@@ -242,6 +242,7 @@ try Blog().publish(using: [
     .optional(.copyResources()),
     .sortItems(by: \.date, order: .descending),
     .generateHTML(withTheme: .myTheme),
+    .generateRSSFeed(including: [.posts]),
     .generateSiteMap(),
 ])
 
