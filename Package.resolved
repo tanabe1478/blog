@@ -20,6 +20,15 @@
         }
       },
       {
+        "package": "HighlightJSPublishPlugin",
+        "repositoryURL": "https://github.com/alex-ross/highlightjspublishplugin",
+        "state": {
+          "branch": null,
+          "revision": "d06241336939f0538b1e5982d4cbef2eb8d9dbb4",
+          "version": "1.0.0"
+        }
+      },
+      {
         "package": "Ink",
         "repositoryURL": "https://github.com/johnsundell/ink.git",
         "state": {

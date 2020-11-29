@@ -1,6 +1,7 @@
 import Foundation
 import Publish
 import Plot
+import HighlightJSPublishPlugin
 
 // This type acts as the configuration for your website.
 struct Blog: Website {
@@ -234,6 +235,15 @@ extension Theme {
 
 
 // This will generate your website using the built-in Foundation theme:
-try Blog().publish(withTheme: .myTheme)
+
+try Blog().publish(using: [
+    .installPlugin(.highlightJS()),
+    .addMarkdownFiles(),
+    .optional(.copyResources()),
+    .sortItems(by: \.date, order: .descending),
+    .generateHTML(withTheme: .myTheme),
+    .generateSiteMap(),
+])
+
 
 

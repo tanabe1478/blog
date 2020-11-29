@@ -11,12 +11,13 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(name: "Publish", url: "https://github.com/johnsundell/publish.git", from: "0.6.0")
+        .package(name: "Publish", url: "https://github.com/johnsundell/publish.git", from: "0.6.0"),
+        .package(name: "HighlightJSPublishPlugin", url: "https://github.com/alex-ross/highlightjspublishplugin", from: "1.0.0")
     ],
     targets: [
         .target(
             name: "Blog",
-            dependencies: ["Publish"]
+            dependencies: ["Publish", "HighlightJSPublishPlugin"]
         )
     ]
 )
