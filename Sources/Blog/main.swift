@@ -239,11 +239,12 @@ extension Theme {
 try Blog().publish(using: [
     .installPlugin(.highlightJS()),
     .addMarkdownFiles(),
+    .generateHTML(withTheme: .myTheme),
     .optional(.copyResources()),
     .sortItems(by: \.date, order: .descending),
-    .generateHTML(withTheme: .myTheme),
     .generateRSSFeed(including: [.posts]),
     .generateSiteMap(),
+    .deploy(using: .gitHub("tanabe1478/tanabe1478.github.io", useSSH: true)),
 ])
 
 
