@@ -15,9 +15,11 @@ tags: 技術,
 postsディレクトリ以下に決まったフォーマットで書いたmarkdownファイルを置いた後、`publish deploy`コマンドでGitHub Pagesにデプロイされる。XCodeでSchemeを新規作成してArguments Passed On Launchに`--deploy`を追加するとRun時にデプロイできるSchemeが作れる。
 
 ```sh
+
 Publishing t__nabe1478's Blog (1 steps)
 [1/1] Deploy using Git (git@github.com:tanabe1478/tanabe1478.github.io.git)
 ✅ Successfully published t__nabe1478's Blog
+
 ```
 
 ### GitHub Pagesでホスティング
@@ -25,6 +27,7 @@ Publishing t__nabe1478's Blog (1 steps)
 静的なファイルのホスティング先は色々検討したがデフォルトでサポートされているGitHub Pagesを利用することにした。
 
 ```swift
+
 try Blog().publish(using: [
     .installPlugin(.highlightJS()),
     .addMarkdownFiles(),

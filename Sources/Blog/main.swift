@@ -240,7 +240,7 @@ try Blog().publish(using: [
     .installPlugin(.highlightJS()),
     .addMarkdownFiles(),
     .generateHTML(withTheme: .myTheme),
-    .optional(.copyResources()),
+    .copyResources(),
     .sortItems(by: \.date, order: .descending),
     .generateRSSFeed(including: [.posts]),
     .generateSiteMap(),

@@ -236,15 +236,6 @@ pre code {
     white-space: pre;
     -webkit-overflow-scrolling: touch;
 }
-
-@media (prefers-color-scheme: dark)
-pre code {
-    background-color: #000;
-    color: #fff;
-}
-
-
-
 /**
  * MARK: Highlight JS
  */
