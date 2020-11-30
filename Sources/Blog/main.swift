@@ -17,7 +17,7 @@ struct Blog: Website {
     // Update these properties to configure your website:
     var url = URL(string: "https://tanabe1478.com")!
     var name = "t__nabe1478's Blog"
-    var description = "t__nabe1478のブログです。務め先のブログには書く程でない技術に関することや私事について書きます。"
+    var description = "t__nabe1478のブログです。務め先のブログには書く程でないプログラミングに関することや私事について書きます。"
     var language: Language { .english }
     var imagePath: Path? { "Resources/images/logo.png" }
 }
