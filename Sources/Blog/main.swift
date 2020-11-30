@@ -19,7 +19,7 @@ struct Blog: Website {
     var name = "t__nabe1478's Blog"
     var description = "t__nabe1478のブログです。務め先のブログには書く程でない技術に関することや私事について書きます。"
     var language: Language { .english }
-    var imagePath: Path? { nil }
+    var imagePath: Path? { "Resources/images/logo.png" }
 }
 
 private extension Node where Context == HTML.BodyContext {
