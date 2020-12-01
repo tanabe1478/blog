@@ -2,6 +2,7 @@ import Foundation
 import Publish
 import Plot
 import HighlightJSPublishPlugin
+import TwitterPublishPlugin
 
 // This type acts as the configuration for your website.
 struct Blog: Website {
@@ -238,6 +239,7 @@ extension Theme {
 
 try Blog().publish(using: [
     .installPlugin(.highlightJS()),
+    .installPlugin(.twitter()),
     .addMarkdownFiles(),
     .generateHTML(withTheme: .myTheme),
     .copyResources(),
