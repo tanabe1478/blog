@@ -4,6 +4,7 @@
 date: 2020-11-29 21:40
 description: このブログの構成について
 tags: 技術,
+image: images/publish.png
 ---
 
 # このブログがどうやって出来ているか

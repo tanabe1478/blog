@@ -1,7 +1,7 @@
 ---
 date: 2020-12-05 18:08
 description: Amazon Prime Videoでゆるキャン△を見た
-tags: アニメ,
+tags: 技術,
 image: images/yurucan.png
 ---
 
