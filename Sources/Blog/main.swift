@@ -7,6 +7,7 @@ import YoutubePublishPlugin
 
 // This type acts as the configuration for your website.
 struct Blog: Website {
+        
     enum SectionID: String, WebsiteSectionID {
         // Add the sections that you want your website to contain here:
         case posts
@@ -21,7 +22,8 @@ struct Blog: Website {
     var name = "t__nabe1478's Blog"
     var description = "t__nabe1478のブログです。務め先のブログには書く程でないプログラミングに関することや私事について書きます。"
     var language: Language { .english }
-    var imagePath: Path? { "Resources/images/logo.png" }
+    var imagePath: Path? { "images/logo.png" }
+    var favicon: Favicon? { Favicon() }
 }
 
 private extension Node where Context == HTML.BodyContext {
@@ -44,6 +46,7 @@ private extension Node where Context == HTML.BodyContext {
             }
         )
     }
+    
     
     static func tagList<T: Website>(for item: Item<T>, on site: T) -> Node {
         return .ul(.class("tag-list"), .forEach(item.tags) { tag in
