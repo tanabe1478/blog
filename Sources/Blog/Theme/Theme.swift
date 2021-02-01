@@ -93,7 +93,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
                        context: PublishingContext<Site>) throws -> HTML {
         HTML(
             .lang(context.site.language),
-            .head(for: index, on: context.site),
+            .customHead(for: index, on: context.site),
             .body(
                 .header(for: context, selectedSection: nil),
                 .wrapper(
@@ -119,7 +119,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
     func makeSectionHTML(for section: Section<Site>, context: PublishingContext<Site>) throws -> HTML {
         HTML(
             .lang(context.site.language),
-            .head(for: section, on: context.site),
+            .customHead(for: section, on: context.site),
             .body(
                 .header(for: context, selectedSection: section.id),
                 .wrapper(
@@ -134,7 +134,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
     func makePageHTML(for page: Page, context: PublishingContext<Site>) throws -> HTML {
         HTML(
             .lang(context.site.language),
-            .head(for: page, on: context.site),
+            .customHead(for: page, on: context.site),
             .body(
                 .header(for: context, selectedSection: nil),
                 .wrapper(.contentBody(page.body)),
@@ -146,7 +146,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
     func makeTagListHTML(for page: TagListPage, context: PublishingContext<Site>) throws -> HTML? {
         HTML(
             .lang(context.site.language),
-            .head(for: page, on: context.site),
+            .customHead(for: page, on: context.site),
             .body(
                 .header(for: context, selectedSection: nil),
                 .wrapper(
@@ -172,7 +172,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
     func makeTagDetailsHTML(for page: TagDetailsPage, context: PublishingContext<Site>) throws -> HTML? {
         HTML(
             .lang(context.site.language),
-            .head(for: page, on: context.site),
+            .customHead(for: page, on: context.site),
             .body(
                 .header(for: context, selectedSection: nil),
                 .wrapper(
