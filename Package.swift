@@ -11,7 +11,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(name: "Publish", url: "https://github.com/johnsundell/publish.git", from: "0.6.0"),
+        .package(name: "Publish", url: "https://github.com/johnsundell/publish.git", from: "0.9.0"),
         .package(name: "HighlightJSPublishPlugin", url: "https://github.com/alex-ross/highlightjspublishplugin", from: "1.0.0"),
         .package(name: "TwitterPublishPlugin", url: "https://github.com/insidegui/TwitterPublishPlugin", from: "0.1.0"),
         .package(name: "YoutubePublishPlugin", url: "https://github.com/tanabe1478/YoutubePublishPlugin.git", from: "0.1.0"),
