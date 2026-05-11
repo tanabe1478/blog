@@ -22,6 +22,7 @@
 
 - `AGENTS.md` に小さなコミット単位と丁寧なコミットメッセージ方針を追加済み。
 - `docs/` に統合計画、migration rules、redirect、deploy、post migration check を整理済み。
+- Markmesh extension API の要求仕様を `docs/markmesh-extension-api-proposal.md` に整理済み。
 
 ## 現在の公開 URL
 

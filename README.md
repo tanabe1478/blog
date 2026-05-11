@@ -68,4 +68,7 @@ scripts/check_public_site.py
 
 画像の新規 upload は Gyazo を前提にします。
 
-詳しくは `docs/markmesh-extension-cms.md` を参照してください。
+詳しくは以下を参照してください。
+
+- `docs/markmesh-extension-cms.md`
+- `docs/markmesh-extension-api-proposal.md`
