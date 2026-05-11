@@ -55,6 +55,7 @@ scripts/check_public_site.py
 
 関連 docs:
 
+- `docs/status.md`
 - `docs/blog-integration-plan.md`
 - `docs/diary-migration-rules.md`
 - `docs/diary-migration-sources.md`
