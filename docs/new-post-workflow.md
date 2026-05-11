@@ -1,0 +1,50 @@
+# New post workflow
+
+Markmesh extension ができるまでの暫定的な記事作成手順です。
+
+## 記事作成
+
+```bash
+scripts/new_post.py "記事タイトル" --slug article-slug
+```
+
+生成先:
+
+```text
+Content/posts/article-slug.md
+```
+
+生成される Markdown:
+
+```markdown
+---
+date: yyyy-MM-dd HH:mm
+description: ""
+tags: 日記
+---
+
+# 記事タイトル
+```
+
+## option
+
+```bash
+scripts/new_post.py "記事タイトル" \
+  --slug article-slug \
+  --tag 日記 \
+  --tag 技術 \
+  --description "説明"
+```
+
+## 確認
+
+```bash
+swift run
+python3 -m http.server 4173 --directory Output
+```
+
+## 将来の方針
+
+この script は Markmesh extension の `Blog: New Post` command の下書きです。
+
+最終的には、Markmesh 上で title、slug、tags、description を入力し、同じ形式の Markdown を生成します。

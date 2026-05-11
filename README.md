@@ -14,6 +14,12 @@ swift run
 
 生成結果は `Output/` に出力されます。
 
+新しい記事の雛形を作る場合:
+
+```bash
+scripts/new_post.py "記事タイトル" --slug article-slug
+```
+
 local で確認する場合:
 
 ```bash
