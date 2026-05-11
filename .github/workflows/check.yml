@@ -11,5 +11,5 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build site
-        run: swift run
+      - name: Run checks
+        run: scripts/run_tests.sh
