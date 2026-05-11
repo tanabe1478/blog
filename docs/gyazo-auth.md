@@ -97,6 +97,22 @@ access_token の有効期限はありません。
 - `client_secret` は使わない。
 - token 再発行もしない。
 
+OAuth code を試すための補助 script として、`scripts/exchange_gyazo_oauth_code.py` も用意しています。
+
+```bash
+scripts/exchange_gyazo_oauth_code.py CODE_FROM_CALLBACK
+```
+
+この script は `.env` から次を読みます。
+
+```text
+GYAZO_CLIENT_ID
+GYAZO_CLIENT_SECRET
+GYAZO_CALLBACK_URL
+```
+
+結果の `access_token` は表示するだけで保存しません。
+
 ### 将来の Markmesh extension
 
 初期実装は手動 token 登録で十分です。

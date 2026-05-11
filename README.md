@@ -26,6 +26,12 @@ scripts/new_post.py "記事タイトル" --slug article-slug
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 ```
 
+OAuth callback の code を access token に交換する場合:
+
+```bash
+scripts/exchange_gyazo_oauth_code.py CODE_FROM_CALLBACK
+```
+
 local で確認する場合:
 
 ```bash
