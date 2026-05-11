@@ -25,6 +25,7 @@
 - GitHub Issues を記事として扱う Next.js 製ブログ。
 - 既に Electron の執筆アプリがあるが、今後は Markmesh extension 方針へ寄せる。
 - diary の記事は最終的に `Content/posts/` へ Markdown として移行する。
+- diary の UI は現在の Swift Publish 側とかなり違うため、移行時は `docs/diary-ui-notes.md` の観点で見た目も確認する。
 
 ### Markmesh
 
@@ -209,6 +210,7 @@ defaultFrontmatter:
 - GitHub Issues から記事 Markdown を取得する方法を決める。
 - issue number、title、created_at、body、comments、labels の移行ルールを決める。
 - 既存 URL から新 URL への redirect 方針を決める。
+- diary 由来ページの UI を diary 風に維持するか、blog 全体を diary 風に寄せるかを決める。
 
 ### Phase 3: Markmesh extension API 設計
 
