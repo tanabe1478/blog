@@ -6,7 +6,7 @@
 
 - ホームページとブログをこの `blog` repository に集約する。
 - GitHub Issues に記事を書く運用をやめ、Markdown file を正本にする。
-- Markmesh を CMS として使う。ただし、ブログ固有機能は Markmesh 本体に入れず extension として実装する。
+- Markmesh を CMS として使う。ただし、ブログ固有機能は Markmesh 本体に入れず extension として実装する。詳細は `docs/markmesh-extension-cms.md` に整理する。
 - 画像は Gyazo にアップロードし、Markdown には Gyazo の画像 URL を挿入する。
 - 見た目の確認は agent-browser を主に使い、必要になった段階で自動 screenshot test を検討する。
 - 実装は学習しやすい小さなコミットに分ける。
@@ -23,7 +23,8 @@
 ### diary repository
 
 - GitHub Issues を記事として扱う Next.js 製ブログ。
-- 既に Electron の執筆アプリがあるが、今後は Markmesh extension 方針へ寄せる。
+- diary 側にあった Desktop Writer / Electron 執筆アプリは移行対象にしない。
+- 今後の CMS は Markmesh extension として定義する。
 - diary の記事は最終的に `Content/posts/` へ Markdown として移行する。
 - diary の公開記事 URL と GitHub Issues / image upload commit の関係は `docs/diary-migration-sources.md` に整理する。
 - diary の UI は現在の Swift Publish 側とかなり違うため、blog 全体を diary UI に寄せる。詳細は `docs/diary-ui-notes.md` を参照する。
