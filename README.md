@@ -26,6 +26,12 @@ scripts/new_post.py "記事タイトル" --slug article-slug
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 ```
 
+Gyazo OAuth の認可 URL を作る場合:
+
+```bash
+scripts/gyazo_authorize_url.py
+```
+
 OAuth callback の code を access token に交換する場合:
 
 ```bash
