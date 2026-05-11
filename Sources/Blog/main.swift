@@ -11,7 +11,6 @@ try Blog().publish(using: [
     .installPlugin(.youtube()),
     .addMarkdownFiles(),
     .generateHTML(withTheme: .myTheme),
-    .generateDiaryRedirects(),
     .copyResources(),
     .sortItems(by: \.date, order: .descending),
     .generateRSSFeed(including: [.posts]),
