@@ -17,7 +17,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-swift run
+scripts/prepare_for_deploy.py
 
 git clone --depth 1 --branch "$branch" "$remote" "$workdir/site"
 rsync -a --delete --exclude .git Output/ "$workdir/site/"

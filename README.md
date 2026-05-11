@@ -86,7 +86,7 @@ scripts/deploy_site.sh
 scripts/deploy_site.sh --check
 ```
 
-`swift run` のあと、`Output/` を `tanabe1478/tanabe1478.github.io` repository へ directory 構造を保ったまま反映します。
+`scripts/prepare_for_deploy.py` で local image の Gyazo 化と `swift run` を実行したあと、`Output/` を `tanabe1478/tanabe1478.github.io` repository へ directory 構造を保ったまま反映します。
 
 詳しくは `docs/deploy.md` を参照してください。
 

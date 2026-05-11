@@ -16,11 +16,19 @@ scripts/deploy_site.sh --check
 
 この script は次を行います。
 
-1. `swift run` で `Output/` を生成する。
+1. `scripts/prepare_for_deploy.py` で local image の Gyazo 化と `Output/` 生成を行う。
 2. `tanabe1478/tanabe1478.github.io` の `master` branch を一時 directory に clone する。
 3. `Output/` の中身を directory 構造を保ったまま rsync する。
 4. 変更があれば `Publish site` commit を作って push する。
 5. `--check` 指定時は `scripts/check_public_site.py` を retry 付きで実行する。
+
+## deploy 前の prepare
+
+`deploy_site.sh` は最初に `scripts/prepare_for_deploy.py` を実行します。
+
+これにより、Markmesh extension の `Prepare for Deploy` と同じ流れで、local image を Gyazo URL に置換してから site を生成します。
+
+local image がなく、置換が不要な場合はそのまま `swift run` 相当の build だけが行われます。
 
 ## なぜ Publish built-in deploy を使わないか
 
