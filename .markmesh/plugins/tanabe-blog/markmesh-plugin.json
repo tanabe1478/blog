@@ -15,6 +15,20 @@
         }
       },
       {
+        "id": "tanabe.blog.uploadImageToGyazo",
+        "label": "Blog: Upload Active Image to Gyazo",
+        "description": "Upload the active image file to Gyazo, print Markdown, and copy it to the clipboard.",
+        "command": {
+          "program": "sh",
+          "args": [
+            "-c",
+            "markdown=$(python3 scripts/upload_image_to_gyazo.py \"$1\") || exit $?; printf '%s\\n' \"$markdown\"; printf '%s' \"$markdown\" | pbcopy",
+            "sh",
+            "${file}"
+          ]
+        }
+      },
+      {
         "id": "tanabe.blog.replaceLocalImagesWithGyazo",
         "label": "Blog: Replace Local Images with Gyazo URLs",
         "description": "Upload draft-local images to Gyazo and rewrite Markdown image URLs.",
