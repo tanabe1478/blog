@@ -56,6 +56,10 @@ python3 -m http.server 4173 --directory Output
 http://127.0.0.1:4173/
 ```
 
+## CI
+
+GitHub Actions の `Check` workflow で `swift run` を実行し、site が生成できることを確認します。
+
 ## deploy
 
 公開 site へ deploy します。
