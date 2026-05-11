@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from check_output_site import check_output
 from replace_local_images_with_gyazo import is_target_local_image
-from upload_image_to_gyazo import has_supported_image_signature
+from gyazo_upload_core import has_supported_image_signature
 
 
 class LocalImageDetectionTests(unittest.TestCase):

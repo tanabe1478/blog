@@ -12,9 +12,10 @@ from pathlib import Path
 import re
 import sys
 
-# Import sibling helper without making scripts a package.
+# Import sibling helpers without making scripts a package.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from upload_image_to_gyazo import load_dotenv, markdown_for, upload  # noqa: E402
+from gyazo_upload_core import markdown_for, upload  # noqa: E402
+from upload_image_to_gyazo import load_dotenv  # noqa: E402
 
 IMAGE_PATTERN = re.compile(r"(?P<prefix>!\[(?P<alt>[^\]]*)\]\()(?P<target>[^)]+)(?P<suffix>\))")
 DEFAULT_TARGET_PREFIXES = ("attachments/", ".markmesh/blog-assets/")
