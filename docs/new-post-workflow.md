@@ -40,6 +40,8 @@ scripts/new_post.py "記事タイトル" \
 
 Markmesh extension ができるまでは、暫定 script で Gyazo に upload できます。
 
+Gyazo API は `Authorization: Bearer <token>` header と `imagedata` form field で upload します。
+
 ```bash
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 ```

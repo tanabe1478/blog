@@ -20,17 +20,12 @@ import uuid
 UPLOAD_URL = "https://upload.gyazo.com/api/upload"
 
 
-def build_multipart_body(path: Path, token: str) -> tuple[bytes, str]:
+def build_multipart_body(path: Path) -> tuple[bytes, str]:
     boundary = f"----tanabe-blog-{uuid.uuid4().hex}"
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     image = path.read_bytes()
 
     parts: list[bytes] = []
-    parts.append(
-        f"--{boundary}\r\n"
-        'Content-Disposition: form-data; name="access_token"\r\n\r\n'
-        f"{token}\r\n".encode()
-    )
     parts.append(
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="imagedata"; filename="{path.name}"\r\n'
@@ -42,11 +37,12 @@ def build_multipart_body(path: Path, token: str) -> tuple[bytes, str]:
 
 
 def upload(path: Path, token: str) -> dict:
-    body, boundary = build_multipart_body(path, token)
+    body, boundary = build_multipart_body(path)
     request = urllib.request.Request(
         UPLOAD_URL,
         data=body,
         headers={
+            "Authorization": f"Bearer {token}",
             "Content-Type": f"multipart/form-data; boundary={boundary}",
             "User-Agent": "tanabe1478-blog-gyazo-upload",
         },
