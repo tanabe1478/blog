@@ -229,18 +229,18 @@ defaultFrontmatter:
 - `Blog: Build` と `Blog: Open Preview` を実装する。
 - `Blog: Commit` と `Blog: Push` を実装する。
 
-### Phase 5: diary 記事の移行
+### Phase 5: diary 記事の移行（完了）
 
-- 移行 script を作る。
-- 少数の記事で変換結果を確認する。
-- 全記事を移行する。
-- agent-browser で見た目を確認する。
+- 移行 script を作成済み。
+- 通常 GitHub Issues 19 件を `Content/posts/diary-*.md` に移行済み。
+- 旧 diary upload 画像のうち必要なものを `Resources/images/uploads/` に保全済み。
+- diary repository 側を redirect site に変更済み。
 
-### Phase 6: 運用を固める
+### Phase 6: 運用を固める（進行中）
 
-- GitHub Actions で build / deploy を実行する。
+- `scripts/deploy_site.sh` で build / deploy できるようにした。
+- `scripts/check_public_site.py` で公開後の smoke check ができるようにした。
 - Markmesh extension から publish workflow を実行できるようにする。
-- diary 側の運用停止手順を整理する。
 
 ## 小さなコミット単位の例
 
@@ -256,10 +256,15 @@ defaultFrontmatter:
 
 各コミットは、ユーザーが diff を読んで理解できる大きさに保つ。
 
+## 決定済み事項
+
+- diary の通常 GitHub Issues には comments がなかったため、comments 移行は初期対象外。
+- 移行後の記事本体 URL は `/posts/diary-{number}/`。
+- 旧 `/diary/articles/{number}` は diary repository 側で redirect する。
+- Gyazo Markdown は extension config 上 `linked-image` を初期値にする。
+- Markmesh extension の最初の配布形式は、まず local / vault scoped extension として検討する。
+
 ## 未決定事項
 
-- diary の comment を本文末尾に移行するか、移行しないか。
-- 新 URL を `/posts/{slug}/` にするか、`/diary/articles/{number}/` 互換を維持するか。
-- Gyazo Markdown を direct image 形式にするか、linked image 形式にするか。現在の extension config では linked-image を初期値にしている。
-- Markmesh extension の最初の配布形式を local extension にするか、GitHub URL install にするか。
+- Markmesh extension を local extension から GitHub URL install / registry install へ広げる時期。
 - 自動 screenshot test が必要になった場合、Playwright などをどの範囲で再導入するか。
