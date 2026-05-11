@@ -21,6 +21,7 @@
 - `markmesh-extension-cms.md` — CMS を Markmesh extension として作る方針
 - `markmesh-extension-api-proposal.md` — Markmesh 本体に必要な汎用 extension API の要求仕様
 - `new-post-workflow.md` — extension 完成までの暫定新規記事作成手順
+- `gyazo-auth.md` — Gyazo API の token / OAuth 認証メモ
 
 ## 見た目確認
 
