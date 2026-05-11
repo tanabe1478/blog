@@ -46,13 +46,13 @@
 例:
 
 ```text
-feat: add visual regression test scaffold
+docs: add agent-browser visual check guide
 
-ブログ統合前の見た目を固定できるようにするため、
-Playwright の初期設定とトップページのスクリーンショットテストを追加した。
+ブログ統合前の見た目を軽く確認できるようにするため、
+agent-browser で確認するページと観点を docs に整理した。
 
-まだ baseline の更新と CI 統合は行っていない。
-確認: npm run test:visual
+まだ自動 screenshot test や CI 統合は行っていない。
+確認: docs の手順を読み、対象ページが分かることを確認
 ```
 
 よく使う type:
@@ -92,7 +92,7 @@ Playwright の初期設定とトップページのスクリーンショットテ
 - Markmesh 本体へ追加する場合は、一般ユーザーにも有用な extension API / capability / task runner として抽象化する。
 - 画像アップロードは Gyazo API を前提にする。
 - Gyazo token などの secret は repository に保存しない。安全な secret storage を使う設計にする。
-- 見た目の維持は Playwright の visual regression test を主な担保にし、agent-browser は目視確認・調査補助として使う。
+- 見た目の確認は agent-browser を主に使う。自動 screenshot test は必要になった段階で、小さく再導入を検討する。
 
 ## 注意
 

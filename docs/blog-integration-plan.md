@@ -8,7 +8,7 @@
 - GitHub Issues に記事を書く運用をやめ、Markdown file を正本にする。
 - Markmesh を CMS として使う。ただし、ブログ固有機能は Markmesh 本体に入れず extension として実装する。
 - 画像は Gyazo にアップロードし、Markdown には Gyazo の画像 URL を挿入する。
-- 見た目が変わっていないことを Playwright visual regression test で確認できるようにする。
+- 見た目の確認は agent-browser を主に使い、必要になった段階で自動 screenshot test を検討する。
 - 実装は学習しやすい小さなコミットに分ける。
 
 ## 現在の前提
@@ -48,15 +48,14 @@ blog CMS extension
   ├─ Gyazo Upload Image
   ├─ Build Blog
   ├─ Preview Blog
-  ├─ Run Visual Test
+  ├─ Open in agent-browser
   └─ Commit / Push
 
 blog repository
   ├─ Content/posts/*.md
   ├─ Package.swift
   ├─ Sources/Blog/...
-  ├─ Output/
-  └─ visual regression tests
+  └─ Output/
 ```
 
 ## 画像アップロード方針
@@ -172,7 +171,7 @@ await api.git.push()
       "https://upload.gyazo.com/*",
       "https://api.gyazo.com/*"
     ],
-    "shell": ["swift run", "npm run test:visual"],
+    "shell": ["swift run"],
     "git": ["status", "commit", "push"]
   }
 }
@@ -184,7 +183,7 @@ await api.git.push()
 # .markmesh/extensions/tanabe-blog.yml
 postsDir: Content/posts
 buildCommand: swift run
-visualTestCommand: npm run test:visual
+previewDirectory: Output
 
 images:
   provider: gyazo
@@ -202,8 +201,8 @@ defaultFrontmatter:
 ### Phase 1: 現状固定
 
 - 現在の blog の出力を確認する。
-- Playwright visual regression test の最小構成を追加する。
-- トップページと代表記事の baseline screenshot を保存する。
+- agent-browser でトップページと代表記事を確認する手順を整理する。
+- 見た目確認で見るべき観点を docs に残す。
 
 ### Phase 2: diary 移行設計
 
@@ -223,7 +222,7 @@ defaultFrontmatter:
 - `Blog: New Post` を実装する。
 - `Blog: Set Gyazo Token` を実装する。
 - `Blog: Upload Image to Gyazo` を実装する。
-- `Blog: Build` と `Blog: Run Visual Test` を実装する。
+- `Blog: Build` と `Blog: Open Preview` を実装する。
 - `Blog: Commit` と `Blog: Push` を実装する。
 
 ### Phase 5: diary 記事の移行
@@ -231,26 +230,25 @@ defaultFrontmatter:
 - 移行 script を作る。
 - 少数の記事で変換結果を確認する。
 - 全記事を移行する。
-- visual regression test で見た目を確認する。
+- agent-browser で見た目を確認する。
 
 ### Phase 6: 運用を固める
 
-- GitHub Actions で build / visual test / deploy を実行する。
+- GitHub Actions で build / deploy を実行する。
 - Markmesh extension から publish workflow を実行できるようにする。
 - diary 側の運用停止手順を整理する。
 
 ## 小さなコミット単位の例
 
 1. `docs: add blog integration plan`
-2. `test: add Playwright visual test dependencies`
-3. `test: add home page visual snapshot test`
-4. `docs: describe diary issue migration rules`
-5. `feat: add Markmesh command registration API draft`
-6. `feat: expose workspace read API to extensions`
-7. `feat: add secret storage API for extensions`
-8. `feat: add Gyazo upload command to blog extension`
-9. `feat: add new blog post command to blog extension`
-10. `test: add migration script regression fixture`
+2. `docs: add agent-browser visual check guide`
+3. `docs: describe diary issue migration rules`
+4. `feat: add Markmesh command registration API draft`
+5. `feat: expose workspace read API to extensions`
+6. `feat: add secret storage API for extensions`
+7. `feat: add Gyazo upload command to blog extension`
+8. `feat: add new blog post command to blog extension`
+9. `test: add migration script regression fixture`
 
 各コミットは、ユーザーが diff を読んで理解できる大きさに保つ。
 
@@ -260,4 +258,4 @@ defaultFrontmatter:
 - 新 URL を `/posts/{slug}/` にするか、`/diary/articles/{number}/` 互換を維持するか。
 - Gyazo Markdown を direct image 形式にするか、linked image 形式にするか。
 - Markmesh extension の最初の配布形式を local extension にするか、GitHub URL install にするか。
-- visual regression baseline を repository に含めるか、CI artifact として扱うか。
+- 自動 screenshot test が必要になった場合、Playwright などをどの範囲で再導入するか。
