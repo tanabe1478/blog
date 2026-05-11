@@ -50,6 +50,27 @@ Gyazo upload は外部サービスへの副作用です。
 ![blog asset](/images/example.png)
 ```
 
+## 暫定 script
+
+Markmesh extension 実装前の検証用に、同じ考え方の暫定 script を用意しています。
+
+```bash
+scripts/replace_local_images_with_gyazo.py Content/posts/example.md
+```
+
+対象確認だけ行う場合:
+
+```bash
+scripts/replace_local_images_with_gyazo.py --dry-run Content/posts/example.md
+```
+
+初期対象 prefix:
+
+```text
+attachments/
+.markmesh/blog-assets/
+```
+
 ## Markdown 置換
 
 local image:

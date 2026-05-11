@@ -26,6 +26,12 @@ scripts/new_post.py "記事タイトル" --slug article-slug
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 ```
 
+記事内の local image を Gyazo URL に置換する場合:
+
+```bash
+scripts/replace_local_images_with_gyazo.py Content/posts/example.md
+```
+
 Gyazo OAuth の認可 URL を作る場合:
 
 ```bash
