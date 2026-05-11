@@ -20,6 +20,18 @@ import uuid
 UPLOAD_URL = "https://upload.gyazo.com/api/upload"
 
 
+def load_dotenv(path: Path = Path(".env")) -> None:
+    if not path.is_file():
+        return
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def build_multipart_body(path: Path) -> tuple[bytes, str]:
     boundary = f"----tanabe-blog-{uuid.uuid4().hex}"
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -82,6 +94,7 @@ def main() -> int:
         print(f"error: image file not found: {args.image}", file=sys.stderr)
         return 1
 
+    load_dotenv()
     token = os.environ.get("GYAZO_ACCESS_TOKEN")
     if not token:
         print("error: GYAZO_ACCESS_TOKEN is not set", file=sys.stderr)

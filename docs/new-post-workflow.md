@@ -46,6 +46,14 @@ Gyazo API は `Authorization: Bearer <token>` header と `imagedata` form field 
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 ```
 
+または、commit されない `.env` に token を置いて実行できます。
+
+```bash
+cp .env.example .env
+# .env の GYAZO_ACCESS_TOKEN を設定
+scripts/upload_image_to_gyazo.py path/to/image.png
+```
+
 出力例:
 
 ```markdown
