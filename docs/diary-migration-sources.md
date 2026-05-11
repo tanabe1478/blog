@@ -63,10 +63,10 @@ chore: upload blog image cc7bd6fd6ca83ce607b965a9aba5b584.png
 ![alt](https://tanabe1478.github.io/diary/uploads/YYYY-MM-DD/file.png)
 ```
 
-移行時の選択肢:
+移行時の扱い:
 
-1. 旧 diary URL のまま残す。
-2. 画像を `blog` repository に取り込む。
-3. 画像を Gyazo に移し、Markdown URL を置き換える。
+1. 外部サービス上の画像 URL は基本的にそのまま残す。
+2. `https://tanabe1478.github.io/diary/uploads/...` の画像だけは `blog` repository に取り込む。
+3. 今後の新規画像は Gyazo に upload し、Markdown URL を Gyazo URL にする。
 
-今後の運用は Gyazo 前提ですが、既存記事については一括で Gyazo へ移すか、旧 URL を維持するかを migration 設計時に決めます。
+`/diary/` は diary repository 側の redirect site に変更したため、旧 diary project site 配下の upload 画像は永続性が弱くなります。そのため、該当画像だけは保全目的で `/images/uploads/...` に移します。

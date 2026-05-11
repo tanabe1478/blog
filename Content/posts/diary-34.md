@@ -16,6 +16,6 @@ Electron で Windows と Mac の両方で動くようにして、記事の新規
 
 ブログを書くための道具を作るのにブログを書く手間がかかっていたので、こういう小さい道具を雑に作れるのは助かる。あとは実際に使い続けられるかどうか。この記事自体を、このツールの最初の動作確認にする。
 
-![cc7bd6fd6ca83ce607b965a9aba5b584](https://tanabe1478.github.io/diary/uploads/2026-04-26/c13ae456-dfee-48db-aa1d-f31d0009ab6e-cc7bd6fd6ca83ce607b965a9aba5b584.png)
+![cc7bd6fd6ca83ce607b965a9aba5b584](/images/uploads/c13ae456-dfee-48db-aa1d-f31d0009ab6e-cc7bd6fd6ca83ce607b965a9aba5b584.png)
 
-![aa5aaffa68d720321e11131bd20a19c7 (1)](https://tanabe1478.github.io/diary/uploads/2026-04-26/2faf82ad-5995-4d7f-b6a8-dcd182e774a2-aa5aaffa68d720321e11131bd20a19c7-1.png)
+![aa5aaffa68d720321e11131bd20a19c7 (1)](/images/uploads/2faf82ad-5995-4d7f-b6a8-dcd182e774a2-aa5aaffa68d720321e11131bd20a19c7-1.png)

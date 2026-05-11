@@ -12,6 +12,7 @@ try Blog().publish(using: [
     .addMarkdownFiles(),
     .generateHTML(withTheme: .myTheme),
     .copyResources(),
+    .copyImagesPreservingPaths(),
     .sortItems(by: \.date, order: .descending),
     .generateRSSFeed(including: [.posts]),
     .generateSiteMap(),
