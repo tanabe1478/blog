@@ -18,6 +18,7 @@ import urllib.request
 import uuid
 
 UPLOAD_URL = "https://upload.gyazo.com/api/upload"
+SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 
 def load_dotenv(path: Path = Path(".env")) -> None:
@@ -30,6 +31,17 @@ def load_dotenv(path: Path = Path(".env")) -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def has_supported_image_signature(path: Path) -> bool:
+    header = path.read_bytes()[:16]
+    return (
+        header.startswith(b"\x89PNG\r\n\x1a\n")
+        or header.startswith(b"\xff\xd8\xff")
+        or header.startswith(b"GIF87a")
+        or header.startswith(b"GIF89a")
+        or (header.startswith(b"RIFF") and header[8:12] == b"WEBP")
+    )
 
 
 def build_multipart_body(path: Path) -> tuple[bytes, str]:
@@ -92,6 +104,13 @@ def main() -> int:
 
     if not args.image.is_file():
         print(f"error: image file not found: {args.image}", file=sys.stderr)
+        return 1
+    if args.image.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_IMAGE_EXTENSIONS))
+        print(f"error: unsupported image extension: {args.image.suffix}. Supported: {supported}", file=sys.stderr)
+        return 1
+    if not has_supported_image_signature(args.image):
+        print(f"error: file does not look like a supported image: {args.image}", file=sys.stderr)
         return 1
 
     load_dotenv()
