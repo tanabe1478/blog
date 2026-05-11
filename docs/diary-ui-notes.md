@@ -103,20 +103,16 @@ body
 - 記事本文の行間、段落間、画像余白が近いか。
 - dark mode の印象が大きく崩れていないか。
 
-## 方針メモ
+## 採用方針
 
-現時点では、diary 統合時に次のどちらかを選ぶのがよさそうです。
+blog 全体を diary UI に寄せます。
 
-### 案 A: diary 由来ページだけ diary UI を維持する
+つまり、diary 由来の記事だけでなく、既存の homepage / posts / article page もまとめてミニマルな UI に寄せます。
 
-- `/diary` と `/diary/articles/...` の見た目を diary に寄せる。
-- 既存 Publish posts は今の見た目を維持する。
-- 互換性を優先しやすい。
+採用理由:
 
-### 案 B: blog 全体を diary UI に寄せる
+- repository 統合後の見た目に一貫性が出る。
+- diary のほうが現在の執筆・閲覧体験に近い。
+- 今後 Markmesh extension を CMS として使う場合も、記事中心の簡素な UI のほうが合う。
 
-- homepage / posts / diary をまとめてミニマルな UI にする。
-- repository 統合後の一貫性が高い。
-- 既存 blog の見た目は変わるので、変更範囲を明示して進める必要がある。
-
-どちらにするかは、diary 記事の移行ルールを決めるタイミングで改めて判断します。
+この方針により、既存 blog の見た目は変わります。変更時は agent-browser で確認し、どの UI 要素を diary に寄せたかを小さなコミットごとに説明します。
