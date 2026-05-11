@@ -36,6 +36,26 @@ scripts/new_post.py "記事タイトル" \
   --description "説明"
 ```
 
+## 画像を Gyazo に upload する
+
+Markmesh extension ができるまでは、暫定 script で Gyazo に upload できます。
+
+```bash
+GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
+```
+
+出力例:
+
+```markdown
+[![image](https://i.gyazo.com/example.png)](https://gyazo.com/example)
+```
+
+直接画像だけを挿入したい場合:
+
+```bash
+GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png --direct
+```
+
 ## 確認
 
 ```bash

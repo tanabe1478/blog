@@ -20,6 +20,12 @@ swift run
 scripts/new_post.py "記事タイトル" --slug article-slug
 ```
 
+画像を Gyazo に upload して Markdown を得る場合:
+
+```bash
+GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
+```
+
 local で確認する場合:
 
 ```bash
