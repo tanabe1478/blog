@@ -64,6 +64,12 @@ http://127.0.0.1:4173/
 scripts/deploy_site.sh
 ```
 
+公開後の smoke check まで実行する場合:
+
+```bash
+scripts/deploy_site.sh --check
+```
+
 `swift run` のあと、`Output/` を `tanabe1478/tanabe1478.github.io` repository へ directory 構造を保ったまま反映します。
 
 詳しくは `docs/deploy.md` を参照してください。

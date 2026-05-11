@@ -8,12 +8,19 @@
 scripts/deploy_site.sh
 ```
 
+公開後の smoke check まで実行する場合:
+
+```bash
+scripts/deploy_site.sh --check
+```
+
 この script は次を行います。
 
 1. `swift run` で `Output/` を生成する。
 2. `tanabe1478/tanabe1478.github.io` の `master` branch を一時 directory に clone する。
 3. `Output/` の中身を directory 構造を保ったまま rsync する。
 4. 変更があれば `Publish site` commit を作って push する。
+5. `--check` 指定時は `scripts/check_public_site.py` を retry 付きで実行する。
 
 ## なぜ Publish built-in deploy を使わないか
 
