@@ -29,16 +29,18 @@ scripts/deploy_site.sh
 
 ## diary path について
 
-`/diary/` は現在 `tanabe1478/diary` repository の GitHub Pages project site として配信されています。
+`/diary/` は `tanabe1478/diary` repository の GitHub Pages project site として配信されています。
 
-そのため、user site 側の `Output/diary/...` に redirect page を置いても、project site が有効な間は `/diary/` 以下では diary project site が優先されます。
+blog 統合後は、diary repository 側を redirect site に変更しています。
 
-旧 diary URL を本当に redirect したい場合は、次のどちらかが必要です。
+```text
+/diary/             -> /
+/diary/articles/34  -> /posts/diary-34/
+```
 
-1. `tanabe1478/diary` 側を redirect site に変更する。
-2. `tanabe1478/diary` の GitHub Pages を停止し、user site 側の `/diary/...` を有効にする。
+user site 側にも `Output/diary/...` の redirect page を生成していますが、project site が有効な間は diary repository 側の redirect が優先されます。
 
-現時点では、移行後の記事本体は次で表示できます。
+移行後の記事本体は次で表示できます。
 
 ```text
 /posts/diary-34/
