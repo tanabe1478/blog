@@ -24,6 +24,19 @@
 - `docs/` に統合計画、migration rules、redirect、deploy、post migration check を整理済み。
 - Markmesh extension API の要求仕様を `docs/markmesh-extension-api-proposal.md` に整理済み。
 
+### Markmesh extension bridge
+
+- Markmesh 本体に plugin command registration API を追加済み。
+- Markmesh 本体に manifest-backed extension command 実行を追加済み。
+- Markmesh 本体で vault-local `.markmesh/plugins/` を discovery するように変更済み。
+- blog 側に `.markmesh/plugins/tanabe-blog/markmesh-plugin.json` を追加済み。
+- Command Palette から以下の blog helper command を呼べる manifest を追加済み。
+  - `Blog: New Post`
+  - `Blog: Upload Active Image to Gyazo`
+  - `Blog: Replace Local Images with Gyazo URLs`
+  - `Blog: Prepare for Deploy`
+  - `Blog: Deploy`
+
 ## 現在の公開 URL
 
 ```text
@@ -63,13 +76,17 @@ scripts/deploy_site.sh
 
 ## 残タスク
 
+> 2026-05-11: blog / diary 移行と Markmesh CMS 化はいったん中断。次の作業へ移るため、以下は再開用メモとして残す。
+
 ### Markmesh extension CMS
 
-- Markmesh 本体の extension API 設計を進める。
-- commands API、workspace file API、editor insertion API、secret storage API、network permission、task runner、git API を検討する。
-- blog CMS extension skeleton を作る。
-- Gyazo token の保存方法を決める。
-- `Blog: New Post` と `Blog: Upload Image to Gyazo` を実装する。
+- 実機で Markmesh から blog vault を開き、Command Palette に `Blog:` 系 command が出ることを確認する。
+- `Blog: New Post` 実行後に vault reload / newly-created post を開く体験を改善する。
+- `Blog: Upload Active Image to Gyazo` の stdout / clipboard / active image 前提の UX を確認する。
+- command 実行結果を console ではなく toast / task panel で見せるか検討する。
+- Gyazo token を `.env` ではなく Markmesh secret storage で扱う API を設計・実装する。
+- workspace file API、editor insertion API、network permission、task runner、git API は未着手。必要になった時点で小さく追加する。
+- blog helper scripts は一時 bridge のまま。将来的に Markmesh extension package 側へ寄せる。
 
 ### 見た目確認
 
