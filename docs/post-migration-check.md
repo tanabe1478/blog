@@ -63,6 +63,14 @@ https://tanabe1478.github.io/diary/articles/34
 - diary repository 側の redirect page が返っている。
 - `/posts/diary-34/` へ移動する。
 
+## 再確認用 script
+
+公開後の HTTP response と記事内画像 URL は、次の script で再確認できます。
+
+```bash
+scripts/check_public_site.py
+```
+
 ## 注意
 
 この確認は HTTP response と画像 URL の存在確認です。見た目の最終確認は agent-browser で行います。

@@ -38,6 +38,12 @@ scripts/deploy_site.sh
 
 詳しくは `docs/deploy.md` を参照してください。
 
+公開後の簡易確認:
+
+```bash
+scripts/check_public_site.py
+```
+
 ## diary 統合
 
 旧 diary URL は diary repository 側で redirect します。
