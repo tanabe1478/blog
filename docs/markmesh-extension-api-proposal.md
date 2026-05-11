@@ -29,6 +29,8 @@ api.commands.registerCommand({
 
 - `Blog: New Post`
 - `Blog: Upload Image to Gyazo`
+- `Blog: Replace Local Images with Gyazo URLs`
+- `Blog: Prepare for Deploy`
 - `Blog: Build`
 - `Blog: Open Preview`
 - `Blog: Commit`
@@ -202,10 +204,12 @@ blog extension 側では、次の順で小さく進めます。
 2. `Blog: New Post`。
 3. `Blog: Set Gyazo Token`。
 4. `Blog: Upload Image to Gyazo`。
-5. `Blog: Build`。
-6. `Blog: Open Preview`。
-7. `Blog: Commit`。
-8. `Blog: Push`。
+5. `Blog: Replace Local Images with Gyazo URLs`。
+6. `Blog: Prepare for Deploy`。
+7. `Blog: Build`。
+8. `Blog: Open Preview`。
+9. `Blog: Commit`。
+10. `Blog: Push`。
 
 ## open questions
 

@@ -19,7 +19,8 @@ Markmesh 本体
 blog CMS extension
   ├─ New Post
   ├─ Upload Image to Gyazo
-  ├─ Insert Markdown Image
+  ├─ Replace Local Images with Gyazo URLs
+  ├─ Prepare for Deploy
   ├─ Build Blog
   ├─ Open Preview
   ├─ Commit
@@ -44,7 +45,14 @@ imageProvider: Gyazo
 .markmesh/extensions/tanabe-blog.yml
 ```
 
-記事作成時は `Content/posts/*.md` を生成し、画像挿入時は Gyazo に upload して Markdown に URL を挿入します。
+記事作成時は `Content/posts/*.md` を生成します。
+
+画像は次の 2 段階で扱います。
+
+1. 執筆中は Markmesh vault 内の local image を参照してよい。
+2. deploy 前の `Prepare for Deploy` で未 upload の local image だけを Gyazo に upload し、Markdown を Gyazo URL に置換する。
+
+`Deploy` command の中で隠れて upload するのではなく、`Prepare for Deploy` として明示的に行います。Gyazo upload は外部サービスへの副作用があり、Markdown も書き換えるためです。
 
 ## Markmesh 本体の責務
 
@@ -88,7 +96,7 @@ OK:
 |---|---|
 | GitHub Issue 作成 | `Content/posts/*.md` 作成 |
 | GitHub Issue 更新 | Markdown file 編集 |
-| `public/uploads` への画像 commit | Gyazo upload |
+| `public/uploads` への画像 commit | Prepare for Deploy で local image を Gyazo URL に置換 |
 | GitHub Actions trigger | git commit / push |
 
 ## 最初の実装単位
@@ -98,4 +106,6 @@ OK:
 3. `Blog: New Post` を実装する。
 4. secret storage API を追加する。
 5. `Blog: Upload Image to Gyazo` を実装する。
-6. build / preview / git 操作を追加する。
+6. `Blog: Replace Local Images with Gyazo URLs` を実装する。
+7. `Blog: Prepare for Deploy` を実装する。
+8. build / preview / git 操作を追加する。
