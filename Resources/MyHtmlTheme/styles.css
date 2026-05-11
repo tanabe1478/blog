@@ -144,6 +144,20 @@ h3 {
     margin-right: 0.5rem;
 }
 
+.article-header {
+    margin-bottom: 2rem;
+}
+
+.article-header h1 {
+    margin-bottom: 0.75rem;
+}
+
+.article-meta {
+    color: #99a1af;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
 .content {
     margin-bottom: 2.5rem;
 }

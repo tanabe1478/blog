@@ -9,7 +9,7 @@ import Foundation
 import Publish
 import Plot
 
-private let diaryDateFormatter: DateFormatter = {
+let diaryDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .gregorian)
     formatter.locale = Locale(identifier: "en_US_POSIX")

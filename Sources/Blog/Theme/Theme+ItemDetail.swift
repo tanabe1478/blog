@@ -20,11 +20,18 @@ extension MyHtmlFactory {
                 .header(for: context, selectedSection: item.sectionID),
                 .wrapper(
                     .article(
+                        .header(
+                            .class("article-header"),
+                            .h1(.text(item.title)),
+                            .div(
+                                .class("article-meta"),
+                                .span(.text(diaryDateFormatter.string(from: item.date)))
+                            )
+                        ),
                         .div(
                             .class("content"),
                             .contentBody(item.body)
                         ),
-                        .span("Tagged with: "),
                         .tagList(for: item, on: context.site)
                     )
                 ),
