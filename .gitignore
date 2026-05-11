@@ -5,3 +5,6 @@
 /*.xcodeproj
 .publish
 /Output
+/node_modules
+/test-results
+/playwright-report
