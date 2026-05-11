@@ -9,6 +9,14 @@ import Foundation
 import Publish
 import Plot
 
+private let diaryDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter
+}()
+
 extension Theme {
     static var myTheme: Theme {
         Theme(htmlFactory: MyHtmlFactory(), resourcePaths: ["Resources/MyHtmlTheme/styles.css"])
@@ -26,7 +34,13 @@ extension Node where Context == HTML.BodyContext {
             .class("item-list"),
             .forEach(items) { item in
                 .li(.article(
+                    .class("item-row"),
+                    .span(
+                        .class("item-date"),
+                        .text(diaryDateFormatter.string(from: item.date))
+                    ),
                     .h1(.a(
+                        .class("item-title"),
                         .href(item.path),
                         .text(item.title)
                     )),
@@ -102,7 +116,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
                         .class("description"),
                         .text(context.site.description)
                     ),
-                    .h2("記事一覧"),
+                    .h2("Articles"),
                     .itemList(
                         for: context.allItems(
                             sortedBy: \.date,
