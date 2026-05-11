@@ -64,6 +64,18 @@ scripts/replace_local_images_with_gyazo.py Content/posts/example.md
 scripts/replace_local_images_with_gyazo.py --dry-run Content/posts/example.md
 ```
 
+`Prepare for Deploy` 相当の暫定 script:
+
+```bash
+scripts/prepare_for_deploy.py
+```
+
+画像置換の確認だけ:
+
+```bash
+scripts/prepare_for_deploy.py --dry-run --skip-build
+```
+
 初期対象 prefix:
 
 ```text

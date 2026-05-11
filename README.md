@@ -32,6 +32,12 @@ GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
 scripts/replace_local_images_with_gyazo.py Content/posts/example.md
 ```
 
+deploy 前の準備をまとめて行う場合:
+
+```bash
+scripts/prepare_for_deploy.py
+```
+
 Gyazo OAuth の認可 URL を作る場合:
 
 ```bash
