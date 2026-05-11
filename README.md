@@ -68,6 +68,12 @@ scripts/check_public_site.py
 
 画像の新規 upload は Gyazo を前提にします。
 
+将来の extension 用設定は以下に置いています。
+
+```text
+.markmesh/extensions/tanabe-blog.yml
+```
+
 詳しくは以下を参照してください。
 
 - `docs/markmesh-extension-cms.md`

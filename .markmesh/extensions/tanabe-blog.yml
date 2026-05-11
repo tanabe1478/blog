@@ -1,0 +1,14 @@
+postsDir: Content/posts
+buildCommand: swift run
+previewDirectory: Output
+deployCommand: scripts/deploy_site.sh
+
+images:
+  provider: gyazo
+  markdownFormat: linked-image
+  altTextFromFilename: true
+
+defaultFrontmatter:
+  description: ""
+  tags:
+    - 日記
