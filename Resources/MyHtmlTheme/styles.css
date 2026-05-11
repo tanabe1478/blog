@@ -162,6 +162,11 @@ h3 {
     margin-bottom: 2.5rem;
 }
 
+.article-header + .content > h1:first-child,
+.article-header + .content > h2:first-child {
+    display: none;
+}
+
 .content h1 {
     margin-bottom: 1rem;
     margin-top: 2rem;
