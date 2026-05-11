@@ -31,6 +31,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="show image replacements without uploading or writing")
     parser.add_argument("--skip-images", action="store_true", help="skip local image replacement")
     parser.add_argument("--skip-build", action="store_true", help="skip swift run")
+    parser.add_argument("--skip-output-check", action="store_true", help="skip generated Output asset check")
     parser.add_argument(
         "--prefix",
         action="append",
@@ -55,6 +56,8 @@ def main() -> int:
 
     if not args.skip_build:
         run(["swift", "run"])
+        if not args.skip_output_check:
+            run(["scripts/check_output_site.py"])
 
     print(f"prepare complete replacements={total_replacements}")
     return 0
