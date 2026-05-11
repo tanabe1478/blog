@@ -19,7 +19,7 @@ let package = Package(
             .package(name: "HighlightJSPublishPlugin", url: "https://github.com/alex-ross/highlightjspublishplugin", from: "1.0.1"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "Blog",
             dependencies: ["Publish", "HighlightJSPublishPlugin", "YoutubePublishPlugin"]
         )
