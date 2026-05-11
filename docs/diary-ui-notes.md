@@ -81,7 +81,7 @@ body
 3. 全体 theme を diary 寄りに寄せるか。
 4. diary article の metadata 行（日付 + GitHub link 相当）をどう扱うか。
 5. GitHub Issues をやめた後、旧 GitHub link を残すか、削除するか。
-6. diary の uploaded image URL を Gyazo URL に置き換えるか、旧 URL のまま残すか。
+6. diary の uploaded image URL は、旧 diary project site 配下のものだけ blog 側 `/images/uploads/...` に保全する。
 7. dark mode を blog 側でも diary と同程度に維持するか。
 
 ## agent-browser で確認する観点

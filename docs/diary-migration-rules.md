@@ -114,12 +114,13 @@ description: ""
 ![alt](https://tanabe1478.github.io/diary/uploads/YYYY-MM-DD/file.png)
 ```
 
-初期移行では、この URL をそのまま残します。
+初期移行では記事本文を先に取り込み、その後で旧 diary project site 配下の upload 画像だけを blog repository 側へ保全しました。
 
-理由:
+現在の扱い:
 
-- 記事移行と画像移行を分けて、小さく安全に進めるため。
-- 今後の新規画像は Gyazo にするが、既存画像の Gyazo 移行は別作業にした方が diff を追いやすいため。
+- `https://tanabe1478.github.io/diary/uploads/...` は `/images/uploads/...` に置き換え済み。
+- `user-images.githubusercontent.com` など外部サービス上の画像 URL はそのまま維持。
+- 今後の新規画像は Gyazo に upload し、Markdown には Gyazo URL を挿入する。
 
 ## URL 方針
 

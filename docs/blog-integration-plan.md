@@ -260,6 +260,6 @@ defaultFrontmatter:
 
 - diary の comment を本文末尾に移行するか、移行しないか。
 - 新 URL を `/posts/{slug}/` にするか、`/diary/articles/{number}/` 互換を維持するか。
-- Gyazo Markdown を direct image 形式にするか、linked image 形式にするか。
+- Gyazo Markdown を direct image 形式にするか、linked image 形式にするか。現在の extension config では linked-image を初期値にしている。
 - Markmesh extension の最初の配布形式を local extension にするか、GitHub URL install にするか。
 - 自動 screenshot test が必要になった場合、Playwright などをどの範囲で再導入するか。
