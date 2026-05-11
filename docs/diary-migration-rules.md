@@ -129,13 +129,13 @@ description: ""
 /posts/diary-34/
 ```
 
-既存 diary URL は別途 redirect を検討します。
+既存 diary URL は静的 redirect page を生成して移行後 URL へ転送します。
 
 ```text
-/diary/articles/34 -> /posts/diary-34/
+/diary/articles/34 -> /posts/diary-34
 ```
 
-redirect 実装は記事移行 script とは分けて進めます。
+redirect の詳細は `docs/diary-redirects.md` に整理します。
 
 ## 移行 script の責務
 
