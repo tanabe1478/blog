@@ -105,13 +105,25 @@ OAuth flow を試すための補助 script も用意しています。
 scripts/gyazo_authorize_url.py
 ```
 
+callback を local server で受け取る:
+
+```bash
+scripts/gyazo_oauth_callback_server.py --state STATE_FROM_AUTHORIZE_URL
+```
+
 callback で受け取った code を access token に交換する:
 
 ```bash
 scripts/exchange_gyazo_oauth_code.py CODE_FROM_CALLBACK
 ```
 
-この script は `.env` から次を読みます。
+callback server で受信と token exchange をまとめて試す場合:
+
+```bash
+scripts/gyazo_oauth_callback_server.py --state STATE_FROM_AUTHORIZE_URL --exchange
+```
+
+これらの script は `.env` から次を読みます。
 
 ```text
 GYAZO_CLIENT_ID

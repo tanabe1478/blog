@@ -32,6 +32,12 @@ Gyazo OAuth の認可 URL を作る場合:
 scripts/gyazo_authorize_url.py
 ```
 
+OAuth callback を local で受ける場合:
+
+```bash
+scripts/gyazo_oauth_callback_server.py --state STATE_FROM_AUTHORIZE_URL
+```
+
 OAuth callback の code を access token に交換する場合:
 
 ```bash
