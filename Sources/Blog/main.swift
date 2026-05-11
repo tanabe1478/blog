@@ -16,6 +16,5 @@ try Blog().publish(using: [
     .sortItems(by: \.date, order: .descending),
     .generateRSSFeed(including: [.posts]),
     .generateSiteMap(),
-    .deploy(using: .gitHub("tanabe1478/tanabe1478.github.io", useSSH: true)),
 ])
 
