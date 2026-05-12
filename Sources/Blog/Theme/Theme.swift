@@ -109,12 +109,6 @@ extension Node where Context == HTML.BodyContext {
                     .attribute(named: "width", value: "18"),
                     .attribute(named: "height", value: "18")
                 )
-            ),
-            .a(
-                .class("company-link"),
-                .href("https://dev.classmethod.jp/author/tanabe-nobuyuki/"),
-                .text("クラスメソッド"),
-                .span(.class("company-note"), .text("（現在の所属先）"))
             )
         )
     }
