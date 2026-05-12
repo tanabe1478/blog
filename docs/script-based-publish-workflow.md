@@ -4,15 +4,35 @@
 
 Markmesh は Markdown editor / previewer の一候補として使えますが、記事作成、画像 upload、build、deploy の正本は repository 内の script に置きます。
 
-## 方針
+## 基本方針
 
-```text
-Editor / Markmesh / terminal
-  └─ blog repository scripts
-      ├─ new_post.py
-      ├─ prepare_for_deploy.py
-      ├─ deploy_site.sh
-      └─ check scripts
+普段の公開作業は 1 コマンドに集約します。
+
+```bash
+scripts/publish_blog.py
+```
+
+この script が次をまとめて行います。
+
+1. `Content/posts/*.md` を走査する。
+2. local image を Gyazo に upload する。
+3. Markdown の画像 URL を Gyazo URL に置換する。
+4. `swift run` で記事一覧、feed、sitemap、`Output/` 全体を再生成する。
+5. `scripts/check_output_site.py` で生成結果を確認する。
+6. source repository の変更を commit / push する。
+7. `Output/` 全体を `tanabe1478/tanabe1478.github.io` に deploy する。
+8. 公開後 smoke check を実行する。
+
+画像置換対象だけ確認する場合:
+
+```bash
+scripts/publish_blog.py --dry-run
+```
+
+commit message を変える場合:
+
+```bash
+scripts/publish_blog.py --message "post: add recent notes"
 ```
 
 ## Markmesh に依存させない理由
@@ -37,39 +57,23 @@ scripts/new_post.py "記事タイトル" --slug article-slug
 Content/posts/article-slug.md
 ```
 
-### deploy 前準備
+### publish
 
 ```bash
-scripts/prepare_for_deploy.py
+scripts/publish_blog.py
 ```
 
-実行内容:
+普段はこれだけを使います。
 
-1. `Content/posts/*.md` を走査する。
-2. local image を Gyazo に upload する。
-3. Markdown の画像 URL を Gyazo URL に置換する。
-4. `swift run` で `Output/` を再生成する。
-5. `scripts/check_output_site.py` で生成結果を確認する。
+### low-level script
 
-画像置換の確認だけ行う場合:
+個別に確認したい場合だけ、下位 script を直接使います。
 
 ```bash
 scripts/prepare_for_deploy.py --dry-run --skip-build
-```
-
-### deploy
-
-```bash
-scripts/deploy_site.sh
-```
-
-公開後の smoke check まで行う場合:
-
-```bash
+scripts/prepare_for_deploy.py
 scripts/deploy_site.sh --check
 ```
-
-`deploy_site.sh` は `prepare_for_deploy.py` を実行したあと、`Output/` 全体を `tanabe1478/tanabe1478.github.io` repository に反映します。
 
 ## 画像
 
@@ -82,7 +86,7 @@ scripts/deploy_site.sh --check
 ![desk](.markmesh/blog-assets/desk.png)
 ```
 
-`prepare_for_deploy.py` 実行時に Gyazo URL へ置換されます。
+`publish_blog.py` 実行時に Gyazo URL へ置換されます。
 
 既存の public URL は置換対象外です。
 

@@ -66,11 +66,18 @@ scripts/upload_image_to_gyazo.py path/to/image.png
 GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png --direct
 ```
 
-## 確認
+## 公開
+
+記事を書き終えたら、次の 1 コマンドで画像 upload、build、source repository の commit / push、deploy、公開後確認まで行います。
 
 ```bash
-swift run
-python3 -m http.server 4173 --directory Output
+scripts/publish_blog.py
+```
+
+画像置換対象だけ確認する場合:
+
+```bash
+scripts/publish_blog.py --dry-run
 ```
 
 ## 方針

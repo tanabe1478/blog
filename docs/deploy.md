@@ -4,27 +4,30 @@
 
 ## 通常の deploy
 
-```bash
-scripts/deploy_site.sh
-```
-
-公開後の smoke check まで実行する場合:
+普段は次の 1 コマンドを使います。
 
 ```bash
-scripts/deploy_site.sh --check
+scripts/publish_blog.py
 ```
 
 この script は次を行います。
 
 1. `scripts/prepare_for_deploy.py` で local image の Gyazo 化と `Output/` 生成を行う。
-2. `tanabe1478/tanabe1478.github.io` の `master` branch を一時 directory に clone する。
-3. `Output/` の中身を directory 構造を保ったまま rsync する。
-4. 変更があれば `Publish site` commit を作って push する。
-5. `--check` 指定時は `scripts/check_public_site.py` を retry 付きで実行する。
+2. source repository の変更を commit / push する。
+3. `tanabe1478/tanabe1478.github.io` の `master` branch を一時 directory に clone する。
+4. `Output/` の中身を directory 構造を保ったまま rsync する。
+5. 変更があれば `Publish site` commit を作って push する。
+6. `scripts/check_public_site.py` を retry 付きで実行する。
+
+低レベルな deploy だけを実行したい場合は次を使います。
+
+```bash
+scripts/deploy_site.sh --check
+```
 
 ## deploy 前の prepare
 
-`deploy_site.sh` は最初に `scripts/prepare_for_deploy.py` を実行します。
+`publish_blog.py` は最初に `scripts/prepare_for_deploy.py` を実行します。
 
 これにより、local image を Gyazo URL に置換してから site を生成します。
 

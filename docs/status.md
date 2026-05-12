@@ -27,8 +27,8 @@
 ### script-based publish workflow
 
 - blog の記事作成、画像 upload、build、deploy は Markmesh に依存させず、repository 内 script を正本にする方針へ変更済み。
-- `scripts/prepare_for_deploy.py` で `Content/posts/*.md` 全体の local image 置換、`swift run`、`scripts/check_output_site.py` をまとめて実行できる。
-- `scripts/deploy_site.sh` で `prepare_for_deploy.py` 後に `Output/` 全体を deploy repository へ反映できる。
+- `scripts/publish_blog.py` で `Content/posts/*.md` 全体の local image 置換、`swift run`、source repository の commit / push、deploy、公開後 smoke check をまとめて実行できる。
+- 下位 script として `scripts/prepare_for_deploy.py` と `scripts/deploy_site.sh` も残している。
 - blog 側の Markmesh plugin / extension 設定は撤退済み。
 
 ## 現在の公開 URL
@@ -74,9 +74,8 @@ scripts/deploy_site.sh
 
 ### script workflow
 
-- `scripts/prepare_for_deploy.py --dry-run --skip-build` で全記事の local image 対象確認を行う。
-- `scripts/prepare_for_deploy.py` で画像置換、build、generated output check を通す。
-- 必要なら `scripts/deploy_site.sh --check` で公開まで確認する。
+- `scripts/publish_blog.py --dry-run` で全記事の local image 対象確認を行う。
+- `scripts/publish_blog.py` で画像置換、build、source commit / push、deploy、公開後 smoke check まで行う。
 - Markmesh は Markdown editor / previewer の一候補として扱い、publish workflow の必須依存にはしない。
 
 ### 見た目確認

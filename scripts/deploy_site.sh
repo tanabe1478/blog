@@ -2,10 +2,24 @@
 set -euo pipefail
 
 run_check=false
-if [[ "${1:-}" == "--check" ]]; then
-  run_check=true
-  shift
-fi
+run_prepare=true
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check)
+      run_check=true
+      shift
+      ;;
+    --skip-prepare)
+      run_prepare=false
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 remote="${BLOG_DEPLOY_REMOTE:-git@github.com:tanabe1478/tanabe1478.github.io.git}"
 branch="${BLOG_DEPLOY_BRANCH:-master}"
@@ -17,7 +31,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-scripts/prepare_for_deploy.py
+if [[ "$run_prepare" == true ]]; then
+  scripts/prepare_for_deploy.py
+fi
 
 git clone --depth 1 --branch "$branch" "$remote" "$workdir/site"
 rsync -a --delete --exclude .git Output/ "$workdir/site/"
