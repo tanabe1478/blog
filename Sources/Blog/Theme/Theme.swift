@@ -92,13 +92,23 @@ extension Node where Context == HTML.BodyContext {
                 .class("icon-link"),
                 .href("https://x.com/t__nabe1478"),
                 .attribute(named: "aria-label", value: "X"),
-                .img(.src("/images/x.svg"), .alt(""))
+                .img(
+                    .src("/images/x.svg"),
+                    .alt(""),
+                    .attribute(named: "width", value: "18"),
+                    .attribute(named: "height", value: "18")
+                )
             ),
             .a(
                 .class("icon-link"),
                 .href("https://github.com/tanabe1478"),
                 .attribute(named: "aria-label", value: "GitHub"),
-                .img(.src("/images/github.svg"), .alt(""))
+                .img(
+                    .src("/images/github.svg"),
+                    .alt(""),
+                    .attribute(named: "width", value: "18"),
+                    .attribute(named: "height", value: "18")
+                )
             ),
             .a(
                 .class("company-link"),
