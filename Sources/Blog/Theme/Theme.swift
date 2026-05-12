@@ -85,6 +85,30 @@ extension Node where Context == HTML.BodyContext {
         )
     }
     
+    static func profileLinks() -> Node {
+        return .div(
+            .class("profile-links"),
+            .a(
+                .class("icon-link"),
+                .href("https://x.com/t__nabe1478"),
+                .attribute(named: "aria-label", value: "X"),
+                .img(.src("/images/x.svg"), .alt(""))
+            ),
+            .a(
+                .class("icon-link"),
+                .href("https://github.com/tanabe1478"),
+                .attribute(named: "aria-label", value: "GitHub"),
+                .img(.src("/images/github.svg"), .alt(""))
+            ),
+            .a(
+                .class("company-link"),
+                .href("https://dev.classmethod.jp/author/tanabe-nobuyuki/"),
+                .text("クラスメソッド"),
+                .span(.class("company-note"), .text("（現在の所属先）"))
+            )
+        )
+    }
+    
     static func footer<T: Website>(for site: T) -> Node {
         return .footer(
             .a(
@@ -104,6 +128,7 @@ struct MyHtmlFactory<Site: Website>: HTMLFactory {
             .body(
                 .header(for: context, selectedSection: nil),
                 .wrapper(
+                    .profileLinks(),
                     .h2("Articles"),
                     .itemList(
                         for: context.allItems(
