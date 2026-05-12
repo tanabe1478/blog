@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print a Gyazo OAuth authorization URL.
 
-This is a helper for testing the future Markmesh extension OAuth flow.
+This is a local helper for obtaining a Gyazo access token during development.
 """
 
 from __future__ import annotations

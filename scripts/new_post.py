@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Create a new Swift Publish blog post.
-
-This is a small bridge until the Markmesh extension exists. It follows the same
-configuration stored in .markmesh/extensions/tanabe-blog.yml.
-"""
+"""Create a new Swift Publish blog post."""
 
 from __future__ import annotations
 

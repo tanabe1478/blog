@@ -26,7 +26,7 @@ scripts/deploy_site.sh --check
 
 `deploy_site.sh` は最初に `scripts/prepare_for_deploy.py` を実行します。
 
-これにより、Markmesh extension の `Prepare for Deploy` と同じ流れで、local image を Gyazo URL に置換してから site を生成します。
+これにより、local image を Gyazo URL に置換してから site を生成します。
 
 local image がなく、置換が不要な場合はそのまま `swift run` 相当の build だけが行われます。
 

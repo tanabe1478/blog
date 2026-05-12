@@ -1,6 +1,6 @@
 # New post workflow
 
-Markmesh extension ができるまでの暫定的な記事作成手順です。
+repository script を使った記事作成手順です。
 
 ## 記事作成
 
@@ -38,7 +38,7 @@ scripts/new_post.py "記事タイトル" \
 
 ## 画像を Gyazo に upload する
 
-Markmesh extension ができるまでは、暫定 script で Gyazo に upload できます。
+画像 upload は repository script で行います。
 
 Gyazo API は `Authorization: Bearer <token>` header と `imagedata` form field で upload します。
 
@@ -73,8 +73,8 @@ swift run
 python3 -m http.server 4173 --directory Output
 ```
 
-## 将来の方針
+## 方針
 
-この script は Markmesh extension の `Blog: New Post` command の下書きです。
+記事作成 workflow は Markmesh に依存させません。
 
-最終的には、Markmesh 上で title、slug、tags、description を入力し、同じ形式の Markdown を生成します。
+Markmesh や別の editor を使う場合も、記事の作成・画像 upload・build・deploy はこの repository の script を正本にします。

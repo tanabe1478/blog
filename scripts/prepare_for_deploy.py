@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Prepare the blog for deploy.
 
-Temporary bridge for the future Markmesh `Blog: Prepare for Deploy` command.
-It can replace local drafting images with Gyazo URLs, then builds the site.
+Replace local drafting images with Gyazo URLs, then build and check the site.
 """
 
 from __future__ import annotations

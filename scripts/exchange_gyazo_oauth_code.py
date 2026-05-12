@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Exchange a Gyazo OAuth code for an access token.
 
-This is a helper for the future Markmesh extension OAuth flow. It does not store
-secrets or tokens; copy the resulting access_token into your local secret store
-or ignored .env during development.
+This helper does not store secrets or tokens; copy the resulting access_token
+into your local secret store or ignored .env during development.
 """
 
 from __future__ import annotations

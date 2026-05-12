@@ -113,6 +113,6 @@ blog 全体を diary UI に寄せます。
 
 - repository 統合後の見た目に一貫性が出る。
 - diary のほうが現在の執筆・閲覧体験に近い。
-- 今後 Markmesh extension を CMS として使う場合も、記事中心の簡素な UI のほうが合う。
+- editor に依存しない script-based workflow でも、記事中心の簡素な UI のほうが合う。
 
 この方針により、既存 blog の見た目は変わります。変更時は agent-browser で確認し、どの UI 要素を diary に寄せたかを小さなコミットごとに説明します。

@@ -40,7 +40,7 @@
 chore: upload blog image cc7bd6fd6ca83ce607b965a9aba5b584.png
 ```
 
-これは記事そのものではなく、diary 側の旧 Desktop Writer / 画像アップロード処理が `public/uploads/...` に画像を追加した commit です。旧 Desktop Writer 自体は移行対象にせず、今後の CMS は Markmesh extension として実装します。
+これは記事そのものではなく、diary 側の旧 Desktop Writer / 画像アップロード処理が `public/uploads/...` に画像を追加した commit です。旧 Desktop Writer 自体は移行対象にせず、今後の publish workflow は repository script として実装します。
 
 つまり、移行時には次のように分けて扱います。
 

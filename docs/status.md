@@ -22,20 +22,14 @@
 
 - `AGENTS.md` に小さなコミット単位と丁寧なコミットメッセージ方針を追加済み。
 - `docs/` に統合計画、migration rules、redirect、deploy、post migration check を整理済み。
-- Markmesh extension API の要求仕様を `docs/markmesh-extension-api-proposal.md` に整理済み。
+- publish workflow 方針を `docs/script-based-publish-workflow.md` に整理済み。
 
-### Markmesh extension bridge
+### script-based publish workflow
 
-- Markmesh 本体に plugin command registration API を追加済み。
-- Markmesh 本体に manifest-backed extension command 実行を追加済み。
-- Markmesh 本体で vault-local `.markmesh/plugins/` を discovery するように変更済み。
-- blog 側に `.markmesh/plugins/tanabe-blog/markmesh-plugin.json` を追加済み。
-- Command Palette から以下の blog helper command を呼べる manifest を追加済み。
-  - `Blog: New Post`
-  - `Blog: Upload Active Image to Gyazo`
-  - `Blog: Replace Local Images with Gyazo URLs`
-  - `Blog: Prepare for Deploy`
-  - `Blog: Deploy`
+- blog の記事作成、画像 upload、build、deploy は Markmesh に依存させず、repository 内 script を正本にする方針へ変更済み。
+- `scripts/prepare_for_deploy.py` で `Content/posts/*.md` 全体の local image 置換、`swift run`、`scripts/check_output_site.py` をまとめて実行できる。
+- `scripts/deploy_site.sh` で `prepare_for_deploy.py` 後に `Output/` 全体を deploy repository へ反映できる。
+- blog 側の Markmesh plugin / extension 設定は撤退済み。
 
 ## 現在の公開 URL
 
@@ -76,17 +70,14 @@ scripts/deploy_site.sh
 
 ## 残タスク
 
-> 2026-05-11: blog / diary 移行と Markmesh CMS 化はいったん中断。次の作業へ移るため、以下は再開用メモとして残す。
+> 2026-05-12: Markmesh extension CMS 方針は撤回。blog workflow は script-based に寄せる。
 
-### Markmesh extension CMS
+### script workflow
 
-- 実機で Markmesh から blog vault を開き、Command Palette に `Blog:` 系 command が出ることを確認する。
-- `Blog: New Post` 実行後に vault reload / newly-created post を開く体験を改善する。
-- `Blog: Upload Active Image to Gyazo` の stdout / clipboard / active image 前提の UX を確認する。
-- command 実行結果を console ではなく toast / task panel で見せるか検討する。
-- Gyazo token を `.env` ではなく Markmesh secret storage で扱う API を設計・実装する。
-- workspace file API、editor insertion API、network permission、task runner、git API は未着手。必要になった時点で小さく追加する。
-- blog helper scripts は一時 bridge のまま。将来的に Markmesh extension package 側へ寄せる。
+- `scripts/prepare_for_deploy.py --dry-run --skip-build` で全記事の local image 対象確認を行う。
+- `scripts/prepare_for_deploy.py` で画像置換、build、generated output check を通す。
+- 必要なら `scripts/deploy_site.sh --check` で公開まで確認する。
+- Markmesh は Markdown editor / previewer の一候補として扱い、publish workflow の必須依存にはしない。
 
 ### 見た目確認
 
@@ -106,8 +97,8 @@ scripts/deploy_site.sh
 ## 判断済みの方針
 
 - Desktop Writer / standalone Mac app は作らない。
-- CMS は Markmesh extension として作る。
-- blog 固有機能は Markmesh 本体に入れない。
-- Markmesh 本体には汎用 extension API だけを追加する。
+- blog workflow は Markmesh に依存させず、repository script を正本にする。
+- Markmesh は Markdown editor / previewer の一候補として扱う。
+- 画像の新規 upload は Gyazo 前提。
 - 見た目確認は agent-browser を主に使う。
 - 自動 screenshot test は必要になった段階で小さく再導入する。

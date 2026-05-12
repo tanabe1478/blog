@@ -1,12 +1,14 @@
 # blog 統合計画
 
-この文書は、現在分かれている `blog` と `diary` を統合し、Markmesh extension を CMS として使えるようにするための計画です。
+> Note: この文書は blog / diary 統合時の履歴メモです。Markmesh extension CMS 方針は 2026-05-12 に撤回し、現在の publish workflow は `docs/script-based-publish-workflow.md` を正とします。
+
+この文書は、現在分かれている `blog` と `diary` を統合するための計画です。
 
 ## 目的
 
 - ホームページとブログをこの `blog` repository に集約する。
 - GitHub Issues に記事を書く運用をやめ、Markdown file を正本にする。
-- Markmesh を CMS として使う。ただし、ブログ固有機能は Markmesh 本体に入れず extension として実装する。詳細は `docs/markmesh-extension-cms.md` に整理する。
+- publish workflow は repository script を正本にする。詳細は `docs/script-based-publish-workflow.md` に整理する。
 - 画像は Gyazo にアップロードし、Markdown には Gyazo の画像 URL を挿入する。
 - 見た目の確認は agent-browser を主に使い、必要になった段階で自動 screenshot test を検討する。
 - 実装は学習しやすい小さなコミットに分ける。
@@ -24,7 +26,7 @@
 
 - GitHub Issues を記事として扱う Next.js 製ブログ。
 - diary 側にあった Desktop Writer / Electron 執筆アプリは移行対象にしない。
-- 今後の CMS は Markmesh extension として定義する。
+- diary 側にあった CMS 機能は Markmesh に依存させず、repository script として整理する。
 - diary の記事は最終的に `Content/posts/` へ Markdown として移行する。
 - diary の公開記事 URL と GitHub Issues / image upload commit の関係は `docs/diary-migration-sources.md` に整理する。
 - diary の UI は現在の Swift Publish 側とかなり違うため、blog 全体を diary UI に寄せる。詳細は `docs/diary-ui-notes.md` を参照する。

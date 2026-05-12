@@ -3,7 +3,7 @@
 
 Open the URL printed by scripts/gyazo_authorize_url.py, then run this server to
 capture the callback at /gyazo/callback. This is a local development helper for
-the future Markmesh extension OAuth flow.
+obtaining a Gyazo access token.
 """
 
 from __future__ import annotations

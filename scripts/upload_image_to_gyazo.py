@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Upload an image to Gyazo and print Markdown.
 
-Temporary bridge until the Markmesh extension provides `Blog: Upload Image to Gyazo`.
 The access token is read from GYAZO_ACCESS_TOKEN so it is never stored in this repository.
 """
 

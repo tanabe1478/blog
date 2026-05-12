@@ -114,19 +114,13 @@ scripts/check_public_site.py
 - `docs/diary-redirects.md`
 - `docs/post-migration-check.md`
 
-## CMS 方針
+## publish workflow 方針
 
-独立した Desktop Writer は作らず、今後の CMS は Markmesh extension として実装します。
+記事作成、画像 upload、build、deploy は Markmesh に依存させず、repository 内の script を正本にします。
 
 画像の新規 upload は Gyazo を前提にします。
 
-将来の extension 用設定は以下に置いています。
-
-```text
-.markmesh/extensions/tanabe-blog.yml
-```
-
 詳しくは以下を参照してください。
 
-- `docs/markmesh-extension-cms.md`
-- `docs/markmesh-extension-api-proposal.md`
+- `docs/script-based-publish-workflow.md`
+- `docs/markmesh-deploy-image-flow.md`

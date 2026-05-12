@@ -133,20 +133,16 @@ GYAZO_CALLBACK_URL
 
 結果の `access_token` は表示するだけで保存しません。
 
-### 将来の Markmesh extension
+### 将来の OAuth 組み込み
 
-初期実装は手動 token 登録で十分です。
+初期実装は `.env` または shell の環境変数での手動 token 登録で十分です。
 
-```text
-Blog: Set Gyazo Token
-```
-
-将来、他ユーザー向けに OAuth を組み込む場合は、Markmesh 側で次を実装します。
+将来、他ユーザー向けに OAuth を組み込む場合は、editor ではなく script / CLI 側の補助 workflow として検討します。
 
 - local callback server または custom URL scheme
 - `state` による CSRF 対策
 - `/oauth/token` で code を access token に交換
-- access token を Markmesh secret storage に保存
+- access token を repository 外の secret store または ignored `.env` に保存
 
 Callback URL は当面これでよいです。
 

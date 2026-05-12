@@ -1,11 +1,12 @@
 # docs
 
-この directory は、blog / diary 統合と今後の Markmesh extension CMS のための設計・運用メモをまとめています。
+この directory は、blog / diary 統合と script-based publish workflow の設計・運用メモをまとめています。
 
 ## まず読むもの
 
 - `status.md` — 現在の状態、完了済み作業、残タスク
 - `deploy.md` — build / deploy 手順
+- `script-based-publish-workflow.md` — Markmesh に依存しない記事作成・画像 upload・publish 方針
 - `post-migration-check.md` — 公開後の確認結果と smoke check
 
 ## diary 統合
@@ -16,12 +17,11 @@
 - `diary-redirects.md` — 旧 diary URL redirect 方針
 - `diary-ui-notes.md` — diary UI に寄せるための見た目メモ
 
-## Markmesh extension CMS
+## publish workflow
 
-- `markmesh-extension-cms.md` — CMS を Markmesh extension として作る方針
-- `markmesh-extension-api-proposal.md` — Markmesh 本体に必要な汎用 extension API の要求仕様
+- `script-based-publish-workflow.md` — repository script を正本にする方針
 - `markmesh-deploy-image-flow.md` — deploy 前に local image を Gyazo URL へ置換する方針
-- `new-post-workflow.md` — extension 完成までの暫定新規記事作成手順
+- `new-post-workflow.md` — 新規記事作成手順
 - `gyazo-auth.md` — Gyazo API の token / OAuth 認証メモ
 
 ## 見た目確認
