@@ -83,10 +83,15 @@ scripts/deploy_site.sh
 
 ## 残タスク
 
+CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本とします。最初にPlaywright E2E基盤を追加し、その後はtaskごとに関連E2Eを追加して進めます。
+
 > 2026-05-12: Markmesh extension CMS 方針は撤回。blog workflow はscript-basedを正本とし、現在のWeb CMSもこのrepositoryを直接更新する。
 
 ### Blog CMS
 
+- Playwright E2E基盤。
+- localStorage自動下書きと復元。
+- 保存後のdeploy status表示。
 - 明示確認とSHA検証付きのrename/delete。
 - 保存後のGitHub Actions / GitHub Pages deploy status表示。
 - 一覧のsearch/filter。

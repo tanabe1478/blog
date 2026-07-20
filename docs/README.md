@@ -6,6 +6,7 @@
 
 - `status.md` — 現在の状態、完了済み作業、残タスク
 - `cms-development-handoff.md` — CMSの構成、Wrangler、認証、Secret、開発・deploy・troubleshoot手順
+- `cms-roadmap.md` — CMSの実装予定task、優先順、E2Eを含む完了条件
 - `deploy.md` — build / deploy 手順
 - `script-based-publish-workflow.md` — Markmesh に依存しない記事作成・画像 upload・publish 方針
 - `post-migration-check.md` — 公開後の確認結果と smoke check
@@ -21,6 +22,7 @@
 ## Blog CMS
 
 - `cms-development-handoff.md` — 別session向けの開発引き継ぎ資料
+- `cms-roadmap.md` — Task ID付きの実装backlogとE2E方針
 - `../cms/README.md` — CMS機能別の短い運用説明
 
 ## publish workflow
