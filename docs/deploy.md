@@ -25,6 +25,23 @@ scripts/publish_blog.py
 scripts/deploy_site.sh --check
 ```
 
+## GitHub Actions deploy
+
+`main`のblog sourceが更新されると、`.github/workflows/deploy-blog.yml`が自動的にsiteを生成し、`tanabe1478/tanabe1478.github.io`の`master`へ同期します。CMSから`Content/posts/*.md`を保存した場合も対象です。
+
+workflowは次を実行します。
+
+1. Python script testを実行する。
+2. `scripts/prepare_for_deploy.py --skip-images`でsiteを生成・検査する。
+3. 公開repositoryを一時directoryへcheckoutする。
+4. `Output/`を`rsync --delete`で同期する。
+5. 差分があれば`github-actions[bot]`としてcommit・pushする。
+6. GitHub Pages反映を待ちながらpublic smoke checkをretryする。
+
+公開repositoryへの認証にはGitHub Actions Secret `BLOG_DEPLOY_TOKEN`を使います。このfine-grained tokenは`tanabe1478/tanabe1478.github.io`だけに`Contents: Read and write`を持たせ、source repositoryや他の権限を含めません。
+
+CIでは外部副作用を避けるため、local画像のGyazo uploadを行いません。CMSから追加する画像は保存前にGyazo URLへ変換済みであることを前提にします。
+
 ## deploy 前の prepare
 
 `publish_blog.py` は最初に `scripts/prepare_for_deploy.py` を実行します。
