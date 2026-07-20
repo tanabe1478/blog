@@ -34,9 +34,15 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
 
+## New article
+
+記事一覧の**新規記事**からslug、title、公開日時、description、tagsを入力すると、frontmatterと見出しを持つ未保存Markdownをbrowser内で生成します。本文を書いて**GitHubへ保存**した時点で初めて`Content/posts/<slug>.md`を作成するため、空の雛形だけが公開されることはありません。
+
+slugは英小文字・数字・単一hyphenだけを許可し、Section予約名`index`は拒否します。同名fileがGitHubにある場合は上書きせず`409`を返します。作成も既存記事の更新と同じくProduction Originだけで許可します。
+
 ## Article detail and live preview
 
-記事detailの閲覧時はMarkdown sourceではなく描画済みpreviewを表示します。編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
+記事detailの閲覧時はMarkdown sourceではなく描画済みpreviewを表示します。各記事detailにはGitHub sourceと公開ページへのlinkを表示します。編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
 
 previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 

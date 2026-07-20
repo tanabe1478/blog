@@ -1,6 +1,9 @@
 import { authenticateAccess, type Env } from "./access";
 import {
+  createPost,
   getPost,
+  isValidNewPostContent,
+  isValidNewPostName,
   isValidPostContent,
   isValidPostName,
   listPosts,
@@ -120,12 +123,64 @@ export default {
       }
     }
 
-    if (request.method === "GET" && url.pathname === "/api/posts") {
-      try {
-        return json({ posts: await listPosts(env.GITHUB_TOKEN) });
-      } catch (error) {
-        console.error("Failed to load posts", error);
-        return json({ error: "記事一覧を取得できませんでした" }, 502);
+    if (url.pathname === "/api/posts") {
+      if (request.method === "GET") {
+        try {
+          return json({ posts: await listPosts(env.GITHUB_TOKEN) });
+        } catch (error) {
+          console.error("Failed to load posts", error);
+          return json({ error: "記事一覧を取得できませんでした" }, 502);
+        }
+      }
+
+      if (request.method === "POST") {
+        if (!isAllowedWriteRequest(request, url, env)) {
+          return json({ error: "Forbidden" }, 403);
+        }
+        if (!request.headers.get("content-type")?.startsWith("application/json")) {
+          return json({ error: "JSONを送信してください" }, 415);
+        }
+        if (!env.GITHUB_TOKEN) {
+          return json({ error: "保存機能が設定されていません" }, 503);
+        }
+
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return json({ error: "JSONが不正です" }, 400);
+        }
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("name" in payload) ||
+          typeof payload.name !== "string" ||
+          !isValidNewPostName(payload.name) ||
+          !("content" in payload) ||
+          typeof payload.content !== "string" ||
+          !isValidNewPostContent(payload.content)
+        ) {
+          return json({ error: "新規記事の内容が不正です" }, 400);
+        }
+
+        try {
+          return json(
+            {
+              post: await createPost(
+                payload.name,
+                payload.content,
+                env.GITHUB_TOKEN,
+              ),
+            },
+            201,
+          );
+        } catch (error) {
+          if (error instanceof PostConflictError) {
+            return json({ error: "同じslugの記事が既に存在します" }, 409);
+          }
+          console.error("Failed to create post", error);
+          return json({ error: "記事を作成できませんでした" }, 502);
+        }
       }
     }
 

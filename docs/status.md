@@ -22,7 +22,8 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 
 - ブログ専用Cloudflare Worker `tanabe-blog-cms-api`を追加済み。
 - Production/PreviewをCloudflare Accessで保護し、Worker内でもJWTを検証済み。
-- GitHub上の既存記事一覧・detail・SHA競合検知付き保存に対応済み。
+- GitHub上の記事一覧・描画済みdetail・新規作成・SHA競合検知付き保存に対応済み。
+- 記事detailからGitHub sourceと公開ページを開ける。
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
 - Gyazo画像のfile picker / drag-and-drop uploadに対応済み。
 - 編集時の2ペインlive Markdown previewに対応済み。
@@ -86,7 +87,6 @@ scripts/deploy_site.sh
 
 ### Blog CMS
 
-- validated slug/frontmatter付きの新規記事作成。
 - 明示確認とSHA検証付きのrename/delete。
 - 保存後のGitHub Actions / GitHub Pages deploy status表示。
 - 一覧のsearch/filter。

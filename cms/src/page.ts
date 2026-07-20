@@ -23,7 +23,15 @@ export const cmsPage = `<!doctype html>
     section[hidden], .back[hidden] { display: none; }
     [role="status"] { color: #666; }
     [role="status"][data-error="true"] { color: #b42318; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .section-heading h2 { margin-bottom: 0; }
     #posts { display: grid; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
+    .new-post-form { display: grid; gap: 14px; max-width: 680px; margin-top: 20px; padding: 18px; border-radius: 8px; background: #f4f4f0; }
+    .new-post-form[hidden] { display: none; }
+    .new-post-form label { display: grid; gap: 5px; font-weight: 600; }
+    .new-post-form input { width: 100%; padding: 9px 10px; border: 1px solid #c8c8c2; border-radius: 6px; color: inherit; background: #fff; font: inherit; font-weight: 400; }
+    .field-help { color: #666; font-size: 0.8rem; font-weight: 400; }
+    .form-actions { display: flex; gap: 10px; }
     .post-link { display: block; padding: 12px 14px; border-radius: 8px; color: inherit; text-decoration: none; background: #f4f4f0; }
     .post-link:hover, .post-link:focus-visible { background: #eaeae4; outline: none; }
     .post-title { display: block; font-weight: 650; }
@@ -42,7 +50,8 @@ export const cmsPage = `<!doctype html>
     .preview blockquote { margin-inline: 0; padding-left: 14px; border-left: 3px solid #c8c8c2; color: #555; }
     @media (max-width: 800px) { .editor-grid[data-editing="true"] { grid-template-columns: 1fr; } }
     .actions { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; }
-    .actions a { margin-left: auto; color: #315ca8; }
+    .action-links { display: flex; gap: 14px; margin-left: auto; }
+    .action-links a { color: #315ca8; }
     button { padding: 8px 14px; border: 1px solid #c8c8c2; border-radius: 8px; color: inherit; background: #fff; cursor: pointer; }
     button.primary { border-color: #315ca8; color: #fff; background: #315ca8; }
     button:disabled { cursor: wait; opacity: 0.6; }
@@ -60,7 +69,38 @@ export const cmsPage = `<!doctype html>
   <main>
     <a id="back" class="back" href="/" hidden>← 記事一覧へ</a>
     <section id="list" aria-labelledby="posts-heading">
-      <h2 id="posts-heading">記事一覧</h2>
+      <div class="section-heading">
+        <h2 id="posts-heading">記事一覧</h2>
+        <button id="new-post" class="primary" type="button">新規記事</button>
+      </div>
+      <form id="new-post-form" class="new-post-form" hidden>
+        <label>
+          slug
+          <input id="new-slug" name="slug" required maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="my-new-post" autocomplete="off">
+          <span class="field-help">英小文字・数字・hyphen。公開URLにも使います。</span>
+        </label>
+        <label>
+          タイトル
+          <input id="new-title" name="title" required maxlength="200" autocomplete="off">
+        </label>
+        <label>
+          公開日時
+          <input id="new-date" name="date" type="datetime-local" required>
+        </label>
+        <label>
+          description
+          <input id="new-description" name="description" maxlength="300" autocomplete="off">
+        </label>
+        <label>
+          tags
+          <input id="new-tags" name="tags" value="日記" maxlength="200" autocomplete="off">
+          <span class="field-help">複数の場合はcomma区切り。</span>
+        </label>
+        <div class="form-actions">
+          <button class="primary" type="submit">本文を編集</button>
+          <button id="new-post-cancel" type="button">フォームを閉じる</button>
+        </div>
+      </form>
       <p id="list-status" role="status">GitHubから取得しています…</p>
       <ul id="posts"></ul>
     </section>
@@ -79,7 +119,10 @@ export const cmsPage = `<!doctype html>
           画像を選択 / ドロップ
           <input id="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
         </label>
-        <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
+        <span class="action-links">
+          <a id="public-link" target="_blank" rel="noreferrer">公開ページを開く</a>
+          <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
+        </span>
       </div>
     </section>
   </main>
@@ -87,12 +130,21 @@ export const cmsPage = `<!doctype html>
     const list = document.querySelector('#list');
     const listStatus = document.querySelector('#list-status');
     const posts = document.querySelector('#posts');
+    const newPostButton = document.querySelector('#new-post');
+    const newPostForm = document.querySelector('#new-post-form');
+    const newPostCancel = document.querySelector('#new-post-cancel');
+    const newSlug = document.querySelector('#new-slug');
+    const newTitle = document.querySelector('#new-title');
+    const newDate = document.querySelector('#new-date');
+    const newDescription = document.querySelector('#new-description');
+    const newTags = document.querySelector('#new-tags');
     const detail = document.querySelector('#detail');
     const detailStatus = document.querySelector('#detail-status');
     const postHeading = document.querySelector('#post-heading');
     const editorGrid = document.querySelector('#editor-grid');
     const postContent = document.querySelector('#post-content');
     const preview = document.querySelector('#preview');
+    const publicLink = document.querySelector('#public-link');
     const githubLink = document.querySelector('#github-link');
     const back = document.querySelector('#back');
     const editButton = document.querySelector('#edit');
@@ -101,6 +153,8 @@ export const cmsPage = `<!doctype html>
     const uploadLabel = document.querySelector('#upload');
     const imageInput = document.querySelector('#image');
     const selectedPost = new URLSearchParams(location.search).get('post');
+    let activePost = selectedPost;
+    let creatingPost = false;
     let currentSha = '';
     let originalContent = '';
 
@@ -134,6 +188,61 @@ export const cmsPage = `<!doctype html>
         });
     }
 
+    function localDateTimeValue() {
+      const now = new Date();
+      const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    newPostButton.addEventListener('click', () => {
+      newPostButton.hidden = true;
+      newPostForm.hidden = false;
+      newDate.value = localDateTimeValue();
+      newSlug.focus();
+    });
+
+    newPostCancel.addEventListener('click', () => {
+      newPostForm.hidden = true;
+      newPostButton.hidden = false;
+      newPostForm.reset();
+      newTags.value = '日記';
+    });
+
+    newPostForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!newPostForm.reportValidity()) return;
+      const newline = String.fromCharCode(10);
+      const tags = newTags.value
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .join(', ') || '日記';
+      activePost = newSlug.value + '.md';
+      creatingPost = true;
+      currentSha = '';
+      originalContent = '';
+      postContent.value = [
+        '---',
+        'date: ' + newDate.value.replace('T', ' '),
+        'description: ' + JSON.stringify(newDescription.value.trim()),
+        'tags: ' + tags,
+        '---',
+        '',
+        '# ' + newTitle.value.trim(),
+        '',
+        '',
+      ].join(newline);
+      document.title = activePost + ' - Blog CMS';
+      postHeading.textContent = activePost;
+      detailStatus.textContent = '未保存の新規記事です。本文を書いてからGitHubへ保存してください。';
+      publicLink.hidden = true;
+      githubLink.hidden = true;
+      list.hidden = true;
+      detail.hidden = false;
+      back.hidden = false;
+      setEditing(true);
+    });
+
     function loadPost(name) {
       list.hidden = true;
       detail.hidden = false;
@@ -151,13 +260,17 @@ export const cmsPage = `<!doctype html>
           postContent.value = data.post.content;
           originalContent = data.post.content;
           currentSha = data.post.sha;
+          publicLink.href = data.post.publicUrl;
+          publicLink.hidden = false;
           githubLink.href = data.post.githubUrl;
+          githubLink.hidden = false;
           setEditing(false);
         })
         .catch(() => {
           detailStatus.dataset.error = 'true';
           detailStatus.textContent = '記事を取得できませんでした。一覧へ戻って再度お試しください。';
           postContent.hidden = true;
+          publicLink.hidden = true;
           githubLink.hidden = true;
         });
     }
@@ -416,8 +529,24 @@ export const cmsPage = `<!doctype html>
     });
 
     cancelButton.addEventListener('click', () => {
+      if (creatingPost) {
+        creatingPost = false;
+        activePost = null;
+        postContent.value = '';
+        originalContent = '';
+        preview.replaceChildren();
+        detail.hidden = true;
+        list.hidden = false;
+        back.hidden = true;
+        newPostForm.hidden = true;
+        newPostButton.hidden = false;
+        newPostForm.reset();
+        newTags.value = '日記';
+        document.title = 'Blog CMS';
+        return;
+      }
       postContent.value = originalContent;
-      detailStatus.textContent = selectedPost ? '変更を破棄しました。' : '';
+      detailStatus.textContent = '変更を破棄しました。';
       setEditing(false);
     });
 
@@ -501,15 +630,32 @@ export const cmsPage = `<!doctype html>
       delete detailStatus.dataset.error;
       detailStatus.textContent = 'GitHubへ保存しています…';
       try {
-        const response = await fetch('/api/posts/' + encodeURIComponent(selectedPost), {
-          method: 'PUT',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ content: postContent.value, sha: currentSha }),
-        });
+        const isCreating = creatingPost;
+        const response = await fetch(
+          isCreating ? '/api/posts' : '/api/posts/' + encodeURIComponent(activePost),
+          {
+            method: isCreating ? 'POST' : 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(
+              isCreating
+                ? { name: activePost, content: postContent.value }
+                : { content: postContent.value, sha: currentSha },
+            ),
+          },
+        );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || '保存に失敗しました');
-        currentSha = data.update.sha;
+        const saved = isCreating ? data.post : data.update;
+        currentSha = saved.sha;
         originalContent = postContent.value;
+        if (isCreating) {
+          creatingPost = false;
+          publicLink.href = saved.publicUrl;
+          publicLink.hidden = false;
+          githubLink.href = saved.githubUrl;
+          githubLink.hidden = false;
+          history.replaceState(null, '', '/?post=' + encodeURIComponent(activePost));
+        }
         detailStatus.textContent = 'GitHubへ保存しました。公開処理はGitHub Actionsで進みます。';
         setEditing(false);
       } catch (error) {
@@ -521,7 +667,7 @@ export const cmsPage = `<!doctype html>
     });
 
     addEventListener('beforeunload', (event) => {
-      if (!postContent.readOnly && postContent.value !== originalContent) {
+      if (!postContent.readOnly && (creatingPost || postContent.value !== originalContent)) {
         event.preventDefault();
       }
     });

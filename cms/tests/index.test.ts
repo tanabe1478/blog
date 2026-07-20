@@ -64,6 +64,10 @@ describe("CMS Worker", () => {
     );
     expect(content).toContain("<h1>Blog CMS</h1>");
     expect(content).toContain("GitHub連携");
+    expect(content).toContain('id="new-post"');
+    expect(content).toContain('id="new-post-form"');
+    expect(content).toContain('id="public-link"');
+    expect(content).toContain('公開ページを開く');
     expect(content).toContain('id="edit"');
     expect(content).toContain('id="image"');
     expect(content).toContain("postContent.addEventListener('drop'");
@@ -301,6 +305,111 @@ describe("CMS Worker", () => {
       content: btoa("# Updated\n"),
       sha: "a".repeat(40),
       branch: "main",
+    });
+  });
+
+  it("creates a new Markdown post without a SHA", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        content: { sha: "b".repeat(40) },
+        commit: { sha: "c".repeat(40) },
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+    const content =
+      '---\ndate: 2026-07-21 09:30\ndescription: "New post"\ntags: 日記\n---\n\n# New post\n\n本文\n';
+
+    const response = await fetch("/api/posts", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({ name: "new-post.md", content }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({
+      post: {
+        name: "new-post.md",
+        sha: "b".repeat(40),
+        commitSha: "c".repeat(40),
+        githubUrl:
+          "https://github.com/tanabe1478/blog/blob/main/Content/posts/new-post.md",
+        publicUrl: "https://tanabe1478.github.io/posts/new-post/",
+      },
+    });
+    expect(upstream).toHaveBeenCalledWith(
+      "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts/new-post.md",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ authorization: "Bearer test-token" }),
+      }),
+    );
+    const requestBody = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(requestBody).toEqual({
+      message: "post: create new-post.md via CMS",
+      content: btoa(
+        String.fromCharCode(...new TextEncoder().encode(content)),
+      ),
+      branch: "main",
+    });
+  });
+
+  it("rejects an invalid new post slug before calling GitHub", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        name: "Invalid Slug.md",
+        content: "---\ndate: 2026-07-21 09:30\n---\n\n# Title\n",
+      }),
+    });
+
+    expect(response.status).toBe(400);
+
+    const reservedResponse = await fetch("/api/posts", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        name: "index.md",
+        content: "---\ndate: 2026-07-21 09:30\n---\n\n# Index\n",
+      }),
+    });
+    expect(reservedResponse.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite an existing post during creation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 422 })),
+    );
+
+    const response = await fetch("/api/posts", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        name: "existing.md",
+        content: "---\ndate: 2026-07-21 09:30\n---\n\n# Existing\n",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "同じslugの記事が既に存在します",
     });
   });
 

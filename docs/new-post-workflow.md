@@ -1,8 +1,19 @@
 # New post workflow
 
-repository script を使った記事作成手順です。
+repository scriptまたはBlog CMSを使った記事作成手順です。
 
-## 記事作成
+## Blog CMSから作成
+
+1. Blog CMSの記事一覧で**新規記事**を選ぶ。
+2. slug、title、公開日時、description、tagsを入力する。
+3. **本文を編集**で未保存Markdownとpreviewを開く。
+4. 本文と画像を編集する。
+5. **GitHubへ保存**で`Content/posts/<slug>.md`を初めて作成する。
+6. GitHub Actionsによるbuild/deploy後、記事detailの**公開ページを開く**から確認する。
+
+フォームを開いただけ、または未保存editorをキャンセルした場合はGitHubにfileを作りません。slugは英小文字・数字・hyphenを使い、既存記事と`index`は指定できません。
+
+## Repository scriptから作成
 
 ```bash
 scripts/new_post.py "記事タイトル" --slug article-slug
@@ -82,6 +93,6 @@ scripts/publish_blog.py --dry-run
 
 ## 方針
 
-記事作成 workflow は Markmesh に依存させません。
+記事作成workflowはrepository scriptとBlog CMSのどちらも`Content/posts/*.md`を正本とし、Markmeshに依存させません。
 
 Markmesh や別の editor を使う場合も、記事の作成・画像 upload・build・deploy はこの repository の script を正本にします。

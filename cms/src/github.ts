@@ -66,6 +66,11 @@ export interface PostUpdate {
   githubUrl: string;
 }
 
+export interface PostCreation extends PostUpdate {
+  name: string;
+  publicUrl: string;
+}
+
 export class PostNotFoundError extends Error {}
 export class PostConflictError extends Error {}
 
@@ -82,6 +87,24 @@ export function isValidPostName(name: string): boolean {
 
 export function isValidPostContent(content: string): boolean {
   return new TextEncoder().encode(content).byteLength <= MAX_POST_BYTES;
+}
+
+export function isValidNewPostName(name: string): boolean {
+  return (
+    name !== "index.md" &&
+    name.length <= 104 &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(name)
+  );
+}
+
+export function isValidNewPostContent(content: string): boolean {
+  if (!isValidPostContent(content)) return false;
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  return Boolean(
+    frontmatter?.[1].match(
+      /^date:\s*\d{4}-\d{2}-\d{2} \d{2}:\d{2}\s*$/m,
+    ) && content.match(/^#\s+\S.*$/m),
+  );
 }
 
 function githubFileUrl(path: string): string {
@@ -269,6 +292,49 @@ export async function getPost(
     path,
     content: decodeBase64Utf8(post.content),
     sha: post.sha,
+    githubUrl: githubFileUrl(path),
+    publicUrl: publicPostUrl(name),
+  };
+}
+
+export async function createPost(
+  name: string,
+  content: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<PostCreation> {
+  const path = `Content/posts/${name}`;
+  const response = await request(`${POSTS_API_URL}/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    headers: githubHeaders(token, true),
+    body: JSON.stringify({
+      message: `post: create ${name} via CMS`,
+      content: encodeBase64Utf8(content),
+      branch: "main",
+    }),
+  });
+
+  if (response.status === 409 || response.status === 422) {
+    throw new PostConflictError(name);
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub create API returned ${response.status}`);
+  }
+
+  const result: GitHubUpdateResult = await response.json();
+  if (
+    typeof result.content?.sha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(result.content.sha) ||
+    typeof result.commit?.sha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(result.commit.sha)
+  ) {
+    throw new Error("GitHub create API returned an unexpected response");
+  }
+
+  return {
+    name,
+    sha: result.content.sha,
+    commitSha: result.commit.sha,
     githubUrl: githubFileUrl(path),
     publicUrl: publicPostUrl(name),
   };
