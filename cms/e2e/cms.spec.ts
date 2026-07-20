@@ -17,11 +17,13 @@ interface MockOptions {
   createError?: boolean;
   updateConflict?: boolean;
   deleteConflict?: boolean;
+  renameConflict?: boolean;
   deploymentError?: boolean;
   deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
   onDelete?: (payload: unknown) => void;
+  onRename?: (payload: unknown) => void;
 }
 
 async function mockCmsApi(page: Page, options: MockOptions = {}) {
@@ -124,6 +126,37 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
             commitSha: "c".repeat(40),
             githubUrl:
               "https://github.com/tanabe1478/blog/blob/main/Content/posts/existing-post.md",
+          },
+        },
+      });
+      return;
+    }
+
+    if (
+      request.method() === "PATCH" &&
+      url.pathname === `/api/posts/${EXISTING_NAME}`
+    ) {
+      const payload: unknown = request.postDataJSON();
+      options.onRename?.(payload);
+      if (options.renameConflict) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            error:
+              "元記事が更新されたか、新slugが既に存在します。再読み込みしてください",
+          },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          rename: {
+            name: "renamed-post.md",
+            sha: "b".repeat(40),
+            commitSha: "c".repeat(40),
+            githubUrl:
+              "https://github.com/tanabe1478/blog/blob/main/Content/posts/renamed-post.md",
+            publicUrl: "https://tanabe1478.github.io/posts/renamed-post/",
           },
         },
       });
@@ -253,6 +286,7 @@ test("recovers an existing article draft after reload and can discard it", async
   await expect(page.locator("#draft-notice")).toBeVisible();
   await expect(page.getByRole("button", { name: "編集", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "削除", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "slug変更", exact: true })).toBeDisabled();
   await expect(
     page.getByRole("heading", { name: "Existing title", exact: true }),
   ).toBeVisible();
@@ -389,6 +423,54 @@ test("creates an unsaved article and saves it for the first time", async ({
     "https://tanabe1478.github.io/posts/new-post/",
   );
   await expect(page).toHaveURL(/\?post=new-post\.md$/);
+});
+
+test("renames an article after slug and filename confirmation", async ({ page }) => {
+  let renamePayload: unknown;
+  await mockCmsApi(page, {
+    onRename: (payload) => {
+      renamePayload = payload;
+    },
+  });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "slug変更", exact: true }).click();
+
+  const slug = page.locator("#rename-slug");
+  const confirmation = page.locator("#rename-confirmation");
+  const submit = page.getByRole("button", { name: "slugを変更", exact: true });
+  await slug.fill("renamed-post");
+  await confirmation.fill("wrong.md");
+  await expect(submit).toBeDisabled();
+  await confirmation.fill(EXISTING_NAME);
+  await expect(submit).toBeEnabled();
+  await submit.click();
+
+  expect(renamePayload).toMatchObject({
+    newName: "renamed-post.md",
+    confirmation: EXISTING_NAME,
+    sha: "a".repeat(40),
+    content: EXISTING_CONTENT,
+  });
+  await expect(page.getByRole("heading", { name: "renamed-post.md" })).toBeVisible();
+  await expect(page).toHaveURL(/\?post=renamed-post\.md$/);
+  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
+    "href",
+    "https://tanabe1478.github.io/posts/renamed-post/",
+  );
+  await expect(page.locator("#deployment-status")).toContainText("公開済み");
+});
+
+test("keeps the old slug when rename conflicts", async ({ page }) => {
+  await mockCmsApi(page, { renameConflict: true });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "slug変更", exact: true }).click();
+  await page.locator("#rename-slug").fill("renamed-post");
+  await page.locator("#rename-confirmation").fill(EXISTING_NAME);
+  await page.getByRole("button", { name: "slugを変更", exact: true }).click();
+
+  await expect(page.getByText(/元記事が更新されたか、新slugが既に存在します/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: EXISTING_NAME })).toBeVisible();
+  await expect(page.locator("#rename-form")).toBeVisible();
 });
 
 test("deletes an article after exact filename confirmation", async ({ page }) => {

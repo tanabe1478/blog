@@ -10,6 +10,7 @@ import {
   isValidPostName,
   listPosts,
   PostConflictError,
+  renamePost,
   PostNotFoundError,
   updatePost,
 } from "./github";
@@ -273,6 +274,70 @@ export default {
           }
           console.error("Failed to update post", error);
           return json({ error: "記事を保存できませんでした" }, 502);
+        }
+      }
+
+      if (request.method === "PATCH") {
+        if (!isAllowedWriteRequest(request, url, env)) {
+          return json({ error: "Forbidden" }, 403);
+        }
+        if (!request.headers.get("content-type")?.startsWith("application/json")) {
+          return json({ error: "JSONを送信してください" }, 415);
+        }
+        if (!env.GITHUB_TOKEN) {
+          return json({ error: "slug変更機能が設定されていません" }, 503);
+        }
+        if (name === "index.md") {
+          return json({ error: "記事一覧のindexは変更できません" }, 400);
+        }
+
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return json({ error: "JSONが不正です" }, 400);
+        }
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("newName" in payload) ||
+          typeof payload.newName !== "string" ||
+          !isValidNewPostName(payload.newName) ||
+          payload.newName === name ||
+          !("confirmation" in payload) ||
+          payload.confirmation !== name ||
+          !("sha" in payload) ||
+          typeof payload.sha !== "string" ||
+          !/^[0-9a-f]{40}$/.test(payload.sha) ||
+          !("content" in payload) ||
+          typeof payload.content !== "string" ||
+          !isValidPostContent(payload.content)
+        ) {
+          return json({ error: "slug変更の内容が不正です" }, 400);
+        }
+
+        try {
+          return json({
+            rename: await renamePost(
+              name,
+              payload.newName,
+              payload.content,
+              payload.sha,
+              env.GITHUB_TOKEN,
+            ),
+          });
+        } catch (error) {
+          if (error instanceof PostConflictError) {
+            return json(
+              { error: "元記事が更新されたか、新slugが既に存在します。再読み込みしてください" },
+              409,
+            );
+          }
+          if (error instanceof PostNotFoundError) {
+            return json({ error: "記事が見つかりません" }, 404);
+          }
+          console.error("Failed to rename post", error);
+          return json({ error: "slugを変更できませんでした" }, 502);
         }
       }
 

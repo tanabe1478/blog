@@ -35,11 +35,14 @@ export const cmsPage = `<!doctype html>
     .deployment-status p { margin-bottom: 10px; }
     .deployment-actions { display: flex; align-items: center; gap: 12px; }
     .deployment-actions a { color: #315ca8; }
-    .delete-panel { margin-bottom: 16px; padding: 14px; border: 1px solid #b42318; border-radius: 8px; background: #fff1f0; }
-    .delete-panel[hidden] { display: none; }
-    .delete-panel label { display: grid; gap: 6px; }
-    .delete-panel input { width: 100%; max-width: 520px; padding: 9px 10px; border: 1px solid #b42318; border-radius: 6px; font: inherit; }
-    .delete-panel div { display: flex; gap: 10px; margin-top: 12px; }
+    .rename-panel, .delete-panel { margin-bottom: 16px; padding: 14px; border-radius: 8px; }
+    .rename-panel { border: 1px solid #d4a72c; background: #fff8dd; }
+    .delete-panel { border: 1px solid #b42318; background: #fff1f0; }
+    .rename-panel[hidden], .delete-panel[hidden] { display: none; }
+    .rename-panel label, .delete-panel label { display: grid; gap: 6px; margin-top: 10px; }
+    .rename-panel input, .delete-panel input { width: 100%; max-width: 520px; padding: 9px 10px; border: 1px solid #c8c8c2; border-radius: 6px; font: inherit; }
+    .delete-panel input { border-color: #b42318; }
+    .rename-panel div, .delete-panel div { display: flex; gap: 10px; margin-top: 12px; }
     button.danger { border-color: #b42318; color: #fff; background: #b42318; }
     #public-link[data-published="true"] { padding: 4px 7px; border-radius: 5px; font-weight: 700; background: #dff3e4; }
     .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -133,6 +136,25 @@ export const cmsPage = `<!doctype html>
           <button id="draft-discard" type="button">下書きを破棄</button>
         </div>
       </aside>
+      <aside id="rename-panel" class="rename-panel" hidden>
+        <p>slugを変更すると公開URLも変わります。旧URLからのredirectは作成されないため、外部linkは切れます。</p>
+        <form id="rename-form">
+          <label>
+            新しいslug
+            <input id="rename-slug" required maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" autocomplete="off">
+            <span class="field-help">英小文字・数字・hyphen。拡張子は入力しません。</span>
+          </label>
+          <label>
+            変更確認用ファイル名
+            <input id="rename-confirmation" autocomplete="off" required>
+            <span class="field-help"><code id="rename-name"></code> と入力してください。</span>
+          </label>
+          <div>
+            <button id="rename-submit" class="primary" type="submit" disabled>slugを変更</button>
+            <button id="rename-cancel" type="button">変更をやめる</button>
+          </div>
+        </form>
+      </aside>
       <aside id="delete-panel" class="delete-panel" hidden>
         <p>削除するとGitHubから記事が削除され、公開サイトにも反映されます。Gyazo画像は削除されません。</p>
         <form id="delete-form">
@@ -153,6 +175,7 @@ export const cmsPage = `<!doctype html>
       </div>
       <div class="actions">
         <button id="edit" type="button">編集</button>
+        <button id="rename" type="button">slug変更</button>
         <button id="delete" class="danger" type="button">削除</button>
         <button id="save" class="primary" type="button" hidden>GitHubへ保存</button>
         <button id="cancel" type="button" hidden>キャンセル</button>
@@ -194,6 +217,13 @@ export const cmsPage = `<!doctype html>
     const draftRestore = document.querySelector('#draft-restore');
     const draftDiscard = document.querySelector('#draft-discard');
     const draftState = document.querySelector('#draft-state');
+    const renamePanel = document.querySelector('#rename-panel');
+    const renameForm = document.querySelector('#rename-form');
+    const renameSlug = document.querySelector('#rename-slug');
+    const renameConfirmation = document.querySelector('#rename-confirmation');
+    const renameName = document.querySelector('#rename-name');
+    const renameSubmit = document.querySelector('#rename-submit');
+    const renameCancel = document.querySelector('#rename-cancel');
     const deletePanel = document.querySelector('#delete-panel');
     const deleteForm = document.querySelector('#delete-form');
     const deleteConfirmation = document.querySelector('#delete-confirmation');
@@ -212,6 +242,7 @@ export const cmsPage = `<!doctype html>
     const githubLink = document.querySelector('#github-link');
     const back = document.querySelector('#back');
     const editButton = document.querySelector('#edit');
+    const renameButton = document.querySelector('#rename');
     const deleteButton = document.querySelector('#delete');
     const saveButton = document.querySelector('#save');
     const cancelButton = document.querySelector('#cancel');
@@ -296,6 +327,7 @@ export const cmsPage = `<!doctype html>
       pendingDraft = undefined;
       draftNotice.hidden = true;
       editButton.disabled = false;
+      renameButton.disabled = false;
       deleteButton.disabled = false;
     }
 
@@ -313,6 +345,7 @@ export const cmsPage = `<!doctype html>
         'この端末に未保存の下書きがあります' + savedLabel + '。' + conflictWarning;
       draftNotice.hidden = false;
       editButton.disabled = true;
+      renameButton.disabled = true;
       deleteButton.disabled = true;
     }
 
@@ -526,6 +559,7 @@ export const cmsPage = `<!doctype html>
       publicLink.hidden = true;
       githubLink.hidden = true;
       editButton.hidden = true;
+      renameButton.hidden = true;
       deleteButton.hidden = true;
       saveButton.hidden = true;
       cancelButton.hidden = true;
@@ -787,6 +821,7 @@ export const cmsPage = `<!doctype html>
       preview.hidden = false;
       renderPreview();
       editButton.hidden = editing || articleDeleted;
+      renameButton.hidden = editing || creatingPost || articleDeleted || !currentSha;
       deleteButton.hidden = editing || creatingPost || articleDeleted || !currentSha;
       saveButton.hidden = !editing;
       cancelButton.hidden = !editing;
@@ -841,11 +876,90 @@ export const cmsPage = `<!doctype html>
       setEditing(true);
     });
 
+    function renameInputIsValid() {
+      const slug = renameSlug.value;
+      return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) &&
+        slug !== 'index' && slug + '.md' !== activePost &&
+        renameConfirmation.value === activePost;
+    }
+
+    function closeRenamePanel() {
+      renamePanel.hidden = true;
+      renameForm.reset();
+      renameSubmit.disabled = true;
+      editButton.disabled = false;
+      renameButton.hidden = articleDeleted;
+      deleteButton.hidden = articleDeleted;
+    }
+
+    renameButton.addEventListener('click', () => {
+      renameName.textContent = activePost;
+      renameSlug.value = activePost.slice(0, -3);
+      renameConfirmation.value = '';
+      renameSubmit.disabled = true;
+      renamePanel.hidden = false;
+      editButton.disabled = true;
+      renameButton.hidden = true;
+      deleteButton.hidden = true;
+      renameSlug.focus();
+    });
+
+    for (const input of [renameSlug, renameConfirmation]) {
+      input.addEventListener('input', () => {
+        renameSubmit.disabled = !renameInputIsValid();
+      });
+    }
+
+    renameCancel.addEventListener('click', closeRenamePanel);
+
+    renameForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!renameInputIsValid() || !currentSha) return;
+      const oldName = activePost;
+      const newName = renameSlug.value + '.md';
+      renameSubmit.disabled = true;
+      delete detailStatus.dataset.error;
+      detailStatus.textContent = 'GitHubでslugを変更しています…';
+      try {
+        const response = await fetch('/api/posts/' + encodeURIComponent(oldName), {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            newName,
+            confirmation: renameConfirmation.value,
+            sha: currentSha,
+            content: postContent.value,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'slugを変更できませんでした');
+        removeDraft(oldName);
+        activePost = data.rename.name;
+        currentSha = data.rename.sha;
+        originalContent = postContent.value;
+        postHeading.textContent = activePost;
+        document.title = activePost + ' - Blog CMS';
+        publicLink.textContent = '公開ページを開く';
+        publicLink.href = data.rename.publicUrl;
+        githubLink.href = data.rename.githubUrl;
+        history.replaceState(null, '', '/?post=' + encodeURIComponent(activePost));
+        closeRenamePanel();
+        detailStatus.textContent = 'slugを変更しました。旧公開URLはredirectされません。公開処理を確認しています。';
+        startDeploymentTracking(data.rename.commitSha);
+      } catch (error) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = error instanceof Error ? error.message : 'slugを変更できませんでした。';
+      } finally {
+        if (!renamePanel.hidden) renameSubmit.disabled = !renameInputIsValid();
+      }
+    });
+
     function closeDeletePanel() {
       deletePanel.hidden = true;
       deleteForm.reset();
       deleteSubmit.disabled = true;
       editButton.disabled = false;
+      renameButton.hidden = articleDeleted;
       deleteButton.hidden = articleDeleted;
     }
 
@@ -855,6 +969,7 @@ export const cmsPage = `<!doctype html>
       deleteSubmit.disabled = true;
       deletePanel.hidden = false;
       editButton.disabled = true;
+      renameButton.hidden = true;
       deleteButton.hidden = true;
       deleteConfirmation.focus();
     });
@@ -887,6 +1002,7 @@ export const cmsPage = `<!doctype html>
         hideDraftNotice();
         closeDeletePanel();
         editButton.hidden = true;
+        renameButton.hidden = true;
         deleteButton.hidden = true;
         githubLink.hidden = true;
         publicLink.textContent = '旧公開ページを確認';

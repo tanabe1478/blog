@@ -54,6 +54,14 @@ slugは英小文字・数字・単一hyphenだけを許可し、Section予約名
 
 previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 
+## Slug rename
+
+既存記事detailの**slug変更**から、新slugと現在filenameの完全入力で記事filenameと公開URLを変更できます。旧公開URLからのredirectは自動作成しないため、外部linkが切れることをpanel内で警告します。
+
+WorkerはProduction Origin、現在Blob SHA、新path不存在、main HEADを確認します。GitHub GraphQL `createCommitOnBranch`で新path追加と旧path削除を1つのatomic commitにするため、部分成功しません。main更新・old SHA変更・new slug既存は`409`です。
+
+成功後は新しいBlob SHA、GitHub URL、公開URLへdetailを切り替え、rename commitのDeploy Blog statusを追跡します。Previewからのrenameは`403`、`index`は新旧とも指定できません。
+
 ## Article deletion
 
 既存記事detailの**削除**から、対象filenameを完全入力すると記事を削除できます。WorkerはProduction Origin、`GITHUB_TOKEN`、現在のBlob SHA、confirmation一致を再検証します。Section用`index.md`は削除できません。

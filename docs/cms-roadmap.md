@@ -34,7 +34,7 @@ Milestone G: 運用・監査を改善する
 | CMS-001 | localStorage自動下書きと復元 | A | `done` |
 | CMS-002 | GitHub Actions / 公開status表示 | B | `done` |
 | CMS-003 | 記事削除 | C | `done` |
-| CMS-004 | slug変更（rename） | C | `planned` |
+| CMS-004 | slug変更（rename） | C | `done` |
 | CMS-005 | 記事一覧の検索・絞り込み | D | `planned` |
 | CMS-006 | metadata専用編集form | D | `planned` |
 | CMS-007 | 保存前の差分表示 | D | `planned` |
@@ -234,7 +234,19 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-004 slug変更（rename）
 
-状態: `planned`
+状態: `done`
+
+実装:
+
+- 新slugと現在filenameの完全入力
+- Production Origin、現在Blob SHA、新path不存在、main HEADを検証
+- GitHub GraphQL `createCommitOnBranch`によるatomic追加/削除
+- `expectedHeadOid`でbranch更新競合を409化
+- Git blob SHAをWorker側計算してrename後の競合制御を継続
+- Previewと`index`を拒否
+- 旧URLはredirectしない方針をUIで警告
+- rename commitのDeploy Blog statusを追跡
+- Vitest 39件とPlaywright E2E 15件で確認
 
 目的:
 
@@ -242,16 +254,16 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 完了条件:
 
-- 新slugへcreateし、旧fileをdeleteする一連の処理で競合を検知する。
+- 新slug追加と旧file削除をatomic commitにし、競合を検知する。
 - 新slugは新規記事と同じvalidationを使う。
 - 同名fileがある場合は拒否する。
-- 途中失敗時の回復方法を定義する。
+- atomic commitにより途中の部分成功を発生させない。
 - 旧公開URLをredirectするか、link切れを許容するかを実装前に決める。
 - rename前に影響するURLを明示し、確認入力を要求する。
 
 注意:
 
-- GitHub Contents APIにはatomic renameがないため、部分成功を考慮する。
+- GitHub Contents APIではなくGraphQL atomic commitを使う。
 - redirectなしのslug変更は外部linkを壊す。
 
 依存: CMS-003のdelete処理。redirect方針の判断。

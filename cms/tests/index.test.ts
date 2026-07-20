@@ -75,6 +75,10 @@ describe("CMS Worker", () => {
     expect(content).toContain('id="deployment-status"');
     expect(content).toContain('id="deployment-refresh"');
     expect(content).toContain('GitHub Actionsを開く');
+    expect(content).toContain('id="rename"');
+    expect(content).toContain('id="rename-form"');
+    expect(content).toContain('id="rename-slug"');
+    expect(content).toContain('id="rename-confirmation"');
     expect(content).toContain('id="delete"');
     expect(content).toContain('id="delete-form"');
     expect(content).toContain('id="delete-confirmation"');
@@ -562,6 +566,166 @@ describe("CMS Worker", () => {
     });
   });
 
+  it("renames a post atomically on the current main HEAD", async () => {
+    const upstream = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          data: {
+            repository: {
+              ref: { target: { oid: "d".repeat(40) } },
+              oldFile: { oid: "a".repeat(40) },
+              newFile: null,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          data: {
+            createCommitOnBranch: { commit: { oid: "c".repeat(40) } },
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", upstream);
+    const content = "---\ndate: 2026-07-21 09:30\n---\n\n# Renamed\n";
+
+    const response = await fetch("/api/posts/old-name.md", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        newName: "new-name.md",
+        confirmation: "old-name.md",
+        sha: "a".repeat(40),
+        content,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({
+      rename: {
+        name: "new-name.md",
+        sha: "e215349149dd4f384a16732814bc4faf2077ca0b",
+        commitSha: "c".repeat(40),
+        githubUrl:
+          "https://github.com/tanabe1478/blog/blob/main/Content/posts/new-name.md",
+        publicUrl: "https://tanabe1478.github.io/posts/new-name/",
+      },
+    });
+    expect(upstream).toHaveBeenCalledTimes(2);
+    const preflight = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(preflight.variables).toEqual({
+      oldExpression: "main:Content/posts/old-name.md",
+      newExpression: "main:Content/posts/new-name.md",
+    });
+    const mutation = JSON.parse(upstream.mock.calls[1][1].body);
+    expect(mutation.variables).toMatchObject({
+      expectedHeadOid: "d".repeat(40),
+      oldPath: "Content/posts/old-name.md",
+      newPath: "Content/posts/new-name.md",
+      contents: btoa(content),
+      message: "post: rename old-name.md to new-name.md via CMS",
+    });
+  });
+
+  it("does not rename over an existing slug", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        data: {
+          repository: {
+            ref: { target: { oid: "d".repeat(40) } },
+            oldFile: { oid: "a".repeat(40) },
+            newFile: { oid: "b".repeat(40) },
+          },
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/old-name.md", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        newName: "existing.md",
+        confirmation: "old-name.md",
+        sha: "a".repeat(40),
+        content: "# Existing\n",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "元記事が更新されたか、新slugが既に存在します。再読み込みしてください",
+    });
+    expect(upstream).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not rename a post whose Blob SHA changed", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        data: {
+          repository: {
+            ref: { target: { oid: "d".repeat(40) } },
+            oldFile: { oid: "f".repeat(40) },
+            newFile: null,
+          },
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/old-name.md", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        newName: "new-name.md",
+        confirmation: "old-name.md",
+        sha: "a".repeat(40),
+        content: "# Changed\n",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(upstream).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects invalid rename input before calling GitHub", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const payloads = [
+      { newName: "Invalid Name.md", confirmation: "old-name.md" },
+      { newName: "index.md", confirmation: "old-name.md" },
+      { newName: "new-name.md", confirmation: "wrong.md" },
+    ];
+
+    for (const payload of payloads) {
+      const response = await fetch("/api/posts/old-name.md", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://127.0.0.1",
+        },
+        body: JSON.stringify({
+          ...payload,
+          sha: "a".repeat(40),
+          content: "# Rename\n",
+        }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
   it("creates a new Markdown post without a SHA", async () => {
     const upstream = vi.fn().mockResolvedValue(
       Response.json({
@@ -710,6 +874,36 @@ describe("CMS Worker", () => {
       body: JSON.stringify({
         sha: "a".repeat(40),
         confirmation: "hello.md",
+      }),
+    });
+
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        GITHUB_TOKEN: "test-token",
+        WRITE_HOST: "tanabe-blog-cms-api.example.workers.dev",
+      },
+    );
+
+    expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("rejects article rename through a Preview hostname", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const origin = "https://preview-tanabe-blog-cms-api.example.workers.dev";
+    const request = new Request(`${origin}/api/posts/hello.md`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify({
+        newName: "renamed.md",
+        confirmation: "hello.md",
+        sha: "a".repeat(40),
+        content: "# Renamed\n",
       }),
     });
 

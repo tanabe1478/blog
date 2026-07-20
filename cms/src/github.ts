@@ -5,6 +5,35 @@ const PUBLIC_BLOG_URL = "https://tanabe1478.github.io";
 const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
 const BLOG_DEPLOY_WORKFLOW_URL =
   "https://api.github.com/repos/tanabe1478/blog/actions/workflows/deploy-blog.yml/runs";
+const RENAME_PREFLIGHT_QUERY = `query RenamePreflight($oldExpression: String!, $newExpression: String!) {
+  repository(owner: "tanabe1478", name: "blog") {
+    ref(qualifiedName: "refs/heads/main") { target { oid } }
+    oldFile: object(expression: $oldExpression) { ... on Blob { oid } }
+    newFile: object(expression: $newExpression) { ... on Blob { oid } }
+  }
+}`;
+const RENAME_MUTATION = `mutation RenamePost(
+  $expectedHeadOid: GitObjectID!
+  $oldPath: String!
+  $newPath: String!
+  $contents: Base64String!
+  $message: String!
+) {
+  createCommitOnBranch(input: {
+    branch: {
+      repositoryNameWithOwner: "tanabe1478/blog"
+      branchName: "main"
+    }
+    expectedHeadOid: $expectedHeadOid
+    message: { headline: $message }
+    fileChanges: {
+      additions: [{ path: $newPath, contents: $contents }]
+      deletions: [{ path: $oldPath }]
+    }
+  }) {
+    commit { oid }
+  }
+}`;
 const POSTS_QUERY = `query BlogPosts {
   repository(owner: "tanabe1478", name: "blog") {
     object(expression: "main:Content/posts") {
@@ -55,6 +84,24 @@ interface GitHubWorkflowRunsResult {
   workflow_runs?: unknown;
 }
 
+interface RenamePreflightResult {
+  data?: {
+    repository?: {
+      ref?: { target?: { oid?: unknown } | null } | null;
+      oldFile?: { oid?: unknown } | null;
+      newFile?: { oid?: unknown } | null;
+    } | null;
+  };
+  errors?: unknown;
+}
+
+interface RenameMutationResult {
+  data?: {
+    createCommitOnBranch?: { commit?: { oid?: unknown } | null } | null;
+  };
+  errors?: unknown;
+}
+
 export interface PostSummary {
   name: string;
   title: string;
@@ -86,6 +133,14 @@ export interface PostCreation extends PostUpdate {
 
 export interface PostDeletion {
   commitSha: string;
+}
+
+export interface PostRename {
+  name: string;
+  sha: string;
+  commitSha: string;
+  githubUrl: string;
+  publicUrl: string;
 }
 
 export type BlogDeploymentState =
@@ -202,6 +257,16 @@ function encodeBase64Utf8(value: string): string {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
   }
   return btoa(binary);
+}
+
+async function gitBlobSha(content: string): Promise<string> {
+  const body = new TextEncoder().encode(content);
+  const header = new TextEncoder().encode(`blob ${body.byteLength}\0`);
+  const input = new Uint8Array(header.byteLength + body.byteLength);
+  input.set(header);
+  input.set(body, header.byteLength);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", input));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function getBlogDeployment(
@@ -424,6 +489,91 @@ export async function createPost(
     commitSha: result.commit.sha,
     githubUrl: githubFileUrl(path),
     publicUrl: publicPostUrl(name),
+  };
+}
+
+export async function renamePost(
+  oldName: string,
+  newName: string,
+  content: string,
+  sha: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<PostRename> {
+  const oldPath = `Content/posts/${oldName}`;
+  const newPath = `Content/posts/${newName}`;
+  const preflightResponse = await request(GITHUB_GRAPHQL_URL, {
+    method: "POST",
+    headers: githubHeaders(token, true),
+    body: JSON.stringify({
+      query: RENAME_PREFLIGHT_QUERY,
+      variables: {
+        oldExpression: `main:${oldPath}`,
+        newExpression: `main:${newPath}`,
+      },
+    }),
+  });
+  if (!preflightResponse.ok) {
+    throw new Error(`GitHub rename preflight returned ${preflightResponse.status}`);
+  }
+
+  const preflight: RenamePreflightResult = await preflightResponse.json();
+  if (Array.isArray(preflight.errors) && preflight.errors.length > 0) {
+    throw new Error("GitHub rename preflight returned errors");
+  }
+  const repository = preflight.data?.repository;
+  const headOid = repository?.ref?.target?.oid;
+  const oldOid = repository?.oldFile?.oid;
+  if (typeof headOid !== "string" || !/^[0-9a-f]{40}$/.test(headOid)) {
+    throw new Error("GitHub rename preflight returned an invalid main HEAD");
+  }
+  if (repository?.oldFile === null) {
+    throw new PostNotFoundError(oldName);
+  }
+  if (
+    typeof oldOid !== "string" ||
+    oldOid !== sha ||
+    repository?.newFile !== null
+  ) {
+    throw new PostConflictError(oldName);
+  }
+
+  const mutationResponse = await request(GITHUB_GRAPHQL_URL, {
+    method: "POST",
+    headers: githubHeaders(token, true),
+    body: JSON.stringify({
+      query: RENAME_MUTATION,
+      variables: {
+        expectedHeadOid: headOid,
+        oldPath,
+        newPath,
+        contents: encodeBase64Utf8(content),
+        message: `post: rename ${oldName} to ${newName} via CMS`,
+      },
+    }),
+  });
+  if (!mutationResponse.ok) {
+    if (mutationResponse.status === 409) {
+      throw new PostConflictError(oldName);
+    }
+    throw new Error(`GitHub rename mutation returned ${mutationResponse.status}`);
+  }
+
+  const mutation: RenameMutationResult = await mutationResponse.json();
+  if (Array.isArray(mutation.errors) && mutation.errors.length > 0) {
+    throw new PostConflictError(oldName);
+  }
+  const commitSha = mutation.data?.createCommitOnBranch?.commit?.oid;
+  if (typeof commitSha !== "string" || !/^[0-9a-f]{40}$/.test(commitSha)) {
+    throw new Error("GitHub rename mutation returned an unexpected response");
+  }
+
+  return {
+    name: newName,
+    sha: await gitBlobSha(content),
+    commitSha,
+    githubUrl: githubFileUrl(newPath),
+    publicUrl: publicPostUrl(newName),
   };
 }
 
