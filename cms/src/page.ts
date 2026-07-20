@@ -28,6 +28,7 @@ export const cmsPage = `<!doctype html>
     .post-link:hover, .post-link:focus-visible { background: #eaeae4; outline: none; }
     code, textarea { font-family: ui-monospace, monospace; font-size: 0.9rem; }
     textarea { width: 100%; min-height: 60vh; resize: vertical; padding: 16px; border: 1px solid #d4d4ce; border-radius: 8px; color: inherit; background: #fafaf8; line-height: 1.6; }
+    textarea[data-drag="true"] { border-color: #315ca8; outline: 3px solid #dce7fa; background: #f5f8ff; }
     .actions { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; }
     .actions a { margin-left: auto; color: #315ca8; }
     button { padding: 8px 14px; border: 1px solid #c8c8c2; border-radius: 8px; color: inherit; background: #fff; cursor: pointer; }
@@ -60,7 +61,7 @@ export const cmsPage = `<!doctype html>
         <button id="save" class="primary" type="button" hidden>GitHubへ保存</button>
         <button id="cancel" type="button" hidden>キャンセル</button>
         <label id="upload" class="upload" hidden>
-          画像をGyazoへ追加
+          画像を選択 / ドロップ
           <input id="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
         </label>
         <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
@@ -160,13 +161,11 @@ export const cmsPage = `<!doctype html>
       setEditing(false);
     });
 
-    imageInput.addEventListener('change', async () => {
-      const image = imageInput.files?.[0];
-      if (!image) return;
+    async function uploadImage(image) {
+      if (imageInput.disabled) return;
       if (image.size > 10 * 1024 * 1024) {
         detailStatus.dataset.error = 'true';
         detailStatus.textContent = '画像は10MB以下にしてください。';
-        imageInput.value = '';
         return;
       }
 
@@ -197,8 +196,43 @@ export const cmsPage = `<!doctype html>
       } finally {
         imageInput.disabled = false;
         delete uploadLabel.dataset.busy;
-        imageInput.value = '';
       }
+    }
+
+    imageInput.addEventListener('change', async () => {
+      const image = imageInput.files?.[0];
+      if (image) await uploadImage(image);
+      imageInput.value = '';
+    });
+
+    function isFileDrag(event) {
+      return Array.from(event.dataTransfer?.types || []).includes('Files');
+    }
+
+    for (const eventName of ['dragenter', 'dragover']) {
+      postContent.addEventListener(eventName, (event) => {
+        if (postContent.readOnly || !isFileDrag(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        postContent.dataset.drag = 'true';
+      });
+    }
+
+    postContent.addEventListener('dragleave', () => {
+      delete postContent.dataset.drag;
+    });
+
+    postContent.addEventListener('drop', async (event) => {
+      if (postContent.readOnly || !isFileDrag(event)) return;
+      event.preventDefault();
+      delete postContent.dataset.drag;
+      const files = Array.from(event.dataTransfer.files);
+      if (files.length !== 1) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = '画像は1枚ずつドロップしてください。';
+        return;
+      }
+      await uploadImage(files[0]);
     });
 
     saveButton.addEventListener('click', async () => {

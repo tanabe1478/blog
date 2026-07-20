@@ -65,6 +65,7 @@ describe("CMS Worker", () => {
     expect(content).toContain("GitHub連携");
     expect(content).toContain('id="edit"');
     expect(content).toContain('id="image"');
+    expect(content).toContain("postContent.addEventListener('drop'");
     expect(content).toContain('id="detail"');
     expect(content).toContain('id="post-content"');
     const script = content.match(/<script>([\s\S]*)<\/script>/)?.[1];
