@@ -54,6 +54,14 @@ slugは英小文字・数字・単一hyphenだけを許可し、Section予約名
 
 previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 
+## Article deletion
+
+既存記事detailの**削除**から、対象filenameを完全入力すると記事を削除できます。WorkerはProduction Origin、`GITHUB_TOKEN`、現在のBlob SHA、confirmation一致を再検証します。Section用`index.md`は削除できません。
+
+GitHub Contents APIがSHA競合を返した場合は`409`として記事を残します。削除成功後は削除commitの`Deploy Blog`を追跡し、公開サイトからの削除反映を表示します。記事内で使っていたGyazo画像は自動削除しません。
+
+端末draftがある間は、復元または破棄を選ぶまで削除buttonを無効化します。Preview hostnameからの削除は`403`です。
+
 ## Publish status
 
 記事のGitHub保存後、source commit SHAを使って`Deploy Blog` workflowを追跡します。CMSには**保存済み・build待ち**、**公開処理を実行中**、**公開済み**、**公開処理に失敗**を表示します。

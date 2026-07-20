@@ -16,10 +16,12 @@ interface MockOptions {
   createConflict?: boolean;
   createError?: boolean;
   updateConflict?: boolean;
+  deleteConflict?: boolean;
   deploymentError?: boolean;
   deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
+  onDelete?: (payload: unknown) => void;
 }
 
 async function mockCmsApi(page: Page, options: MockOptions = {}) {
@@ -128,6 +130,25 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
       return;
     }
 
+    if (
+      request.method() === "DELETE" &&
+      url.pathname === `/api/posts/${EXISTING_NAME}`
+    ) {
+      const payload: unknown = request.postDataJSON();
+      options.onDelete?.(payload);
+      if (options.deleteConflict) {
+        await route.fulfill({
+          status: 409,
+          json: { error: "記事が他の場所で更新されています。再読み込みしてください" },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: { deletion: { commitSha: "c".repeat(40) } },
+      });
+      return;
+    }
+
     if (request.method() === "POST" && url.pathname === "/api/posts") {
       const payload: unknown = request.postDataJSON();
       options.onCreate?.(payload);
@@ -231,6 +252,7 @@ test("recovers an existing article draft after reload and can discard it", async
   await page.reload();
   await expect(page.locator("#draft-notice")).toBeVisible();
   await expect(page.getByRole("button", { name: "編集", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "削除", exact: true })).toBeDisabled();
   await expect(
     page.getByRole("heading", { name: "Existing title", exact: true }),
   ).toBeVisible();
@@ -367,6 +389,51 @@ test("creates an unsaved article and saves it for the first time", async ({
     "https://tanabe1478.github.io/posts/new-post/",
   );
   await expect(page).toHaveURL(/\?post=new-post\.md$/);
+});
+
+test("deletes an article after exact filename confirmation", async ({ page }) => {
+  let deletePayload: unknown;
+  await mockCmsApi(page, {
+    onDelete: (payload) => {
+      deletePayload = payload;
+    },
+  });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "削除", exact: true }).click();
+
+  const confirmation = page.getByLabel("削除確認用ファイル名");
+  const submit = page.getByRole("button", { name: "記事を削除", exact: true });
+  await expect(submit).toBeDisabled();
+  await confirmation.fill("wrong.md");
+  await expect(submit).toBeDisabled();
+  await confirmation.fill(EXISTING_NAME);
+  await expect(submit).toBeEnabled();
+  await submit.click();
+
+  expect(deletePayload).toEqual({
+    sha: "a".repeat(40),
+    confirmation: EXISTING_NAME,
+  });
+  await expect(page.getByText("GitHubから記事を削除しました", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "編集", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "削除", exact: true })).toBeHidden();
+  await expect(page.locator("#deployment-status")).toContainText(
+    "公開サイトからの削除が反映されました",
+  );
+});
+
+test("keeps an article visible when deletion conflicts", async ({ page }) => {
+  await mockCmsApi(page, { deleteConflict: true });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "削除", exact: true }).click();
+  await page.getByLabel("削除確認用ファイル名").fill(EXISTING_NAME);
+  await page.getByRole("button", { name: "記事を削除", exact: true }).click();
+
+  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#delete-form")).toBeVisible();
 });
 
 test("shows deployment progress until the article is public", async ({ page }) => {

@@ -1,6 +1,7 @@
 import { authenticateAccess, type Env } from "./access";
 import {
   createPost,
+  deletePost,
   getBlogDeployment,
   getPost,
   isValidNewPostContent,
@@ -272,6 +273,61 @@ export default {
           }
           console.error("Failed to update post", error);
           return json({ error: "記事を保存できませんでした" }, 502);
+        }
+      }
+
+      if (request.method === "DELETE") {
+        if (!isAllowedWriteRequest(request, url, env)) {
+          return json({ error: "Forbidden" }, 403);
+        }
+        if (!request.headers.get("content-type")?.startsWith("application/json")) {
+          return json({ error: "JSONを送信してください" }, 415);
+        }
+        if (!env.GITHUB_TOKEN) {
+          return json({ error: "削除機能が設定されていません" }, 503);
+        }
+        if (name === "index.md") {
+          return json({ error: "記事一覧のindexは削除できません" }, 400);
+        }
+
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return json({ error: "JSONが不正です" }, 400);
+        }
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("sha" in payload) ||
+          typeof payload.sha !== "string" ||
+          !/^[0-9a-f]{40}$/.test(payload.sha) ||
+          !("confirmation" in payload) ||
+          payload.confirmation !== name
+        ) {
+          return json({ error: "削除確認の内容が不正です" }, 400);
+        }
+
+        try {
+          return json({
+            deletion: await deletePost(
+              name,
+              payload.sha,
+              env.GITHUB_TOKEN,
+            ),
+          });
+        } catch (error) {
+          if (error instanceof PostConflictError) {
+            return json(
+              { error: "記事が他の場所で更新されています。再読み込みしてください" },
+              409,
+            );
+          }
+          if (error instanceof PostNotFoundError) {
+            return json({ error: "記事が見つかりません" }, 404);
+          }
+          console.error("Failed to delete post", error);
+          return json({ error: "記事を削除できませんでした" }, 502);
         }
       }
     }

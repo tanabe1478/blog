@@ -33,7 +33,7 @@ Milestone G: 運用・監査を改善する
 | CMS-000 | Playwright E2E基盤 | 0 | `done` |
 | CMS-001 | localStorage自動下書きと復元 | A | `done` |
 | CMS-002 | GitHub Actions / 公開status表示 | B | `done` |
-| CMS-003 | 記事削除 | C | `planned` |
+| CMS-003 | 記事削除 | C | `done` |
 | CMS-004 | slug変更（rename） | C | `planned` |
 | CMS-005 | 記事一覧の検索・絞り込み | D | `planned` |
 | CMS-006 | metadata専用編集form | D | `planned` |
@@ -203,7 +203,18 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-003 記事削除
 
-状態: `planned`
+状態: `done`
+
+実装:
+
+- filename完全入力による削除確認
+- Production Origin、token、現在Blob SHAをWorkerで検証
+- `index.md`削除禁止、Preview削除禁止
+- SHA競合時は409で記事を維持
+- local draft解決前は削除buttonを無効化
+- 削除commitのDeploy Blog statusを追跡
+- Gyazo画像は自動削除しない
+- Vitest 34件とPlaywright E2E 13件で確認
 
 目的:
 

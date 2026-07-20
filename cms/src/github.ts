@@ -84,6 +84,10 @@ export interface PostCreation extends PostUpdate {
   publicUrl: string;
 }
 
+export interface PostDeletion {
+  commitSha: string;
+}
+
 export type BlogDeploymentState =
   | "pending"
   | "running"
@@ -421,6 +425,46 @@ export async function createPost(
     githubUrl: githubFileUrl(path),
     publicUrl: publicPostUrl(name),
   };
+}
+
+export async function deletePost(
+  name: string,
+  sha: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<PostDeletion> {
+  const response = await request(
+    `${POSTS_API_URL}/${encodeURIComponent(name)}`,
+    {
+      method: "DELETE",
+      headers: githubHeaders(token, true),
+      body: JSON.stringify({
+        message: `post: delete ${name} via CMS`,
+        sha,
+        branch: "main",
+      }),
+    },
+  );
+
+  if (response.status === 404) {
+    throw new PostNotFoundError(name);
+  }
+  if (response.status === 409) {
+    throw new PostConflictError(name);
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub delete API returned ${response.status}`);
+  }
+
+  const result: GitHubUpdateResult = await response.json();
+  if (
+    typeof result.commit?.sha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(result.commit.sha)
+  ) {
+    throw new Error("GitHub delete API returned an unexpected response");
+  }
+
+  return { commitSha: result.commit.sha };
 }
 
 export async function updatePost(

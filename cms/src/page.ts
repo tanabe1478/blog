@@ -35,6 +35,12 @@ export const cmsPage = `<!doctype html>
     .deployment-status p { margin-bottom: 10px; }
     .deployment-actions { display: flex; align-items: center; gap: 12px; }
     .deployment-actions a { color: #315ca8; }
+    .delete-panel { margin-bottom: 16px; padding: 14px; border: 1px solid #b42318; border-radius: 8px; background: #fff1f0; }
+    .delete-panel[hidden] { display: none; }
+    .delete-panel label { display: grid; gap: 6px; }
+    .delete-panel input { width: 100%; max-width: 520px; padding: 9px 10px; border: 1px solid #b42318; border-radius: 6px; font: inherit; }
+    .delete-panel div { display: flex; gap: 10px; margin-top: 12px; }
+    button.danger { border-color: #b42318; color: #fff; background: #b42318; }
     #public-link[data-published="true"] { padding: 4px 7px; border-radius: 5px; font-weight: 700; background: #dff3e4; }
     .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .section-heading h2 { margin-bottom: 0; }
@@ -127,12 +133,27 @@ export const cmsPage = `<!doctype html>
           <button id="draft-discard" type="button">下書きを破棄</button>
         </div>
       </aside>
+      <aside id="delete-panel" class="delete-panel" hidden>
+        <p>削除するとGitHubから記事が削除され、公開サイトにも反映されます。Gyazo画像は削除されません。</p>
+        <form id="delete-form">
+          <label>
+            削除確認用ファイル名
+            <input id="delete-confirmation" autocomplete="off" required>
+            <span class="field-help"><code id="delete-name"></code> と入力してください。</span>
+          </label>
+          <div>
+            <button id="delete-submit" class="danger" type="submit" disabled>記事を削除</button>
+            <button id="delete-cancel" type="button">削除をやめる</button>
+          </div>
+        </form>
+      </aside>
       <div id="editor-grid" class="editor-grid">
         <textarea id="post-content" aria-label="Markdown本文" readonly hidden></textarea>
         <article id="preview" class="preview" aria-label="記事プレビュー" hidden></article>
       </div>
       <div class="actions">
         <button id="edit" type="button">編集</button>
+        <button id="delete" class="danger" type="button">削除</button>
         <button id="save" class="primary" type="button" hidden>GitHubへ保存</button>
         <button id="cancel" type="button" hidden>キャンセル</button>
         <label id="upload" class="upload" hidden>
@@ -173,6 +194,12 @@ export const cmsPage = `<!doctype html>
     const draftRestore = document.querySelector('#draft-restore');
     const draftDiscard = document.querySelector('#draft-discard');
     const draftState = document.querySelector('#draft-state');
+    const deletePanel = document.querySelector('#delete-panel');
+    const deleteForm = document.querySelector('#delete-form');
+    const deleteConfirmation = document.querySelector('#delete-confirmation');
+    const deleteName = document.querySelector('#delete-name');
+    const deleteSubmit = document.querySelector('#delete-submit');
+    const deleteCancel = document.querySelector('#delete-cancel');
     const deploymentStatus = document.querySelector('#deployment-status');
     const deploymentLabel = document.querySelector('#deployment-label');
     const deploymentRefresh = document.querySelector('#deployment-refresh');
@@ -185,6 +212,7 @@ export const cmsPage = `<!doctype html>
     const githubLink = document.querySelector('#github-link');
     const back = document.querySelector('#back');
     const editButton = document.querySelector('#edit');
+    const deleteButton = document.querySelector('#delete');
     const saveButton = document.querySelector('#save');
     const cancelButton = document.querySelector('#cancel');
     const uploadLabel = document.querySelector('#upload');
@@ -200,9 +228,11 @@ export const cmsPage = `<!doctype html>
     let pendingDraft;
     let draftTimer;
     let deploymentCommit = '';
+    let deploymentPurpose = 'publish';
     let deploymentTimer;
     let deploymentChecks = 0;
     let deploymentLoading = false;
+    let articleDeleted = false;
 
     function draftKey(name) {
       return draftPrefix + name;
@@ -266,6 +296,7 @@ export const cmsPage = `<!doctype html>
       pendingDraft = undefined;
       draftNotice.hidden = true;
       editButton.disabled = false;
+      deleteButton.disabled = false;
     }
 
     function showDraftNotice(draft, latestSha = '') {
@@ -282,6 +313,7 @@ export const cmsPage = `<!doctype html>
         'この端末に未保存の下書きがあります' + savedLabel + '。' + conflictWarning;
       draftNotice.hidden = false;
       editButton.disabled = true;
+      deleteButton.disabled = true;
     }
 
     function scheduleDeploymentCheck() {
@@ -313,37 +345,50 @@ export const cmsPage = `<!doctype html>
         }
 
         if (deployment.state === 'pending') {
-          deploymentLabel.textContent = '保存済み・build待ちです。';
+          deploymentLabel.textContent = deploymentPurpose === 'delete'
+            ? 'GitHubから削除済み・公開サイトへの反映待ちです。'
+            : '保存済み・build待ちです。';
           scheduleDeploymentCheck();
         } else if (deployment.state === 'running') {
-          deploymentLabel.textContent = '公開処理を実行中です。';
+          deploymentLabel.textContent = deploymentPurpose === 'delete'
+            ? '公開サイトから記事を削除中です。'
+            : '公開処理を実行中です。';
           scheduleDeploymentCheck();
         } else if (deployment.state === 'published') {
-          deploymentLabel.textContent = '公開済みです。';
-          publicLink.dataset.published = 'true';
+          deploymentLabel.textContent = deploymentPurpose === 'delete'
+            ? '公開サイトからの削除が反映されました。'
+            : '公開済みです。';
+          if (deploymentPurpose === 'publish') publicLink.dataset.published = 'true';
         } else if (deployment.state === 'failed') {
-          deploymentLabel.textContent = '公開処理に失敗しました。GitHub Actionsを確認してください。';
+          deploymentLabel.textContent = deploymentPurpose === 'delete'
+            ? '削除の公開反映に失敗しました。GitHub Actionsを確認してください。'
+            : '公開処理に失敗しました。GitHub Actionsを確認してください。';
         } else {
           throw new Error('公開状況のresponseが不正です');
         }
       } catch {
         delete deploymentStatus.dataset.state;
-        deploymentLabel.textContent = '記事は保存済みですが、公開状況を取得できません。手動で再確認できます。';
+        deploymentLabel.textContent = deploymentPurpose === 'delete'
+          ? '記事はGitHubから削除済みですが、公開状況を取得できません。手動で再確認できます。'
+          : '記事は保存済みですが、公開状況を取得できません。手動で再確認できます。';
       } finally {
         deploymentLoading = false;
         deploymentRefresh.disabled = false;
       }
     }
 
-    function startDeploymentTracking(commitSha) {
+    function startDeploymentTracking(commitSha, purpose = 'publish') {
       clearTimeout(deploymentTimer);
       deploymentCommit = commitSha;
+      deploymentPurpose = purpose;
       deploymentChecks = 0;
       deploymentStatus.hidden = false;
       delete deploymentStatus.dataset.state;
       delete publicLink.dataset.published;
       deploymentRunLink.hidden = true;
-      deploymentLabel.textContent = '保存済み。公開処理を確認しています…';
+      deploymentLabel.textContent = purpose === 'delete'
+        ? 'GitHubから削除済み。公開サイトへの反映を確認しています…'
+        : '保存済み。公開処理を確認しています…';
       void refreshDeployment();
     }
 
@@ -481,6 +526,7 @@ export const cmsPage = `<!doctype html>
       publicLink.hidden = true;
       githubLink.hidden = true;
       editButton.hidden = true;
+      deleteButton.hidden = true;
       saveButton.hidden = true;
       cancelButton.hidden = true;
       uploadLabel.hidden = true;
@@ -740,7 +786,8 @@ export const cmsPage = `<!doctype html>
       editorGrid.dataset.editing = editing ? 'true' : 'false';
       preview.hidden = false;
       renderPreview();
-      editButton.hidden = editing;
+      editButton.hidden = editing || articleDeleted;
+      deleteButton.hidden = editing || creatingPost || articleDeleted || !currentSha;
       saveButton.hidden = !editing;
       cancelButton.hidden = !editing;
       uploadLabel.hidden = !editing;
@@ -792,6 +839,67 @@ export const cmsPage = `<!doctype html>
       delete detailStatus.dataset.error;
       detailStatus.textContent = '編集中です。保存するとGitHubのmainブランチへ反映されます。';
       setEditing(true);
+    });
+
+    function closeDeletePanel() {
+      deletePanel.hidden = true;
+      deleteForm.reset();
+      deleteSubmit.disabled = true;
+      editButton.disabled = false;
+      deleteButton.hidden = articleDeleted;
+    }
+
+    deleteButton.addEventListener('click', () => {
+      deleteName.textContent = activePost;
+      deleteConfirmation.value = '';
+      deleteSubmit.disabled = true;
+      deletePanel.hidden = false;
+      editButton.disabled = true;
+      deleteButton.hidden = true;
+      deleteConfirmation.focus();
+    });
+
+    deleteConfirmation.addEventListener('input', () => {
+      deleteSubmit.disabled = deleteConfirmation.value !== activePost;
+    });
+
+    deleteCancel.addEventListener('click', closeDeletePanel);
+
+    deleteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (deleteConfirmation.value !== activePost || !currentSha) return;
+      deleteSubmit.disabled = true;
+      delete detailStatus.dataset.error;
+      detailStatus.textContent = 'GitHubから記事を削除しています…';
+      try {
+        const response = await fetch('/api/posts/' + encodeURIComponent(activePost), {
+          method: 'DELETE',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sha: currentSha,
+            confirmation: deleteConfirmation.value,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '記事を削除できませんでした');
+        articleDeleted = true;
+        removeDraft(activePost);
+        hideDraftNotice();
+        closeDeletePanel();
+        editButton.hidden = true;
+        deleteButton.hidden = true;
+        githubLink.hidden = true;
+        publicLink.textContent = '旧公開ページを確認';
+        detailStatus.textContent = 'GitHubから記事を削除しました。公開サイトへの反映を確認しています。';
+        startDeploymentTracking(data.deletion.commitSha, 'delete');
+      } catch (error) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = error instanceof Error ? error.message : '記事を削除できませんでした。';
+      } finally {
+        if (!articleDeleted) {
+          deleteSubmit.disabled = deleteConfirmation.value !== activePost;
+        }
+      }
     });
 
     cancelButton.addEventListener('click', () => {

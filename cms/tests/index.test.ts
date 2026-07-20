@@ -75,6 +75,9 @@ describe("CMS Worker", () => {
     expect(content).toContain('id="deployment-status"');
     expect(content).toContain('id="deployment-refresh"');
     expect(content).toContain('GitHub Actionsを開く');
+    expect(content).toContain('id="delete"');
+    expect(content).toContain('id="delete-form"');
+    expect(content).toContain('id="delete-confirmation"');
     expect(content).toContain('id="edit"');
     expect(content).toContain('id="image"');
     expect(content).toContain("postContent.addEventListener('drop'");
@@ -459,6 +462,106 @@ describe("CMS Worker", () => {
     });
   });
 
+  it("deletes an existing Markdown post with its current SHA", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({ content: null, commit: { sha: "c".repeat(40) } }),
+    );
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/hello.md", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        sha: "a".repeat(40),
+        confirmation: "hello.md",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deletion: { commitSha: "c".repeat(40) },
+    });
+    expect(upstream).toHaveBeenCalledWith(
+      "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts/hello.md",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: expect.objectContaining({ authorization: "Bearer test-token" }),
+      }),
+    );
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual({
+      message: "post: delete hello.md via CMS",
+      sha: "a".repeat(40),
+      branch: "main",
+    });
+  });
+
+  it("requires the exact filename before deleting a post", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/hello.md", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        sha: "a".repeat(40),
+        confirmation: "hello",
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("never deletes the posts section index", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/index.md", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        sha: "a".repeat(40),
+        confirmation: "index.md",
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("reports a conflict instead of deleting a newer post", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 409 })),
+    );
+
+    const response = await fetch("/api/posts/hello.md", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        sha: "a".repeat(40),
+        confirmation: "hello.md",
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "記事が他の場所で更新されています。再読み込みしてください",
+    });
+  });
+
   it("creates a new Markdown post without a SHA", async () => {
     const upstream = vi.fn().mockResolvedValue(
       Response.json({
@@ -581,6 +684,34 @@ describe("CMS Worker", () => {
         }),
       },
     );
+
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        GITHUB_TOKEN: "test-token",
+        WRITE_HOST: "tanabe-blog-cms-api.example.workers.dev",
+      },
+    );
+
+    expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("rejects article deletion through a Preview hostname", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const origin = "https://preview-tanabe-blog-cms-api.example.workers.dev";
+    const request = new Request(`${origin}/api/posts/hello.md`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify({
+        sha: "a".repeat(40),
+        confirmation: "hello.md",
+      }),
+    });
 
     const response = await worker.fetch(
       request as Parameters<typeof worker.fetch>[0],
