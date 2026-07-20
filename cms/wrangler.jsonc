@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tanabe-blog-cms-api",
+  "account_id": "35982b1225c409fa8b163e71fec370bc",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-16",
+  "workers_dev": true
+}
