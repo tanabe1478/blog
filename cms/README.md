@@ -34,6 +34,14 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
 
+## Local draft
+
+編集中のMarkdownは400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。
+
+下書きには保存時のGitHub SHAを記録します。GitHub版がその後更新された場合、復元後も古いSHAを使って保存するため`409`となり、最新記事を無意識に上書きしません。
+
+`localStorage`は暗号化されたsecret storageではなく、Accessからlogoutしても端末に本文が残ります。共有端末では下書きを破棄してください。token、JWT、cookieは保存しません。storageが利用できない場合もeditorは止めず、別の場所への退避を案内します。
+
 ## New article
 
 記事一覧の**新規記事**からslug、title、公開日時、description、tagsを入力すると、frontmatterと見出しを持つ未保存Markdownをbrowser内で生成します。本文を書いて**GitHubへ保存**した時点で初めて`Content/posts/<slug>.md`を作成するため、空の雛形だけが公開されることはありません。

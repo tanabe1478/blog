@@ -68,6 +68,10 @@ describe("CMS Worker", () => {
     expect(content).toContain('id="new-post-form"');
     expect(content).toContain('id="public-link"');
     expect(content).toContain('公開ページを開く');
+    expect(content).toContain('id="draft-notice"');
+    expect(content).toContain('id="draft-restore"');
+    expect(content).toContain('id="draft-discard"');
+    expect(content).toContain("localStorage.setItem(draftKey(activePost)");
     expect(content).toContain('id="edit"');
     expect(content).toContain('id="image"');
     expect(content).toContain("postContent.addEventListener('drop'");

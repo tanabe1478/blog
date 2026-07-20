@@ -23,6 +23,11 @@ export const cmsPage = `<!doctype html>
     section[hidden], .back[hidden] { display: none; }
     [role="status"] { color: #666; }
     [role="status"][data-error="true"] { color: #b42318; }
+    .draft-notice { margin-bottom: 16px; padding: 14px; border: 1px solid #d4a72c; border-radius: 8px; background: #fff8dd; }
+    .draft-notice[hidden] { display: none; }
+    .draft-notice p { margin-bottom: 10px; }
+    .draft-notice div { display: flex; gap: 10px; }
+    .draft-state { min-height: 1.2em; margin: 10px 0 0; color: #666; font-size: 0.8rem; }
     .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .section-heading h2 { margin-bottom: 0; }
     #posts { display: grid; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
@@ -107,6 +112,13 @@ export const cmsPage = `<!doctype html>
     <section id="detail" aria-labelledby="post-heading" hidden>
       <h2 id="post-heading">記事</h2>
       <p id="detail-status" role="status">Markdownを取得しています…</p>
+      <aside id="draft-notice" class="draft-notice" hidden>
+        <p id="draft-notice-text">この端末に未保存の下書きがあります。</p>
+        <div>
+          <button id="draft-restore" class="primary" type="button">下書きを復元</button>
+          <button id="draft-discard" type="button">下書きを破棄</button>
+        </div>
+      </aside>
       <div id="editor-grid" class="editor-grid">
         <textarea id="post-content" aria-label="Markdown本文" readonly hidden></textarea>
         <article id="preview" class="preview" aria-label="記事プレビュー" hidden></article>
@@ -124,6 +136,7 @@ export const cmsPage = `<!doctype html>
           <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
         </span>
       </div>
+      <p id="draft-state" class="draft-state" role="status"></p>
     </section>
   </main>
   <script>
@@ -140,6 +153,11 @@ export const cmsPage = `<!doctype html>
     const newTags = document.querySelector('#new-tags');
     const detail = document.querySelector('#detail');
     const detailStatus = document.querySelector('#detail-status');
+    const draftNotice = document.querySelector('#draft-notice');
+    const draftNoticeText = document.querySelector('#draft-notice-text');
+    const draftRestore = document.querySelector('#draft-restore');
+    const draftDiscard = document.querySelector('#draft-discard');
+    const draftState = document.querySelector('#draft-state');
     const postHeading = document.querySelector('#post-heading');
     const editorGrid = document.querySelector('#editor-grid');
     const postContent = document.querySelector('#post-content');
@@ -152,11 +170,96 @@ export const cmsPage = `<!doctype html>
     const cancelButton = document.querySelector('#cancel');
     const uploadLabel = document.querySelector('#upload');
     const imageInput = document.querySelector('#image');
-    const selectedPost = new URLSearchParams(location.search).get('post');
-    let activePost = selectedPost;
+    const searchParams = new URLSearchParams(location.search);
+    const selectedPost = searchParams.get('post');
+    const selectedDraft = searchParams.get('draft');
+    const draftPrefix = 'blog-cms:draft:v1:' + location.host + ':';
+    let activePost = selectedPost || selectedDraft;
     let creatingPost = false;
     let currentSha = '';
     let originalContent = '';
+    let pendingDraft;
+    let draftTimer;
+
+    function draftKey(name) {
+      return draftPrefix + name;
+    }
+
+    function validDraft(value, name) {
+      return value && value.version === 1 && value.name === name &&
+        typeof value.content === 'string' && value.content.length <= 1_000_000 &&
+        typeof value.isNew === 'boolean' && typeof value.savedAt === 'string' &&
+        (value.baseSha === null || /^[0-9a-f]{40}$/.test(value.baseSha));
+    }
+
+    function readDraft(name) {
+      if (!name) return undefined;
+      try {
+        const value = JSON.parse(localStorage.getItem(draftKey(name)) || 'null');
+        return validDraft(value, name) ? value : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+
+    function removeDraft(name) {
+      clearTimeout(draftTimer);
+      draftTimer = undefined;
+      if (!name) return;
+      try {
+        localStorage.removeItem(draftKey(name));
+      } catch {
+        // Editing must remain available even when browser storage is unavailable.
+      }
+      draftState.textContent = '';
+    }
+
+    function persistDraft() {
+      draftTimer = undefined;
+      if (postContent.readOnly || !activePost) return;
+      const draft = {
+        version: 1,
+        name: activePost,
+        content: postContent.value,
+        baseSha: creatingPost ? null : currentSha,
+        isNew: creatingPost,
+        savedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(draftKey(activePost), JSON.stringify(draft));
+        draftState.textContent = '下書きをこの端末に保存しました。共有端末では保存後に破棄してください。';
+      } catch {
+        draftState.textContent = '端末下書きを保存できません。本文を別の場所にも退避してください。';
+      }
+    }
+
+    function scheduleDraftSave() {
+      clearTimeout(draftTimer);
+      draftState.textContent = '端末下書きを保存しています…';
+      draftTimer = setTimeout(persistDraft, 400);
+    }
+
+    function hideDraftNotice() {
+      pendingDraft = undefined;
+      draftNotice.hidden = true;
+      editButton.disabled = false;
+    }
+
+    function showDraftNotice(draft, latestSha = '') {
+      pendingDraft = draft;
+      const savedAt = new Date(draft.savedAt);
+      const savedLabel = Number.isNaN(savedAt.getTime())
+        ? ''
+        : '（' + savedAt.toLocaleString('ja-JP') + '）';
+      const conflictWarning =
+        !draft.isNew && latestSha && draft.baseSha !== latestSha
+          ? ' GitHub版が更新されているため、復元後の保存では競合確認が必要です。'
+          : '';
+      draftNoticeText.textContent =
+        'この端末に未保存の下書きがあります' + savedLabel + '。' + conflictWarning;
+      draftNotice.hidden = false;
+      editButton.disabled = true;
+    }
 
     function loadPosts() {
       fetch('/api/posts')
@@ -240,7 +343,9 @@ export const cmsPage = `<!doctype html>
       list.hidden = true;
       detail.hidden = false;
       back.hidden = false;
+      history.replaceState(null, '', '/?draft=' + encodeURIComponent(activePost));
       setEditing(true);
+      persistDraft();
     });
 
     function loadPost(name) {
@@ -265,6 +370,8 @@ export const cmsPage = `<!doctype html>
           githubLink.href = data.post.githubUrl;
           githubLink.hidden = false;
           setEditing(false);
+          const draft = readDraft(name);
+          if (draft && !draft.isNew) showDraftNotice(draft, currentSha);
         })
         .catch(() => {
           detailStatus.dataset.error = 'true';
@@ -273,6 +380,30 @@ export const cmsPage = `<!doctype html>
           publicLink.hidden = true;
           githubLink.hidden = true;
         });
+    }
+
+    function loadNewDraft(name) {
+      const draft = readDraft(name);
+      list.hidden = true;
+      detail.hidden = false;
+      back.hidden = false;
+      publicLink.hidden = true;
+      githubLink.hidden = true;
+      editButton.hidden = true;
+      saveButton.hidden = true;
+      cancelButton.hidden = true;
+      uploadLabel.hidden = true;
+      postContent.hidden = true;
+      preview.hidden = true;
+      document.title = name + ' - Blog CMS';
+      postHeading.textContent = name;
+      if (!draft || !draft.isNew) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = 'この端末に復元できる新規記事の下書きがありません。';
+        return;
+      }
+      detailStatus.textContent = '未保存の新規記事の下書きがあります。';
+      showDraftNotice(draft);
     }
 
     function safePreviewUrl(value, image) {
@@ -507,7 +638,10 @@ export const cmsPage = `<!doctype html>
       preview.replaceChildren(fragment);
     }
 
-    postContent.addEventListener('input', renderPreview);
+    postContent.addEventListener('input', () => {
+      renderPreview();
+      scheduleDraftSave();
+    });
 
     function setEditing(editing) {
       postContent.readOnly = !editing;
@@ -522,6 +656,47 @@ export const cmsPage = `<!doctype html>
       if (editing) postContent.focus();
     }
 
+    draftRestore.addEventListener('click', () => {
+      if (!pendingDraft) return;
+      const draft = pendingDraft;
+      activePost = draft.name;
+      creatingPost = draft.isNew;
+      postContent.value = draft.content;
+      if (draft.isNew) {
+        currentSha = '';
+        originalContent = '';
+      } else if (draft.baseSha) {
+        currentSha = draft.baseSha;
+      }
+      hideDraftNotice();
+      draftState.textContent = '端末の下書きを復元しました。';
+      detailStatus.textContent = draft.isNew
+        ? '未保存の新規記事です。本文を確認してGitHubへ保存してください。'
+        : '端末の下書きを編集中です。';
+      setEditing(true);
+    });
+
+    draftDiscard.addEventListener('click', () => {
+      if (!pendingDraft) return;
+      const draft = pendingDraft;
+      removeDraft(draft.name);
+      hideDraftNotice();
+      if (draft.isNew) {
+        creatingPost = false;
+        activePost = null;
+        postContent.value = '';
+        preview.replaceChildren();
+        detail.hidden = true;
+        list.hidden = false;
+        back.hidden = true;
+        history.replaceState(null, '', '/');
+        document.title = 'Blog CMS';
+        if (posts.children.length === 0) loadPosts();
+      } else {
+        detailStatus.textContent = '端末の下書きを破棄しました。GitHub版を表示しています。';
+      }
+    });
+
     editButton.addEventListener('click', () => {
       delete detailStatus.dataset.error;
       detailStatus.textContent = '編集中です。保存するとGitHubのmainブランチへ反映されます。';
@@ -529,6 +704,10 @@ export const cmsPage = `<!doctype html>
     });
 
     cancelButton.addEventListener('click', () => {
+      const hasChanges = creatingPost || postContent.value !== originalContent;
+      if (hasChanges && !confirm('変更と、この端末に保存した下書きを破棄しますか？')) return;
+      removeDraft(activePost);
+      hideDraftNotice();
       if (creatingPost) {
         creatingPost = false;
         activePost = null;
@@ -543,6 +722,7 @@ export const cmsPage = `<!doctype html>
         newPostForm.reset();
         newTags.value = '日記';
         document.title = 'Blog CMS';
+        history.replaceState(null, '', '/');
         return;
       }
       postContent.value = originalContent;
@@ -579,6 +759,7 @@ export const cmsPage = `<!doctype html>
         postContent.setRangeText(inserted, start, end, 'end');
         detailStatus.textContent = 'Gyazo画像を挿入しました。GitHubへ保存してください。';
         renderPreview();
+        scheduleDraftSave();
         postContent.focus();
       } catch (error) {
         detailStatus.dataset.error = 'true';
@@ -648,6 +829,8 @@ export const cmsPage = `<!doctype html>
         const saved = isCreating ? data.post : data.update;
         currentSha = saved.sha;
         originalContent = postContent.value;
+        removeDraft(activePost);
+        hideDraftNotice();
         if (isCreating) {
           creatingPost = false;
           publicLink.href = saved.publicUrl;
@@ -674,6 +857,8 @@ export const cmsPage = `<!doctype html>
 
     if (selectedPost) {
       loadPost(selectedPost);
+    } else if (selectedDraft) {
+      loadNewDraft(selectedDraft);
     } else {
       loadPosts();
     }

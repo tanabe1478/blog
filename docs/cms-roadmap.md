@@ -31,7 +31,7 @@ Milestone G: 運用・監査を改善する
 | ID | Task | Milestone | 状態 |
 | --- | --- | --- | --- |
 | CMS-000 | Playwright E2E基盤 | 0 | `done` |
-| CMS-001 | localStorage自動下書きと復元 | A | `planned` |
+| CMS-001 | localStorage自動下書きと復元 | A | `done` |
 | CMS-002 | GitHub Actions / 公開status表示 | B | `planned` |
 | CMS-003 | 記事削除 | C | `planned` |
 | CMS-004 | slug変更（rename） | C | `planned` |
@@ -120,7 +120,17 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-001 localStorage自動下書きと復元
 
-状態: `planned`
+状態: `done`
+
+実装:
+
+- 400ms debounceで記事別localStorage keyへ保存
+- 既存記事と新規記事のreload復元 / 明示破棄
+- 新規記事は`?draft=<name>`で未保存状態を再表示
+- base SHA不一致warningと409競合維持
+- GitHub保存成功 / 確認付きcancelでdraft削除
+- storage unavailable時も編集継続
+- Vitest 23件とPlaywright E2E 8件で確認
 
 目的:
 
