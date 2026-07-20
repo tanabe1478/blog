@@ -30,7 +30,7 @@ Milestone G: 運用・監査を改善する
 
 | ID | Task | Milestone | 状態 |
 | --- | --- | --- | --- |
-| CMS-000 | Playwright E2E基盤 | 0 | `planned` |
+| CMS-000 | Playwright E2E基盤 | 0 | `done` |
 | CMS-001 | localStorage自動下書きと復元 | A | `planned` |
 | CMS-002 | GitHub Actions / 公開status表示 | B | `planned` |
 | CMS-003 | 記事削除 | C | `planned` |
@@ -84,7 +84,16 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-000 Playwright E2E基盤
 
-状態: `planned`
+状態: `done`
+
+実装:
+
+- `cms/playwright.config.ts`
+- `cms/e2e/cms.spec.ts`
+- `npm run check`でTypeScript、Vitest、Playwrightを実行
+- Check / Deploy CMS workflowでChromium E2Eを必須化
+- 失敗時にtrace、screenshot、HTML reportをCI artifactへ保存
+- APIはPlaywrightでmockし、実GitHub/Gyazoへのwriteなし
 
 目的:
 

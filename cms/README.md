@@ -88,9 +88,19 @@ GET http://localhost:8787/api/health
 
 ## checks
 
+初回だけPlaywright Chromiumをinstallします。
+
+```bash
+npx playwright install chromium
+```
+
+全check:
+
 ```bash
 npm run check
 ```
+
+これはTypeScript、Vitest、Playwright E2Eを順に実行します。E2Eはlocal Wranglerを起動し、browserからのAPI requestをmockするため、実GitHubやGyazoへwriteしません。
 
 ## deploy
 

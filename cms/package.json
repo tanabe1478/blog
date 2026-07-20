@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --var ACCESS_BYPASS:true --var WRITE_HOST:127.0.0.1",
-    "check": "tsc --noEmit && vitest run",
+    "check": "npm run check:types && npm run test:unit && npm run test:e2e",
+    "check:types": "tsc --noEmit && tsc --project tsconfig.e2e.json",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260719.1",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
     "wrangler": "^4.112.0"

@@ -13,5 +13,7 @@
 /cms/.env.*
 /cms/node_modules/
 /cms/.wrangler/
+/cms/playwright-report/
+/cms/test-results/
 __pycache__/
 *.pyc
