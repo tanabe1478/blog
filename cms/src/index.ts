@@ -46,7 +46,7 @@ function html(content: string): Response {
       "cache-control": "no-store",
       "content-type": "text/html; charset=utf-8",
       "content-security-policy":
-        "default-src 'none'; connect-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+        "default-src 'none'; connect-src 'self'; img-src https: data:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
     },
