@@ -1,4 +1,9 @@
-import { listPosts } from "./github";
+import {
+  getPost,
+  isValidPostName,
+  listPosts,
+  PostNotFoundError,
+} from "./github";
 import { cmsPage } from "./page";
 
 function json(data: unknown, status = 200, cacheControl = "no-store"): Response {
@@ -40,6 +45,29 @@ export default {
       } catch (error) {
         console.error("Failed to load posts", error);
         return json({ error: "記事一覧を取得できませんでした" }, 502);
+      }
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/api/posts/")) {
+      let name: string;
+      try {
+        name = decodeURIComponent(url.pathname.slice("/api/posts/".length));
+      } catch {
+        return json({ error: "記事名が不正です" }, 400);
+      }
+
+      if (!isValidPostName(name)) {
+        return json({ error: "記事名が不正です" }, 400);
+      }
+
+      try {
+        return json({ post: await getPost(name) }, 200, "public, max-age=60");
+      } catch (error) {
+        if (error instanceof PostNotFoundError) {
+          return json({ error: "記事が見つかりません" }, 404);
+        }
+        console.error("Failed to load post", error);
+        return json({ error: "記事を取得できませんでした" }, 502);
       }
     }
 
