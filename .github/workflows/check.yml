@@ -7,9 +7,28 @@ on:
       - main
 
 jobs:
-  build:
+  blog:
+    name: Blog
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Run checks
         run: scripts/run_tests.sh
+
+  cms:
+    name: CMS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cms
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cms/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run checks
+        run: npm run check

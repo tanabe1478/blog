@@ -51,3 +51,17 @@ npm run deploy
 ```
 
 CIではブログCMS専用Accountにscopeを限定した`CLOUDFLARE_API_TOKEN`をsecretとして設定します。tokenをrepository内のファイルへ保存しないでください。
+
+## GitHub Actions deploy
+
+`main`へ`cms/**`の変更がpushされると、`.github/workflows/deploy-cms.yml`がcheck後にWorkerをdeployします。GitHub Actionsの手動実行にも対応しています。
+
+Cloudflare Dashboardの**Account API tokens**でtokenを作成します。
+
+1. **Create Token**を選ぶ。
+2. **Edit Cloudflare Workers** templateを選ぶ。
+3. Account resourceをブログCMS専用Accountだけに限定する。
+4. GitHub repositoryの**Settings → Secrets and variables → Actions**を開く。
+5. Repository secret `CLOUDFLARE_API_TOKEN`として保存する。
+
+Secretの値は画面、terminal、chat、repositoryへ貼り付けず、CloudflareからGitHubのSecret入力欄へ直接コピーします。
