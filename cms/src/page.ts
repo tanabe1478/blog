@@ -28,14 +28,18 @@ export const cmsPage = `<!doctype html>
     .post-link:hover, .post-link:focus-visible { background: #eaeae4; outline: none; }
     code, textarea { font-family: ui-monospace, monospace; font-size: 0.9rem; }
     textarea { width: 100%; min-height: 60vh; resize: vertical; padding: 16px; border: 1px solid #d4d4ce; border-radius: 8px; color: inherit; background: #fafaf8; line-height: 1.6; }
-    .actions { margin: 16px 0 0; }
-    .actions a { color: #315ca8; }
+    .actions { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; }
+    .actions a { margin-left: auto; color: #315ca8; }
+    button { padding: 8px 14px; border: 1px solid #c8c8c2; border-radius: 8px; color: inherit; background: #fff; cursor: pointer; }
+    button.primary { border-color: #315ca8; color: #fff; background: #315ca8; }
+    button:disabled { cursor: wait; opacity: 0.6; }
+    button[hidden] { display: none; }
   </style>
 </head>
 <body>
   <header>
     <h1>Blog CMS</h1>
-    <span class="badge">読み取り専用</span>
+    <span class="badge">GitHub連携</span>
   </header>
   <main>
     <a id="back" class="back" href="/" hidden>← 記事一覧へ</a>
@@ -48,7 +52,12 @@ export const cmsPage = `<!doctype html>
       <h2 id="post-heading">記事</h2>
       <p id="detail-status" role="status">Markdownを取得しています…</p>
       <textarea id="post-content" aria-label="Markdown本文" readonly></textarea>
-      <p class="actions"><a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a></p>
+      <div class="actions">
+        <button id="edit" type="button">編集</button>
+        <button id="save" class="primary" type="button" hidden>GitHubへ保存</button>
+        <button id="cancel" type="button" hidden>キャンセル</button>
+        <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
+      </div>
     </section>
   </main>
   <script>
@@ -61,7 +70,12 @@ export const cmsPage = `<!doctype html>
     const postContent = document.querySelector('#post-content');
     const githubLink = document.querySelector('#github-link');
     const back = document.querySelector('#back');
+    const editButton = document.querySelector('#edit');
+    const saveButton = document.querySelector('#save');
+    const cancelButton = document.querySelector('#cancel');
     const selectedPost = new URLSearchParams(location.search).get('post');
+    let currentSha = '';
+    let originalContent = '';
 
     function loadPosts() {
       fetch('/api/posts')
@@ -104,6 +118,8 @@ export const cmsPage = `<!doctype html>
           postHeading.textContent = data.post.name;
           detailStatus.textContent = data.post.path;
           postContent.value = data.post.content;
+          originalContent = data.post.content;
+          currentSha = data.post.sha;
           githubLink.href = data.post.githubUrl;
         })
         .catch(() => {
@@ -113,6 +129,56 @@ export const cmsPage = `<!doctype html>
           githubLink.hidden = true;
         });
     }
+
+    function setEditing(editing) {
+      postContent.readOnly = !editing;
+      editButton.hidden = editing;
+      saveButton.hidden = !editing;
+      cancelButton.hidden = !editing;
+      if (editing) postContent.focus();
+    }
+
+    editButton.addEventListener('click', () => {
+      delete detailStatus.dataset.error;
+      detailStatus.textContent = '編集中です。保存するとGitHubのmainブランチへ反映されます。';
+      setEditing(true);
+    });
+
+    cancelButton.addEventListener('click', () => {
+      postContent.value = originalContent;
+      detailStatus.textContent = selectedPost ? '変更を破棄しました。' : '';
+      setEditing(false);
+    });
+
+    saveButton.addEventListener('click', async () => {
+      saveButton.disabled = true;
+      delete detailStatus.dataset.error;
+      detailStatus.textContent = 'GitHubへ保存しています…';
+      try {
+        const response = await fetch('/api/posts/' + encodeURIComponent(selectedPost), {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ content: postContent.value, sha: currentSha }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '保存に失敗しました');
+        currentSha = data.update.sha;
+        originalContent = postContent.value;
+        detailStatus.textContent = 'GitHubへ保存しました。公開処理はまだ実行していません。';
+        setEditing(false);
+      } catch (error) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = error instanceof Error ? error.message : '記事を保存できませんでした。';
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    addEventListener('beforeunload', (event) => {
+      if (!postContent.readOnly && postContent.value !== originalContent) {
+        event.preventDefault();
+      }
+    });
 
     if (selectedPost) {
       loadPost(selectedPost);

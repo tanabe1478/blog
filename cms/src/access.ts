@@ -4,6 +4,8 @@ export interface Env {
   POLICY_AUD: string;
   TEAM_DOMAIN: string;
   ACCESS_BYPASS?: string | boolean;
+  GITHUB_TOKEN?: string;
+  WRITE_HOST: string;
 }
 
 export interface AccessIdentity {

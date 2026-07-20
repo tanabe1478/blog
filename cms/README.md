@@ -30,6 +30,18 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 認証を迂回する`ACCESS_BYPASS=true`は`npm run dev`からlocal Wranglerへだけ渡します。本番の`wrangler.jsonc`には設定しません。
 
+## GitHub article editing
+
+既存記事の保存には、`tanabe1478/blog`だけに`Contents: Read and write`を持つfine-grained tokenを使います。tokenはCloudflare Worker Secret `GITHUB_TOKEN`として保存し、repositoryやブラウザへ渡しません。
+
+```bash
+npx wrangler secret put GITHUB_TOKEN
+```
+
+保存APIは`wrangler.jsonc`の`WRITE_HOST`と一致するProduction hostnameからだけ受け付けます。Preview URLは記事を閲覧できますが、GitHubへの書き込みは`403`で拒否します。
+
+CMSの保存は`Content/posts/*.md`をGitHubの`main`へcommitします。この時点では既存の`publish_blog.py`によるGitHub Pages公開処理までは実行しません。
+
 ## local development
 
 ```bash

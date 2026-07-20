@@ -10,6 +10,7 @@ import {
 const env: Env = {
   POLICY_AUD: "production-audience, preview-audience",
   TEAM_DOMAIN: "https://team.cloudflareaccess.com",
+  WRITE_HOST: "cms.example.test",
 };
 
 function accessRequest(token = "signed-token"): Request {

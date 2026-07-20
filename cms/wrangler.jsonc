@@ -7,6 +7,7 @@
   "workers_dev": true,
   "vars": {
     "POLICY_AUD": "adeefd5008c6b889c4aa36662acdc53f746a7ae099f21a067b5c2a44461ecd6d,0be875cc065eea35a5b53d1741262f9f7cdf1c4ebe29beabd26d800ad83e69f8",
-    "TEAM_DOMAIN": "https://enterprise2580.cloudflareaccess.com"
+    "TEAM_DOMAIN": "https://enterprise2580.cloudflareaccess.com",
+    "WRITE_HOST": "tanabe-blog-cms-api.enterprise2580.workers.dev"
   }
 }

@@ -8,6 +8,8 @@ function fetch(path: string, init?: RequestInit): Promise<Response> {
     POLICY_AUD: "test-audience",
     TEAM_DOMAIN: "https://test.cloudflareaccess.com",
     ACCESS_BYPASS: "true",
+    GITHUB_TOKEN: "test-token",
+    WRITE_HOST: "127.0.0.1",
   });
 }
 
@@ -24,6 +26,7 @@ describe("CMS Worker", () => {
       {
         POLICY_AUD: "test-audience",
         TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        WRITE_HOST: "cms.example.test",
       },
     );
 
@@ -39,6 +42,7 @@ describe("CMS Worker", () => {
         POLICY_AUD: "test-audience",
         TEAM_DOMAIN: "https://test.cloudflareaccess.com",
         ACCESS_BYPASS: true,
+        WRITE_HOST: "cms.example.test",
       },
     );
 
@@ -57,7 +61,8 @@ describe("CMS Worker", () => {
       "default-src 'none'",
     );
     expect(content).toContain("<h1>Blog CMS</h1>");
-    expect(content).toContain("読み取り専用");
+    expect(content).toContain("GitHub連携");
+    expect(content).toContain('id="edit"');
     expect(content).toContain('id="detail"');
     expect(content).toContain('id="post-content"');
   });
@@ -89,7 +94,7 @@ describe("CMS Worker", () => {
     const response = await fetch("/api/posts");
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
       posts: [
         {
@@ -110,27 +115,140 @@ describe("CMS Worker", () => {
 
   it("returns one Markdown post for the detail view", async () => {
     const upstream = vi.fn().mockResolvedValue(
-      new Response("---\ndate: 2026-07-20\n---\n\n# Hello\n"),
+      Response.json({
+        name: "hello world.md",
+        path: "Content/posts/hello world.md",
+        type: "file",
+        sha: "a".repeat(40),
+        encoding: "base64",
+        content: btoa("---\ndate: 2026-07-20\n---\n\n# Hello\n"),
+      }),
     );
     vi.stubGlobal("fetch", upstream);
 
     const response = await fetch("/api/posts/hello%20world.md");
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
       post: {
         name: "hello world.md",
         path: "Content/posts/hello world.md",
         content: "---\ndate: 2026-07-20\n---\n\n# Hello\n",
+        sha: "a".repeat(40),
         githubUrl:
           "https://github.com/tanabe1478/blog/blob/main/Content/posts/hello%20world.md",
       },
     });
     expect(upstream).toHaveBeenCalledWith(
-      "https://raw.githubusercontent.com/tanabe1478/blog/main/Content/posts/hello%20world.md",
+      "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts/hello%20world.md",
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it("updates an existing Markdown post with its current SHA", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        content: { sha: "b".repeat(40) },
+        commit: { sha: "c".repeat(40) },
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/posts/hello.md", {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        content: "# Updated\n",
+        sha: "a".repeat(40),
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      update: {
+        sha: "b".repeat(40),
+        commitSha: "c".repeat(40),
+        githubUrl:
+          "https://github.com/tanabe1478/blog/blob/main/Content/posts/hello.md",
+      },
+    });
+    expect(upstream).toHaveBeenCalledWith(
+      "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts/hello.md",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          authorization: "Bearer test-token",
+        }),
+      }),
+    );
+    const requestBody = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(requestBody).toEqual({
+      message: "post: update hello.md via CMS",
+      content: btoa("# Updated\n"),
+      sha: "a".repeat(40),
+      branch: "main",
+    });
+  });
+
+  it("rejects writes through a Preview hostname", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const request = new Request(
+      "https://preview-tanabe-blog-cms-api.example.workers.dev/api/posts/hello.md",
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://preview-tanabe-blog-cms-api.example.workers.dev",
+        },
+        body: JSON.stringify({
+          content: "# Updated\n",
+          sha: "a".repeat(40),
+        }),
+      },
+    );
+
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        GITHUB_TOKEN: "test-token",
+        WRITE_HOST: "tanabe-blog-cms-api.example.workers.dev",
+      },
+    );
+
+    expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("reports a conflict instead of overwriting a newer post", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 409 })),
+    );
+
+    const response = await fetch("/api/posts/hello.md", {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1",
+      },
+      body: JSON.stringify({
+        content: "# Updated\n",
+        sha: "a".repeat(40),
+      }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "記事が他の場所で更新されています。再読み込みしてください",
+    });
   });
 
   it("rejects path traversal before requesting GitHub", async () => {
@@ -161,8 +279,13 @@ describe("CMS Worker", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response("small body", {
-          headers: { "content-length": "1000001" },
+        Response.json({
+          name: "large.md",
+          path: "Content/posts/large.md",
+          type: "file",
+          sha: "a".repeat(40),
+          encoding: "base64",
+          content: btoa("x".repeat(1_000_001)),
         }),
       ),
     );
