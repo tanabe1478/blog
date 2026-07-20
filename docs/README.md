@@ -5,6 +5,7 @@
 ## まず読むもの
 
 - `status.md` — 現在の状態、完了済み作業、残タスク
+- `cms-development-handoff.md` — CMSの構成、Wrangler、認証、Secret、開発・deploy・troubleshoot手順
 - `deploy.md` — build / deploy 手順
 - `script-based-publish-workflow.md` — Markmesh に依存しない記事作成・画像 upload・publish 方針
 - `post-migration-check.md` — 公開後の確認結果と smoke check
@@ -16,6 +17,11 @@
 - `diary-migration-sources.md` — diary 記事・画像 source の整理
 - `diary-redirects.md` — 旧 diary URL redirect 方針
 - `diary-ui-notes.md` — diary UI に寄せるための見た目メモ
+
+## Blog CMS
+
+- `cms-development-handoff.md` — 別session向けの開発引き継ぎ資料
+- `../cms/README.md` — CMS機能別の短い運用説明
 
 ## publish workflow
 

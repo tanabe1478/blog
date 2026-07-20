@@ -1,6 +1,6 @@
 # Current status
 
-2026-05-11 時点の統合作業ステータスです。
+blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`cms-development-handoff.md`も参照してください。
 
 ## 完了
 
@@ -18,9 +18,21 @@
 - Publish built-in deploy は path flatten 問題があったため使わない。
 - 公開後確認用の `scripts/check_public_site.py` を追加済み。
 
+### Blog CMS
+
+- ブログ専用Cloudflare Worker `tanabe-blog-cms-api`を追加済み。
+- Production/PreviewをCloudflare Accessで保護し、Worker内でもJWTを検証済み。
+- GitHub上の既存記事一覧・detail・SHA競合検知付き保存に対応済み。
+- 記事一覧は公開blogと同じ43記事をdate降順で表示する。
+- Gyazo画像のfile picker / drag-and-drop uploadに対応済み。
+- 編集時の2ペインlive Markdown previewに対応済み。
+- CMS保存後はGitHub ActionsがSwift Publish buildとGitHub Pages deployを自動実行する。
+- Cloudflare resourceとtokenは`yurubo`から分離済み。
+
 ### docs
 
 - `AGENTS.md` に小さなコミット単位と丁寧なコミットメッセージ方針を追加済み。
+- `docs/cms-development-handoff.md`にWrangler、認証、Secret、開発、deploy、troubleshoot手順を整理済み。
 - `docs/` に統合計画、migration rules、redirect、deploy、post migration check を整理済み。
 - publish workflow 方針を `docs/script-based-publish-workflow.md` に整理済み。
 
@@ -70,7 +82,15 @@ scripts/deploy_site.sh
 
 ## 残タスク
 
-> 2026-05-12: Markmesh extension CMS 方針は撤回。blog workflow は script-based に寄せる。
+> 2026-05-12: Markmesh extension CMS 方針は撤回。blog workflow はscript-basedを正本とし、現在のWeb CMSもこのrepositoryを直接更新する。
+
+### Blog CMS
+
+- validated slug/frontmatter付きの新規記事作成。
+- 明示確認とSHA検証付きのrename/delete。
+- 保存後のGitHub Actions / GitHub Pages deploy status表示。
+- 一覧のsearch/filter。
+- fine-grained tokenの期限・rotation手順の定期確認。
 
 ### script workflow
 
