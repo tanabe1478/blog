@@ -1,6 +1,25 @@
 const POSTS_API_URL =
   "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts";
 const REPOSITORY_URL = "https://github.com/tanabe1478/blog";
+const PUBLIC_BLOG_URL = "https://tanabe1478.github.io";
+const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
+const POSTS_QUERY = `query BlogPosts {
+  repository(owner: "tanabe1478", name: "blog") {
+    object(expression: "main:Content/posts") {
+      ... on Tree {
+        entries {
+          name
+          type
+          object {
+            ... on Blob {
+              text
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
 const MAX_POST_BYTES = 1_000_000;
 
 interface GitHubContent {
@@ -17,15 +36,28 @@ interface GitHubUpdateResult {
   commit?: { sha?: unknown };
 }
 
-export interface PostSummary {
-  name: string;
-  path: string;
-  githubUrl: string;
+interface GitHubTreeEntry {
+  name?: unknown;
+  type?: unknown;
+  object?: { text?: unknown } | null;
 }
 
-export interface PostDocument extends PostSummary {
+export interface PostSummary {
+  name: string;
+  title: string;
+  date: string;
+  path: string;
+  githubUrl: string;
+  publicUrl: string;
+}
+
+export interface PostDocument {
+  name: string;
+  path: string;
   content: string;
   sha: string;
+  githubUrl: string;
+  publicUrl: string;
 }
 
 export interface PostUpdate {
@@ -55,6 +87,35 @@ export function isValidPostContent(content: string): boolean {
 function githubFileUrl(path: string): string {
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
   return `${REPOSITORY_URL}/blob/main/${encodedPath}`;
+}
+
+function publicPostUrl(name: string): string {
+  return `${PUBLIC_BLOG_URL}/posts/${encodeURIComponent(name.slice(0, -3))}/`;
+}
+
+function postMetadata(name: string, content: string): PostSummary | undefined {
+  if (name === "index.md") return undefined;
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const date = frontmatter?.[1].match(/^date:\s*(.+)\s*$/m)?.[1]?.trim();
+  const title = content.match(/^#{1,6}\s+(.+)\s*$/m)?.[1]?.trim();
+  if (!date || !title) return undefined;
+  const path = `Content/posts/${name}`;
+  return {
+    name,
+    title,
+    date,
+    path,
+    githubUrl: githubFileUrl(path),
+    publicUrl: publicPostUrl(name),
+  };
+}
+
+function sortPosts(posts: PostSummary[]): PostSummary[] {
+  return posts.sort(
+    (left, right) =>
+      right.date.localeCompare(left.date, "en") ||
+      left.name.localeCompare(right.name, "en"),
+  );
 }
 
 function githubHeaders(token?: string, json = false): Record<string, string> {
@@ -94,14 +155,57 @@ export async function listPosts(
   token?: string,
   request: typeof fetch = fetch,
 ): Promise<PostSummary[]> {
-  const response = await request(POSTS_API_URL, {
-    headers: githubHeaders(token),
-  });
+  if (token) {
+    const response = await request(GITHUB_GRAPHQL_URL, {
+      method: "POST",
+      headers: githubHeaders(token, true),
+      body: JSON.stringify({ query: POSTS_QUERY }),
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub GraphQL API returned ${response.status}`);
+    }
 
+    const result: unknown = await response.json();
+    const entries =
+      typeof result === "object" &&
+      result !== null &&
+      "data" in result &&
+      typeof result.data === "object" &&
+      result.data !== null &&
+      "repository" in result.data &&
+      typeof result.data.repository === "object" &&
+      result.data.repository !== null &&
+      "object" in result.data.repository &&
+      typeof result.data.repository.object === "object" &&
+      result.data.repository.object !== null &&
+      "entries" in result.data.repository.object
+        ? result.data.repository.object.entries
+        : undefined;
+    if (!Array.isArray(entries)) {
+      throw new Error("GitHub GraphQL API returned an unexpected response");
+    }
+
+    const posts = entries.flatMap((entry: GitHubTreeEntry) => {
+      if (
+        entry.type !== "blob" ||
+        typeof entry.name !== "string" ||
+        !entry.name.endsWith(".md") ||
+        typeof entry.object?.text !== "string"
+      ) {
+        return [];
+      }
+      const metadata = postMetadata(entry.name, entry.object.text);
+      return metadata ? [metadata] : [];
+    });
+    return sortPosts(posts);
+  }
+
+  const response = await request(POSTS_API_URL, {
+    headers: githubHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`GitHub API returned ${response.status}`);
   }
-
   const contents: unknown = await response.json();
   if (!Array.isArray(contents)) {
     throw new Error("GitHub API returned an unexpected response");
@@ -116,16 +220,20 @@ export async function listPosts(
       } =>
         entry.type === "file" &&
         typeof entry.name === "string" &&
+        entry.name !== "index.md" &&
         entry.name.endsWith(".md") &&
         typeof entry.path === "string" &&
         entry.path.startsWith("Content/posts/"),
     )
     .map((entry) => ({
       name: entry.name,
+      title: entry.name.slice(0, -3),
+      date: "",
       path: entry.path,
       githubUrl: githubFileUrl(entry.path),
+      publicUrl: publicPostUrl(entry.name),
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, "en"));
+    .sort((left, right) => left.name.localeCompare(right.name, "en"));
 }
 
 export async function getPost(
@@ -162,6 +270,7 @@ export async function getPost(
     content: decodeBase64Utf8(post.content),
     sha: post.sha,
     githubUrl: githubFileUrl(path),
+    publicUrl: publicPostUrl(name),
   };
 }
 

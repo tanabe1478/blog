@@ -26,6 +26,8 @@ export const cmsPage = `<!doctype html>
     ul { display: grid; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
     .post-link { display: block; padding: 12px 14px; border-radius: 8px; color: inherit; text-decoration: none; background: #f4f4f0; }
     .post-link:hover, .post-link:focus-visible { background: #eaeae4; outline: none; }
+    .post-title { display: block; font-weight: 650; }
+    .post-meta { display: block; margin-top: 4px; color: #666; font-size: 0.78rem; }
     code, textarea { font-family: ui-monospace, monospace; font-size: 0.9rem; }
     textarea { width: 100%; min-height: 60vh; resize: vertical; padding: 16px; border: 1px solid #d4d4ce; border-radius: 8px; color: inherit; background: #fafaf8; line-height: 1.6; }
     textarea[data-drag="true"] { border-color: #315ca8; outline: 3px solid #dce7fa; background: #f5f8ff; }
@@ -98,11 +100,15 @@ export const cmsPage = `<!doctype html>
           for (const post of data.posts) {
             const item = document.createElement('li');
             const link = document.createElement('a');
-            const name = document.createElement('code');
-            name.textContent = post.name;
+            const title = document.createElement('span');
+            const metadata = document.createElement('code');
+            title.className = 'post-title';
+            title.textContent = post.title;
+            metadata.className = 'post-meta';
+            metadata.textContent = post.date ? post.date + ' · ' + post.name : post.name;
             link.className = 'post-link';
             link.href = '/?post=' + encodeURIComponent(post.name);
-            link.append(name);
+            link.append(title, metadata);
             item.append(link);
             posts.append(item);
           }

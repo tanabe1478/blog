@@ -74,28 +74,43 @@ describe("CMS Worker", () => {
   });
 
   it("returns Markdown posts from the public repository", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        Response.json([
-          {
-            name: "second post.md",
-            path: "Content/posts/second post.md",
-            type: "file",
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        data: {
+          repository: {
+            object: {
+              entries: [
+                {
+                  name: "second post.md",
+                  type: "blob",
+                  object: {
+                    text: "---\ndate: 2026-02-03 10:00\n---\n\n# Second post\n",
+                  },
+                },
+                {
+                  name: "assets",
+                  type: "tree",
+                  object: null,
+                },
+                {
+                  name: "index.md",
+                  type: "blob",
+                  object: { text: "# My posts\n" },
+                },
+                {
+                  name: "first.md",
+                  type: "blob",
+                  object: {
+                    text: "---\ndate: 2025-01-02 09:00\n---\n\n# First post\n",
+                  },
+                },
+              ],
+            },
           },
-          {
-            name: "assets",
-            path: "Content/posts/assets",
-            type: "dir",
-          },
-          {
-            name: "first.md",
-            path: "Content/posts/first.md",
-            type: "file",
-          },
-        ]),
-      ),
+        },
+      }),
     );
+    vi.stubGlobal("fetch", upstream);
 
     const response = await fetch("/api/posts");
 
@@ -104,19 +119,35 @@ describe("CMS Worker", () => {
     expect(await response.json()).toEqual({
       posts: [
         {
-          name: "first.md",
-          path: "Content/posts/first.md",
-          githubUrl:
-            "https://github.com/tanabe1478/blog/blob/main/Content/posts/first.md",
-        },
-        {
           name: "second post.md",
+          title: "Second post",
+          date: "2026-02-03 10:00",
           path: "Content/posts/second post.md",
           githubUrl:
             "https://github.com/tanabe1478/blog/blob/main/Content/posts/second%20post.md",
+          publicUrl:
+            "https://tanabe1478.github.io/posts/second%20post/",
+        },
+        {
+          name: "first.md",
+          title: "First post",
+          date: "2025-01-02 09:00",
+          path: "Content/posts/first.md",
+          githubUrl:
+            "https://github.com/tanabe1478/blog/blob/main/Content/posts/first.md",
+          publicUrl: "https://tanabe1478.github.io/posts/first/",
         },
       ],
     });
+    expect(upstream).toHaveBeenCalledWith(
+      "https://api.github.com/graphql",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          authorization: "Bearer test-token",
+        }),
+      }),
+    );
   });
 
   it("returns one Markdown post for the detail view", async () => {
@@ -144,6 +175,8 @@ describe("CMS Worker", () => {
         sha: "a".repeat(40),
         githubUrl:
           "https://github.com/tanabe1478/blog/blob/main/Content/posts/hello%20world.md",
+        publicUrl:
+          "https://tanabe1478.github.io/posts/hello%20world/",
       },
     });
     expect(upstream).toHaveBeenCalledWith(
