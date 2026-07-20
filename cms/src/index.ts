@@ -1,6 +1,7 @@
 import { authenticateAccess, type Env } from "./access";
 import {
   createPost,
+  getBlogDeployment,
   getPost,
   isValidNewPostContent,
   isValidNewPostName,
@@ -120,6 +121,24 @@ export default {
         }
         console.error("Failed to upload image", error);
         return json({ error: "画像をGyazoへアップロードできませんでした" }, 502);
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname.startsWith("/api/deployments/")
+    ) {
+      const commitSha = url.pathname.slice("/api/deployments/".length);
+      if (!/^[0-9a-f]{40}$/.test(commitSha)) {
+        return json({ error: "commit SHAが不正です" }, 400);
+      }
+      try {
+        return json({
+          deployment: await getBlogDeployment(commitSha, env.GITHUB_TOKEN),
+        });
+      } catch (error) {
+        console.error("Failed to load deployment status", error);
+        return json({ error: "公開状況を取得できませんでした" }, 502);
       }
     }
 

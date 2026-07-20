@@ -16,14 +16,50 @@ interface MockOptions {
   createConflict?: boolean;
   createError?: boolean;
   updateConflict?: boolean;
+  deploymentError?: boolean;
+  deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
 }
 
 async function mockCmsApi(page: Page, options: MockOptions = {}) {
+  let deploymentIndex = 0;
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+
+    if (
+      request.method() === "GET" &&
+      url.pathname.startsWith("/api/deployments/")
+    ) {
+      if (options.deploymentError) {
+        await route.fulfill({
+          status: 502,
+          json: { error: "公開状況を取得できませんでした" },
+        });
+        return;
+      }
+      const states = options.deploymentStates ?? ["published"];
+      const state = states[Math.min(deploymentIndex, states.length - 1)];
+      deploymentIndex += 1;
+      const commitSha = url.pathname.slice("/api/deployments/".length);
+      await route.fulfill({
+        json: {
+          deployment: {
+            commitSha,
+            state,
+            ...(state === "pending"
+              ? {}
+              : {
+                  runUrl:
+                    "https://github.com/tanabe1478/blog/actions/runs/789",
+                  updatedAt: "2026-07-20T15:10:00Z",
+                }),
+          },
+        },
+      });
+      return;
+    }
 
     if (request.method() === "GET" && url.pathname === "/api/posts") {
       await route.fulfill({
@@ -331,6 +367,57 @@ test("creates an unsaved article and saves it for the first time", async ({
     "https://tanabe1478.github.io/posts/new-post/",
   );
   await expect(page).toHaveURL(/\?post=new-post\.md$/);
+});
+
+test("shows deployment progress until the article is public", async ({ page }) => {
+  await mockCmsApi(page, {
+    deploymentStates: ["pending", "running", "published"],
+  });
+  await openNewPostEditor(page);
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  const deployment = page.locator("#deployment-status");
+  await expect(deployment).toContainText("build待ち");
+  await page.getByRole("button", { name: "公開状況を再確認" }).click();
+  await expect(deployment).toContainText("公開処理を実行中");
+  await expect(page.getByRole("link", { name: "GitHub Actionsを開く" })).toHaveAttribute(
+    "href",
+    "https://github.com/tanabe1478/blog/actions/runs/789",
+  );
+  await page.getByRole("button", { name: "公開状況を再確認" }).click();
+  await expect(deployment).toContainText("公開済み");
+  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
+    "data-published",
+    "true",
+  );
+});
+
+test("shows a failed deployment without losing the saved article", async ({
+  page,
+}) => {
+  await mockCmsApi(page, { deploymentStates: ["failed"] });
+  await openNewPostEditor(page);
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  await expect(page.locator("#deployment-status")).toContainText(
+    "公開処理に失敗しました",
+  );
+  await expect(page.getByRole("link", { name: "GitHub Actionsを開く" })).toBeVisible();
+  await expect(page.getByLabel("Markdown本文")).toBeHidden();
+});
+
+test("keeps the saved article when deployment status cannot be loaded", async ({
+  page,
+}) => {
+  await mockCmsApi(page, { deploymentError: true });
+  await openNewPostEditor(page);
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  await expect(page.locator("#deployment-status")).toContainText(
+    "記事は保存済みですが、公開状況を取得できません",
+  );
+  await expect(page.getByLabel("Markdown本文")).toBeHidden();
+  await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
 });
 
 test("keeps an unsaved new article when creation conflicts", async ({ page }) => {

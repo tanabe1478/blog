@@ -32,7 +32,7 @@ Milestone G: 運用・監査を改善する
 | --- | --- | --- | --- |
 | CMS-000 | Playwright E2E基盤 | 0 | `done` |
 | CMS-001 | localStorage自動下書きと復元 | A | `done` |
-| CMS-002 | GitHub Actions / 公開status表示 | B | `planned` |
+| CMS-002 | GitHub Actions / 公開status表示 | B | `done` |
 | CMS-003 | 記事削除 | C | `planned` |
 | CMS-004 | slug変更（rename） | C | `planned` |
 | CMS-005 | 記事一覧の検索・絞り込み | D | `planned` |
@@ -163,7 +163,19 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-002 GitHub Actions / 公開status表示
 
-状態: `planned`
+状態: `done`
+
+実装:
+
+- 保存responseのsource commit SHAで`deploy-blog.yml` runを検索
+- 保存済み/build待ち、実行中、公開済み、失敗の4状態
+- 10秒間隔、最大30回でpollingを自動停止
+- 手動再確認とGitHub Actions詳細link
+- public smoke checkを含むworkflow successを公開済み判定に使用
+- status API失敗時も記事保存成功と本文を維持
+- Actions APIの401/403時だけpublic APIへ認証なしfallback
+- 新しいSecret/token scope追加なし
+- Vitest 29件とPlaywright E2E 11件で確認
 
 目的:
 

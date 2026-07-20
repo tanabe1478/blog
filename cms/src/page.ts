@@ -28,6 +28,14 @@ export const cmsPage = `<!doctype html>
     .draft-notice p { margin-bottom: 10px; }
     .draft-notice div { display: flex; gap: 10px; }
     .draft-state { min-height: 1.2em; margin: 10px 0 0; color: #666; font-size: 0.8rem; }
+    .deployment-status { margin-top: 16px; padding: 14px; border: 1px solid #c8c8c2; border-radius: 8px; background: #f4f4f0; }
+    .deployment-status[hidden] { display: none; }
+    .deployment-status[data-state="published"] { border-color: #3f8f5f; background: #edf8f0; }
+    .deployment-status[data-state="failed"] { border-color: #b42318; background: #fff1f0; }
+    .deployment-status p { margin-bottom: 10px; }
+    .deployment-actions { display: flex; align-items: center; gap: 12px; }
+    .deployment-actions a { color: #315ca8; }
+    #public-link[data-published="true"] { padding: 4px 7px; border-radius: 5px; font-weight: 700; background: #dff3e4; }
     .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .section-heading h2 { margin-bottom: 0; }
     #posts { display: grid; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
@@ -137,6 +145,13 @@ export const cmsPage = `<!doctype html>
         </span>
       </div>
       <p id="draft-state" class="draft-state" role="status"></p>
+      <aside id="deployment-status" class="deployment-status" aria-live="polite" hidden>
+        <p id="deployment-label">保存済み。公開処理を確認しています…</p>
+        <div class="deployment-actions">
+          <button id="deployment-refresh" type="button">公開状況を再確認</button>
+          <a id="deployment-run-link" target="_blank" rel="noreferrer" hidden>GitHub Actionsを開く</a>
+        </div>
+      </aside>
     </section>
   </main>
   <script>
@@ -158,6 +173,10 @@ export const cmsPage = `<!doctype html>
     const draftRestore = document.querySelector('#draft-restore');
     const draftDiscard = document.querySelector('#draft-discard');
     const draftState = document.querySelector('#draft-state');
+    const deploymentStatus = document.querySelector('#deployment-status');
+    const deploymentLabel = document.querySelector('#deployment-label');
+    const deploymentRefresh = document.querySelector('#deployment-refresh');
+    const deploymentRunLink = document.querySelector('#deployment-run-link');
     const postHeading = document.querySelector('#post-heading');
     const editorGrid = document.querySelector('#editor-grid');
     const postContent = document.querySelector('#post-content');
@@ -180,6 +199,10 @@ export const cmsPage = `<!doctype html>
     let originalContent = '';
     let pendingDraft;
     let draftTimer;
+    let deploymentCommit = '';
+    let deploymentTimer;
+    let deploymentChecks = 0;
+    let deploymentLoading = false;
 
     function draftKey(name) {
       return draftPrefix + name;
@@ -260,6 +283,74 @@ export const cmsPage = `<!doctype html>
       draftNotice.hidden = false;
       editButton.disabled = true;
     }
+
+    function scheduleDeploymentCheck() {
+      clearTimeout(deploymentTimer);
+      if (deploymentChecks >= 30) {
+        deploymentLabel.textContent += ' 自動確認を停止しました。必要に応じて再確認してください。';
+        return;
+      }
+      deploymentTimer = setTimeout(refreshDeployment, 10_000);
+    }
+
+    async function refreshDeployment() {
+      if (!deploymentCommit || deploymentLoading) return;
+      clearTimeout(deploymentTimer);
+      deploymentLoading = true;
+      deploymentRefresh.disabled = true;
+      deploymentChecks += 1;
+      try {
+        const response = await fetch('/api/deployments/' + deploymentCommit);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '公開状況を取得できませんでした');
+        const deployment = data.deployment;
+        deploymentStatus.dataset.state = deployment.state;
+        if (deployment.runUrl) {
+          deploymentRunLink.href = deployment.runUrl;
+          deploymentRunLink.hidden = false;
+        } else {
+          deploymentRunLink.hidden = true;
+        }
+
+        if (deployment.state === 'pending') {
+          deploymentLabel.textContent = '保存済み・build待ちです。';
+          scheduleDeploymentCheck();
+        } else if (deployment.state === 'running') {
+          deploymentLabel.textContent = '公開処理を実行中です。';
+          scheduleDeploymentCheck();
+        } else if (deployment.state === 'published') {
+          deploymentLabel.textContent = '公開済みです。';
+          publicLink.dataset.published = 'true';
+        } else if (deployment.state === 'failed') {
+          deploymentLabel.textContent = '公開処理に失敗しました。GitHub Actionsを確認してください。';
+        } else {
+          throw new Error('公開状況のresponseが不正です');
+        }
+      } catch {
+        delete deploymentStatus.dataset.state;
+        deploymentLabel.textContent = '記事は保存済みですが、公開状況を取得できません。手動で再確認できます。';
+      } finally {
+        deploymentLoading = false;
+        deploymentRefresh.disabled = false;
+      }
+    }
+
+    function startDeploymentTracking(commitSha) {
+      clearTimeout(deploymentTimer);
+      deploymentCommit = commitSha;
+      deploymentChecks = 0;
+      deploymentStatus.hidden = false;
+      delete deploymentStatus.dataset.state;
+      delete publicLink.dataset.published;
+      deploymentRunLink.hidden = true;
+      deploymentLabel.textContent = '保存済み。公開処理を確認しています…';
+      void refreshDeployment();
+    }
+
+    deploymentRefresh.addEventListener('click', () => {
+      deploymentChecks = 0;
+      void refreshDeployment();
+    });
 
     function loadPosts() {
       fetch('/api/posts')
@@ -841,6 +932,7 @@ export const cmsPage = `<!doctype html>
         }
         detailStatus.textContent = 'GitHubへ保存しました。公開処理はGitHub Actionsで進みます。';
         setEditing(false);
+        startDeploymentTracking(saved.commitSha);
       } catch (error) {
         detailStatus.dataset.error = 'true';
         detailStatus.textContent = error instanceof Error ? error.message : '記事を保存できませんでした。';

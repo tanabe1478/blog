@@ -72,6 +72,9 @@ describe("CMS Worker", () => {
     expect(content).toContain('id="draft-restore"');
     expect(content).toContain('id="draft-discard"');
     expect(content).toContain("localStorage.setItem(draftKey(activePost)");
+    expect(content).toContain('id="deployment-status"');
+    expect(content).toContain('id="deployment-refresh"');
+    expect(content).toContain('GitHub Actionsを開く');
     expect(content).toContain('id="edit"');
     expect(content).toContain('id="image"');
     expect(content).toContain("postContent.addEventListener('drop'");
@@ -163,6 +166,150 @@ describe("CMS Worker", () => {
         }),
       }),
     );
+  });
+
+  it("reports a running blog deployment for a source commit", async () => {
+    const commitSha = "d".repeat(40);
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        workflow_runs: [
+          {
+            status: "in_progress",
+            conclusion: null,
+            html_url: "https://github.com/tanabe1478/blog/actions/runs/123",
+            updated_at: "2026-07-20T15:00:00Z",
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch(`/api/deployments/${commitSha}`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deployment: {
+        commitSha,
+        state: "running",
+        runUrl: "https://github.com/tanabe1478/blog/actions/runs/123",
+        updatedAt: "2026-07-20T15:00:00Z",
+      },
+    });
+    expect(upstream).toHaveBeenCalledWith(
+      `https://api.github.com/repos/tanabe1478/blog/actions/workflows/deploy-blog.yml/runs?head_sha=${commitSha}&event=push&per_page=1`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ authorization: "Bearer test-token" }),
+      }),
+    );
+  });
+
+  it("reports a pending deployment before its workflow run appears", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ workflow_runs: [] })),
+    );
+    const commitSha = "d".repeat(40);
+
+    const response = await fetch(`/api/deployments/${commitSha}`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deployment: { commitSha, state: "pending" },
+    });
+  });
+
+  it("falls back to the public workflow API when the token lacks Actions read", async () => {
+    const upstream = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(Response.json({ workflow_runs: [] }));
+    vi.stubGlobal("fetch", upstream);
+    const commitSha = "d".repeat(40);
+
+    const response = await fetch(`/api/deployments/${commitSha}`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deployment: { commitSha, state: "pending" },
+    });
+    expect(upstream).toHaveBeenCalledTimes(2);
+    expect(upstream.mock.calls[0][1].headers).toHaveProperty(
+      "authorization",
+      "Bearer test-token",
+    );
+    expect(upstream.mock.calls[1][1].headers).not.toHaveProperty("authorization");
+  });
+
+  it("reports a published completed blog deployment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          workflow_runs: [
+            {
+              status: "completed",
+              conclusion: "success",
+              html_url: "https://github.com/tanabe1478/blog/actions/runs/321",
+              updated_at: "2026-07-20T15:03:00Z",
+            },
+          ],
+        }),
+      ),
+    );
+    const commitSha = "f".repeat(40);
+
+    const response = await fetch(`/api/deployments/${commitSha}`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deployment: {
+        commitSha,
+        state: "published",
+        runUrl: "https://github.com/tanabe1478/blog/actions/runs/321",
+        updatedAt: "2026-07-20T15:03:00Z",
+      },
+    });
+  });
+
+  it("reports a failed completed blog deployment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          workflow_runs: [
+            {
+              status: "completed",
+              conclusion: "failure",
+              html_url: "https://github.com/tanabe1478/blog/actions/runs/456",
+              updated_at: "2026-07-20T15:05:00Z",
+            },
+          ],
+        }),
+      ),
+    );
+    const commitSha = "e".repeat(40);
+
+    const response = await fetch(`/api/deployments/${commitSha}`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deployment: {
+        commitSha,
+        state: "failed",
+        runUrl: "https://github.com/tanabe1478/blog/actions/runs/456",
+        updatedAt: "2026-07-20T15:05:00Z",
+      },
+    });
+  });
+
+  it("rejects an invalid deployment commit SHA", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+
+    const response = await fetch("/api/deployments/not-a-sha");
+
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
   });
 
   it("returns one Markdown post for the detail view", async () => {

@@ -3,6 +3,8 @@ const POSTS_API_URL =
 const REPOSITORY_URL = "https://github.com/tanabe1478/blog";
 const PUBLIC_BLOG_URL = "https://tanabe1478.github.io";
 const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
+const BLOG_DEPLOY_WORKFLOW_URL =
+  "https://api.github.com/repos/tanabe1478/blog/actions/workflows/deploy-blog.yml/runs";
 const POSTS_QUERY = `query BlogPosts {
   repository(owner: "tanabe1478", name: "blog") {
     object(expression: "main:Content/posts") {
@@ -42,6 +44,17 @@ interface GitHubTreeEntry {
   object?: { text?: unknown } | null;
 }
 
+interface GitHubWorkflowRun {
+  status?: unknown;
+  conclusion?: unknown;
+  html_url?: unknown;
+  updated_at?: unknown;
+}
+
+interface GitHubWorkflowRunsResult {
+  workflow_runs?: unknown;
+}
+
 export interface PostSummary {
   name: string;
   title: string;
@@ -69,6 +82,19 @@ export interface PostUpdate {
 export interface PostCreation extends PostUpdate {
   name: string;
   publicUrl: string;
+}
+
+export type BlogDeploymentState =
+  | "pending"
+  | "running"
+  | "published"
+  | "failed";
+
+export interface BlogDeployment {
+  commitSha: string;
+  state: BlogDeploymentState;
+  runUrl?: string;
+  updatedAt?: string;
 }
 
 export class PostNotFoundError extends Error {}
@@ -172,6 +198,63 @@ function encodeBase64Utf8(value: string): string {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
   }
   return btoa(binary);
+}
+
+export async function getBlogDeployment(
+  commitSha: string,
+  token?: string,
+  request: typeof fetch = fetch,
+): Promise<BlogDeployment> {
+  const query = new URLSearchParams({
+    head_sha: commitSha,
+    event: "push",
+    per_page: "1",
+  });
+  const url = `${BLOG_DEPLOY_WORKFLOW_URL}?${query}`;
+  let response = await request(url, {
+    headers: githubHeaders(token),
+  });
+  if (token && (response.status === 401 || response.status === 403)) {
+    response = await request(url, { headers: githubHeaders() });
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub Actions API returned ${response.status}`);
+  }
+
+  const result: GitHubWorkflowRunsResult = await response.json();
+  if (!Array.isArray(result.workflow_runs)) {
+    throw new Error("GitHub Actions API returned an unexpected response");
+  }
+  if (result.workflow_runs.length === 0) {
+    return { commitSha, state: "pending" };
+  }
+
+  const run = result.workflow_runs[0] as GitHubWorkflowRun;
+  if (typeof run.status !== "string") {
+    throw new Error("GitHub Actions API returned an invalid workflow run");
+  }
+  const state: BlogDeploymentState =
+    run.status === "completed"
+      ? run.conclusion === "success"
+        ? "published"
+        : "failed"
+      : run.status === "in_progress"
+        ? "running"
+        : "pending";
+  const runUrl =
+    typeof run.html_url === "string" &&
+    run.html_url.startsWith("https://github.com/tanabe1478/blog/actions/runs/")
+      ? run.html_url
+      : undefined;
+  const updatedAt =
+    typeof run.updated_at === "string" ? run.updated_at : undefined;
+
+  return {
+    commitSha,
+    state,
+    ...(runUrl ? { runUrl } : {}),
+    ...(updatedAt ? { updatedAt } : {}),
+  };
 }
 
 export async function listPosts(

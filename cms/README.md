@@ -54,6 +54,14 @@ slugは英小文字・数字・単一hyphenだけを許可し、Section予約名
 
 previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 
+## Publish status
+
+記事のGitHub保存後、source commit SHAを使って`Deploy Blog` workflowを追跡します。CMSには**保存済み・build待ち**、**公開処理を実行中**、**公開済み**、**公開処理に失敗**を表示します。
+
+10秒間隔、最大約5分で自動確認し、完了・失敗時に停止します。手動の**公開状況を再確認**とGitHub Actionsへのlinkも利用できます。workflowはpublic smoke checkまで含むため、成功を公開済みとして扱います。
+
+status取得に失敗してもGitHubへの記事保存は取り消しません。最初は既存`GITHUB_TOKEN`を使い、Actions read権限がなく`401/403`の場合だけpublic repository APIへ認証なしでfallbackします。新しいSecretやtoken scopeは追加しません。
+
 ## GitHub article editing
 
 既存記事の保存には、`tanabe1478/blog`だけに`Contents: Read and write`を持つfine-grained tokenを使います。tokenはCloudflare Worker Secret `GITHUB_TOKEN`として保存し、repositoryやブラウザへ渡しません。
