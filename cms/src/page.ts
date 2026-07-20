@@ -68,8 +68,8 @@ export const cmsPage = `<!doctype html>
       <h2 id="post-heading">記事</h2>
       <p id="detail-status" role="status">Markdownを取得しています…</p>
       <div id="editor-grid" class="editor-grid">
-        <textarea id="post-content" aria-label="Markdown本文" readonly></textarea>
-        <article id="preview" class="preview" aria-label="リアルタイムプレビュー" hidden></article>
+        <textarea id="post-content" aria-label="Markdown本文" readonly hidden></textarea>
+        <article id="preview" class="preview" aria-label="記事プレビュー" hidden></article>
       </div>
       <div class="actions">
         <button id="edit" type="button">編集</button>
@@ -152,6 +152,7 @@ export const cmsPage = `<!doctype html>
           originalContent = data.post.content;
           currentSha = data.post.sha;
           githubLink.href = data.post.githubUrl;
+          setEditing(false);
         })
         .catch(() => {
           detailStatus.dataset.error = 'true';
@@ -397,16 +398,15 @@ export const cmsPage = `<!doctype html>
 
     function setEditing(editing) {
       postContent.readOnly = !editing;
+      postContent.hidden = !editing;
       editorGrid.dataset.editing = editing ? 'true' : 'false';
-      preview.hidden = !editing;
+      preview.hidden = false;
+      renderPreview();
       editButton.hidden = editing;
       saveButton.hidden = !editing;
       cancelButton.hidden = !editing;
       uploadLabel.hidden = !editing;
-      if (editing) {
-        renderPreview();
-        postContent.focus();
-      }
+      if (editing) postContent.focus();
     }
 
     editButton.addEventListener('click', () => {
@@ -449,6 +449,7 @@ export const cmsPage = `<!doctype html>
         const inserted = leadingNewline + data.image.markdown + trailingNewline;
         postContent.setRangeText(inserted, start, end, 'end');
         detailStatus.textContent = 'Gyazo画像を挿入しました。GitHubへ保存してください。';
+        renderPreview();
         postContent.focus();
       } catch (error) {
         detailStatus.dataset.error = 'true';
@@ -509,7 +510,7 @@ export const cmsPage = `<!doctype html>
         if (!response.ok) throw new Error(data.error || '保存に失敗しました');
         currentSha = data.update.sha;
         originalContent = postContent.value;
-        detailStatus.textContent = 'GitHubへ保存しました。公開処理はまだ実行していません。';
+        detailStatus.textContent = 'GitHubへ保存しました。公開処理はGitHub Actionsで進みます。';
         setEditing(false);
       } catch (error) {
         detailStatus.dataset.error = 'true';

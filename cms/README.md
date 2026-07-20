@@ -34,9 +34,9 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
 
-## Live preview
+## Article detail and live preview
 
-記事を編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
+記事detailの閲覧時はMarkdown sourceではなく描画済みpreviewを表示します。編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
 
 previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 

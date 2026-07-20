@@ -50,7 +50,7 @@ describe("CMS Worker", () => {
     expect(response.status).toBe(200);
   });
 
-  it("renders the read-only CMS page", async () => {
+  it("renders article details and editing controls", async () => {
     const response = await fetch("/");
     const content = await response.text();
 
@@ -68,7 +68,13 @@ describe("CMS Worker", () => {
     expect(content).toContain('id="image"');
     expect(content).toContain("postContent.addEventListener('drop'");
     expect(content).toContain('id="detail"');
-    expect(content).toContain('id="post-content"');
+    expect(content).toContain(
+      'id="post-content" aria-label="Markdown本文" readonly hidden',
+    );
+    expect(content).toContain(
+      'id="preview" class="preview" aria-label="記事プレビュー" hidden',
+    );
+    expect(content).toContain("postContent.hidden = !editing");
     const script = content.match(/<script>([\s\S]*)<\/script>/)?.[1];
     expect(script).toBeDefined();
     expect(() => new Function(script ?? "")).not.toThrow();
