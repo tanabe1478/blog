@@ -9,6 +9,7 @@ function fetch(path: string, init?: RequestInit): Promise<Response> {
     TEAM_DOMAIN: "https://test.cloudflareaccess.com",
     ACCESS_BYPASS: "true",
     GITHUB_TOKEN: "test-token",
+    GYAZO_ACCESS_TOKEN: "test-gyazo-token",
     WRITE_HOST: "127.0.0.1",
   });
 }
@@ -63,8 +64,12 @@ describe("CMS Worker", () => {
     expect(content).toContain("<h1>Blog CMS</h1>");
     expect(content).toContain("GitHub連携");
     expect(content).toContain('id="edit"');
+    expect(content).toContain('id="image"');
     expect(content).toContain('id="detail"');
     expect(content).toContain('id="post-content"');
+    const script = content.match(/<script>([\s\S]*)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    expect(() => new Function(script ?? "")).not.toThrow();
   });
 
   it("returns Markdown posts from the public repository", async () => {
@@ -144,6 +149,70 @@ describe("CMS Worker", () => {
       "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts/hello%20world.md",
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it("uploads a validated image to Gyazo", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({
+        url: "https://i.gyazo.com/image.png",
+        permalink_url: "https://gyazo.com/example",
+      }),
+    );
+    vi.stubGlobal("fetch", upstream);
+    const form = new FormData();
+    form.append(
+      "image",
+      new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], {
+        type: "image/png",
+      }),
+      "screen.png",
+    );
+
+    const response = await fetch("/api/images", {
+      method: "POST",
+      headers: { origin: "http://127.0.0.1" },
+      body: form,
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      image: {
+        imageUrl: "https://i.gyazo.com/image.png",
+        permalinkUrl: "https://gyazo.com/example",
+        markdown:
+          "[![screen](https://i.gyazo.com/image.png)](https://gyazo.com/example)",
+      },
+    });
+    expect(upstream).toHaveBeenCalledWith(
+      "https://upload.gyazo.com/api/upload",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          authorization: "Bearer test-gyazo-token",
+        }),
+        body: expect.any(FormData),
+      }),
+    );
+  });
+
+  it("rejects a file whose signature is not an image", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const form = new FormData();
+    form.append(
+      "image",
+      new Blob(["not an image"], { type: "image/png" }),
+      "fake.png",
+    );
+
+    const response = await fetch("/api/images", {
+      method: "POST",
+      headers: { origin: "http://127.0.0.1" },
+      body: form,
+    });
+
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
   });
 
   it("updates an existing Markdown post with its current SHA", async () => {

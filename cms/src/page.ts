@@ -33,7 +33,10 @@ export const cmsPage = `<!doctype html>
     button { padding: 8px 14px; border: 1px solid #c8c8c2; border-radius: 8px; color: inherit; background: #fff; cursor: pointer; }
     button.primary { border-color: #315ca8; color: #fff; background: #315ca8; }
     button:disabled { cursor: wait; opacity: 0.6; }
-    button[hidden] { display: none; }
+    button[hidden], .upload[hidden] { display: none; }
+    .upload { padding: 8px 14px; border: 1px solid #c8c8c2; border-radius: 8px; background: #fff; cursor: pointer; }
+    .upload input { display: none; }
+    .upload[data-busy="true"] { cursor: wait; opacity: 0.6; }
   </style>
 </head>
 <body>
@@ -56,6 +59,10 @@ export const cmsPage = `<!doctype html>
         <button id="edit" type="button">編集</button>
         <button id="save" class="primary" type="button" hidden>GitHubへ保存</button>
         <button id="cancel" type="button" hidden>キャンセル</button>
+        <label id="upload" class="upload" hidden>
+          画像をGyazoへ追加
+          <input id="image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+        </label>
         <a id="github-link" target="_blank" rel="noreferrer">GitHubで元ファイルを開く</a>
       </div>
     </section>
@@ -73,6 +80,8 @@ export const cmsPage = `<!doctype html>
     const editButton = document.querySelector('#edit');
     const saveButton = document.querySelector('#save');
     const cancelButton = document.querySelector('#cancel');
+    const uploadLabel = document.querySelector('#upload');
+    const imageInput = document.querySelector('#image');
     const selectedPost = new URLSearchParams(location.search).get('post');
     let currentSha = '';
     let originalContent = '';
@@ -135,6 +144,7 @@ export const cmsPage = `<!doctype html>
       editButton.hidden = editing;
       saveButton.hidden = !editing;
       cancelButton.hidden = !editing;
+      uploadLabel.hidden = !editing;
       if (editing) postContent.focus();
     }
 
@@ -148,6 +158,47 @@ export const cmsPage = `<!doctype html>
       postContent.value = originalContent;
       detailStatus.textContent = selectedPost ? '変更を破棄しました。' : '';
       setEditing(false);
+    });
+
+    imageInput.addEventListener('change', async () => {
+      const image = imageInput.files?.[0];
+      if (!image) return;
+      if (image.size > 10 * 1024 * 1024) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = '画像は10MB以下にしてください。';
+        imageInput.value = '';
+        return;
+      }
+
+      imageInput.disabled = true;
+      uploadLabel.dataset.busy = 'true';
+      delete detailStatus.dataset.error;
+      detailStatus.textContent = 'Gyazoへアップロードしています…';
+      try {
+        const form = new FormData();
+        form.append('image', image);
+        const response = await fetch('/api/images', { method: 'POST', body: form });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '画像アップロードに失敗しました');
+
+        const start = postContent.selectionStart;
+        const end = postContent.selectionEnd;
+        const before = postContent.value.slice(0, start);
+        const after = postContent.value.slice(end);
+        const leadingNewline = before && !before.endsWith('\\n') ? '\\n' : '';
+        const trailingNewline = after && !after.startsWith('\\n') ? '\\n' : '';
+        const inserted = leadingNewline + data.image.markdown + trailingNewline;
+        postContent.setRangeText(inserted, start, end, 'end');
+        detailStatus.textContent = 'Gyazo画像を挿入しました。GitHubへ保存してください。';
+        postContent.focus();
+      } catch (error) {
+        detailStatus.dataset.error = 'true';
+        detailStatus.textContent = error instanceof Error ? error.message : '画像をアップロードできませんでした。';
+      } finally {
+        imageInput.disabled = false;
+        delete uploadLabel.dataset.busy;
+        imageInput.value = '';
+      }
     });
 
     saveButton.addEventListener('click', async () => {

@@ -8,6 +8,11 @@ import {
   PostNotFoundError,
   updatePost,
 } from "./github";
+import {
+  InvalidImageError,
+  MAX_IMAGE_BYTES,
+  uploadToGyazo,
+} from "./gyazo";
 import { cmsPage } from "./page";
 
 function json(data: unknown, status = 200, cacheControl = "no-store"): Response {
@@ -17,6 +22,13 @@ function json(data: unknown, status = 200, cacheControl = "no-store"): Response 
       "cache-control": cacheControl,
     },
   });
+}
+
+function isAllowedWriteRequest(request: Request, url: URL, env: Env): boolean {
+  return (
+    url.hostname === env.WRITE_HOST &&
+    request.headers.get("origin") === url.origin
+  );
 }
 
 function postNameFromPath(pathname: string): string | undefined {
@@ -62,6 +74,51 @@ export default {
       return json({ service: "tanabe-blog-cms-api", status: "ok" });
     }
 
+    if (request.method === "POST" && url.pathname === "/api/images") {
+      if (!isAllowedWriteRequest(request, url, env)) {
+        return json({ error: "Forbidden" }, 403);
+      }
+      if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) {
+        return json({ error: "画像をmultipart/form-dataで送信してください" }, 415);
+      }
+      const declaredLength = Number(request.headers.get("content-length"));
+      if (
+        Number.isFinite(declaredLength) &&
+        declaredLength > MAX_IMAGE_BYTES + 1024 * 1024
+      ) {
+        return json({ error: "画像は10MB以下にしてください" }, 413);
+      }
+      if (!env.GYAZO_ACCESS_TOKEN) {
+        return json({ error: "画像アップロードが設定されていません" }, 503);
+      }
+
+      let form: FormData;
+      try {
+        form = await request.formData();
+      } catch {
+        return json({ error: "画像フォームが不正です" }, 400);
+      }
+      const image = form.get("image");
+      if (!(image instanceof File)) {
+        return json({ error: "画像ファイルを選択してください" }, 400);
+      }
+
+      try {
+        return json({
+          image: await uploadToGyazo(image, env.GYAZO_ACCESS_TOKEN),
+        });
+      } catch (error) {
+        if (error instanceof InvalidImageError) {
+          return json(
+            { error: "PNG・JPEG・GIF・WebPの10MB以下の画像を選択してください" },
+            400,
+          );
+        }
+        console.error("Failed to upload image", error);
+        return json({ error: "画像をGyazoへアップロードできませんでした" }, 502);
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/posts") {
       try {
         return json({ posts: await listPosts(env.GITHUB_TOKEN) });
@@ -90,10 +147,7 @@ export default {
       }
 
       if (request.method === "PUT") {
-        if (
-          url.hostname !== env.WRITE_HOST ||
-          request.headers.get("origin") !== url.origin
-        ) {
+        if (!isAllowedWriteRequest(request, url, env)) {
           return json({ error: "Forbidden" }, 403);
         }
         if (!request.headers.get("content-type")?.startsWith("application/json")) {

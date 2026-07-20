@@ -42,6 +42,18 @@ npx wrangler secret put GITHUB_TOKEN
 
 CMSの保存は`Content/posts/*.md`をGitHubの`main`へcommitします。この時点では既存の`publish_blog.py`によるGitHub Pages公開処理までは実行しません。
 
+## Gyazo image upload
+
+画像はWorkerからGyazoへ直接uploadします。access tokenはCloudflare Worker Secret `GYAZO_ACCESS_TOKEN`として保存し、repositoryやブラウザへ渡しません。
+
+```bash
+npx wrangler secret put GYAZO_ACCESS_TOKEN
+```
+
+Production CMSからの同一Origin requestだけを受け付け、Previewからのuploadは`403`で拒否します。PNG・JPEG・GIF・WebPのfile signatureを検証し、sizeは10MB以下に制限します。
+
+Gyazo uploadは即時に外部へ画像を作成する副作用があります。textareaへ挿入した後にキャンセルしてもGyazo画像は自動削除されません。記事へ反映するには、続けて**GitHubへ保存**を実行します。
+
 ## local development
 
 ```bash

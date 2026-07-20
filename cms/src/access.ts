@@ -5,6 +5,7 @@ export interface Env {
   TEAM_DOMAIN: string;
   ACCESS_BYPASS?: string | boolean;
   GITHUB_TOKEN?: string;
+  GYAZO_ACCESS_TOKEN?: string;
   WRITE_HOST: string;
 }
 

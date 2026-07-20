@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --var ACCESS_BYPASS:true",
+    "dev": "wrangler dev --var ACCESS_BYPASS:true --var WRITE_HOST:127.0.0.1",
     "check": "tsc --noEmit && vitest run",
     "deploy": "wrangler deploy"
   },
