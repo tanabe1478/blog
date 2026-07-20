@@ -1,3 +1,4 @@
+import { authenticateAccess, type Env } from "./access";
 import {
   getPost,
   isValidPostName,
@@ -28,7 +29,17 @@ function html(content: string): Response {
 }
 
 export default {
-  async fetch(request): Promise<Response> {
+  async fetch(request, env): Promise<Response> {
+    const bypassAccess =
+      env.ACCESS_BYPASS === "true" || env.ACCESS_BYPASS === true;
+    if (!bypassAccess) {
+      try {
+        await authenticateAccess(request, env);
+      } catch {
+        return json({ error: "Forbidden" }, 403);
+      }
+    }
+
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/") {
@@ -73,4 +84,4 @@ export default {
 
     return json({ error: "Not found" }, 404);
   },
-} satisfies ExportedHandler;
+} satisfies ExportedHandler<Env>;

@@ -22,6 +22,14 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 - CIではブログCMS専用Accountにscopeを限定したAPI tokenを使用する。
 - D1、KV、R2が必要になった場合もブログCMS専用resourceを新規作成する。
 
+## authentication
+
+Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Policyに加えて、Workerも`Cf-Access-Jwt-Assertion`の署名、issuer、audienceを検証します。
+
+`TEAM_DOMAIN`と`POLICY_AUD`は認証情報ではないため`wrangler.jsonc`で管理します。ProductionとPreviewでAudienceが異なる場合、`POLICY_AUD`へカンマ区切りで指定します。
+
+認証を迂回する`ACCESS_BYPASS=true`は`npm run dev`からlocal Wranglerへだけ渡します。本番の`wrangler.jsonc`には設定しません。
+
 ## local development
 
 ```bash

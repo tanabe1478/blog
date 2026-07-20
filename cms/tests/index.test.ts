@@ -3,14 +3,46 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 
 function fetch(path: string, init?: RequestInit): Promise<Response> {
-  const request = new Request(`https://cms.example.test${path}`, init);
-  return worker.fetch(request as Parameters<typeof worker.fetch>[0]);
+  const request = new Request(`http://127.0.0.1${path}`, init);
+  return worker.fetch(request as Parameters<typeof worker.fetch>[0], {
+    POLICY_AUD: "test-audience",
+    TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+    ACCESS_BYPASS: "true",
+  });
 }
 
 describe("CMS Worker", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("rejects production requests without an Access JWT", async () => {
+    const request = new Request("https://cms.example.test/");
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+      },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "Forbidden" });
+  });
+
+  it("allows the explicit Wrangler local bypass flag", async () => {
+    const request = new Request("https://cms.example.test/api/health");
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+      },
+    );
+
+    expect(response.status).toBe(200);
   });
 
   it("renders the read-only CMS page", async () => {
