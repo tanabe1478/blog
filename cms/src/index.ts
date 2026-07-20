@@ -43,6 +43,7 @@ function postNameFromPath(pathname: string): string | undefined {
 function html(content: string): Response {
   return new Response(content, {
     headers: {
+      "cache-control": "no-store",
       "content-type": "text/html; charset=utf-8",
       "content-security-policy":
         "default-src 'none'; connect-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
