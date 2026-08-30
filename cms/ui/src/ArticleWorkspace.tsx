@@ -84,11 +84,13 @@ export function ArticleWorkspace({
   const [error, setError] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const lastDraftContent = useRef(content);
 
   const changed = creating || content !== post.content;
 
   useEffect(() => {
-    if (!editing) return;
+    if (!editing || content === lastDraftContent.current) return;
+    lastDraftContent.current = content;
     setDraftStatus("端末下書きを保存しています…");
     const timer = window.setTimeout(() => {
       const stored = writeDraft({
@@ -136,6 +138,7 @@ export function ArticleWorkspace({
 
   const restorePendingDraft = () => {
     if (!pendingDraft) return;
+    lastDraftContent.current = pendingDraft.content;
     setContent(pendingDraft.content);
     setBaseSha(pendingDraft.baseSha ?? "");
     setCreating(pendingDraft.isNew);
