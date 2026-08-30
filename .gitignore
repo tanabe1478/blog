@@ -12,6 +12,7 @@
 /cms/.env
 /cms/.env.*
 /cms/node_modules/
+/cms/dist/
 /cms/.wrangler/
 /cms/playwright-report/
 /cms/test-results/

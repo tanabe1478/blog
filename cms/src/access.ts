@@ -7,6 +7,7 @@ export interface Env {
   GITHUB_TOKEN?: string;
   GYAZO_ACCESS_TOKEN?: string;
   WRITE_HOST: string;
+  ASSETS?: Fetcher;
 }
 
 export interface AccessIdentity {

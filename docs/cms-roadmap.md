@@ -26,6 +26,42 @@ Milestone F: 公開管理を拡張する
 Milestone G: 運用・監査を改善する
 ```
 
+## React移行task
+
+CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReactへ段階移行します。移行中もProduction CMSを利用可能に保ち、各段階で既存E2Eをすべて通します。
+
+| ID | Task | 状態 |
+| --- | --- | --- |
+| CMS-R001 | React 19 / Vite / Cloudflare Assets基盤 | `done` |
+| CMS-R002 | 記事一覧・detail閲覧のReact化 | `planned` |
+| CMS-R003 | 編集・preview・GyazoのReact化 | `planned` |
+| CMS-R004 | draft・新規作成のReact化 | `planned` |
+| CMS-R005 | deploy status・rename・deleteのReact化 | `planned` |
+| CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `planned` |
+
+### CMS-R001 React 19 / Vite / Cloudflare Assets基盤
+
+状態: `done`
+
+実装:
+
+- React / React DOM 19.2.8
+- Vite 8.2.2と`@vitejs/plugin-react` 6.1.1
+- React UI専用TypeScript check
+- Wrangler Assets bindingと`run_worker_first: true`
+- Access JWT検証後だけReact HTML/assetを配信
+- 外部script/styleだけを許可するReact UI用CSP
+- `/react-preview`で移行基盤を確認
+- Wrangler 4.127.1へ更新し`npm audit` 0件
+- 40 Vitestと16 Playwright E2Eで確認
+
+移行原則:
+
+- React assetをAccess認証より前に配信しない。
+- 画面単位で移行し、既存機能を一括置換しない。
+- React化したuser flowもPlaywright E2Eを維持する。
+- CMS-R006までは従来UIをfallbackとして残す。
+
 ## Task一覧
 
 | ID | Task | Milestone | 状態 |

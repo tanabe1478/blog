@@ -98,6 +98,41 @@ describe("CMS Worker", () => {
     expect(() => new Function(script ?? "")).not.toThrow();
   });
 
+  it("serves the React migration preview through the authenticated Worker", async () => {
+    const assets = {
+      fetch: vi.fn().mockResolvedValue(
+        new Response('<div id="root"></div>', {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+    };
+    const request = new Request("https://cms.example.test/react-preview");
+
+    const response = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        WRITE_HOST: "cms.example.test",
+        ASSETS: assets as unknown as Fetcher,
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('id="root"');
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-security-policy")).toContain(
+      "script-src 'self'",
+    );
+    expect(response.headers.get("content-security-policy")).not.toContain(
+      "'unsafe-inline'",
+    );
+    expect(assets.fetch).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://cms.example.test/" }),
+    );
+  });
+
   it("returns Markdown posts from the public repository", async () => {
     const upstream = vi.fn().mockResolvedValue(
       Response.json({

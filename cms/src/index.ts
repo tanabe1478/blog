@@ -59,6 +59,32 @@ function html(content: string): Response {
   });
 }
 
+async function reactAsset(request: Request, env: Env): Promise<Response> {
+  if (!env.ASSETS) {
+    return json({ error: "React UI assets are not built" }, 503);
+  }
+  const url = new URL(request.url);
+  if (url.pathname === "/react-preview") {
+    url.pathname = "/";
+  }
+  const asset = await env.ASSETS.fetch(new Request(url, request));
+  const headers = new Headers(asset.headers);
+  headers.set("referrer-policy", "no-referrer");
+  headers.set("x-content-type-options", "nosniff");
+  if (url.pathname === "/") {
+    headers.set("cache-control", "no-store");
+    headers.set(
+      "content-security-policy",
+      "default-src 'none'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src https: data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+    );
+  }
+  return new Response(asset.body, {
+    status: asset.status,
+    statusText: asset.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request, env): Promise<Response> {
     const bypassAccess =
@@ -72,6 +98,13 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    if (
+      request.method === "GET" &&
+      (url.pathname === "/react-preview" || url.pathname.startsWith("/assets/"))
+    ) {
+      return reactAsset(request, env);
+    }
 
     if (request.method === "GET" && url.pathname === "/") {
       return html(cmsPage);

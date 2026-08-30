@@ -14,6 +14,18 @@ health check:
 GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 ```
 
+## React migration
+
+CMS UIはReact 19へ段階移行中です。`CMS-R001`でReact 19.2.8、Vite 8.2.2、Wrangler Assets基盤を追加しました。現行の`/`は移行完了まで従来UIを維持します。
+
+認証後の移行preview:
+
+```text
+GET /react-preview
+```
+
+`assets.run_worker_first=true`により、React HTML/JavaScript/CSSもWorkerのCloudflare Access JWT検証後だけ配信します。React UIのbuildは`npm run build:ui`、通常の`npm run check`と`npm run deploy`にも自動で含まれます。移行順は`docs/cms-roadmap.md`を正本とします。
+
 ## yuruboとの分離
 
 - Worker名は`tanabe-blog-cms-api`に固定する。

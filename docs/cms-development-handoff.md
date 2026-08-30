@@ -75,13 +75,18 @@ Blog: https://tanabe1478.github.io/
 | `cms/src/access.ts` | Cloudflare Access JWTの署名・issuer・audience・email検証 |
 | `cms/src/github.ts` | GitHub GraphQL/Contents API、metadata解析、SHA競合制御 |
 | `cms/src/gyazo.ts` | 画像signature/size検証とGyazo upload |
-| `cms/src/page.ts` | CMSのHTML、CSS、browser側JavaScript、live preview |
+| `cms/src/page.ts` | 移行完了まで残す従来inline UI |
+| `cms/ui/` | React 19 UI source。Viteで`cms/dist/`へbuild |
+| `cms/vite.config.ts` | React build設定 |
+| `cms/playwright.config.ts` | Browser E2Eとlocal Wrangler起動設定 |
 | `cms/tests/access.test.ts` | Access JWT検証のunit test |
 | `cms/tests/index.test.ts` | route、GitHub/Gyazo連携、HTML script構文等のtest |
 | `cms/wrangler.jsonc` | Worker名、Account、entry point、通常変数 |
 | `cms/README.md` | 機能別の短い運用説明 |
 
-`page.ts`は現在、HTML全体をtemplate literalとして持ちます。inline script内の正規表現やbackslashを編集すると、TypeScript側のtemplate literalでescapeが消える可能性があります。`npm run check`のscript構文testを必ず通してください。
+`page.ts`はReact移行完了まで、HTML全体をtemplate literalとして持ちます。inline script内の正規表現やbackslashを編集すると、TypeScript側のtemplate literalでescapeが消える可能性があります。`npm run check`のscript構文testを必ず通してください。
+
+React移行は`cms-roadmap.md`のCMS-R001〜R006を正本とします。現在はR001が完了し、`/react-preview`だけがReactです。`wrangler.jsonc`のAssetsは`run_worker_first: true`にしてあり、assetもAccess JWT検証を迂回しません。`npm run dev`、`npm run check`、`npm run deploy`はReact UIを先にbuildします。
 
 ## Wranglerとは何か
 
@@ -405,7 +410,8 @@ npx playwright install chromium
 `npm run check`は次を実行します。
 
 ```text
-TypeScript: WorkerとE2E
+Vite: React production build
+TypeScript: Worker、React UI、E2E
 Vitest: Worker route / integration test
 Playwright: Chromium E2E
 ```
@@ -592,10 +598,11 @@ Secretの問題はcode rollbackでは戻りません。Secret storage側で正�
 
 ## 次の実装task
 
-優先順と完了条件は`cms-roadmap.md`を正本とします。
+優先順と完了条件は`cms-roadmap.md`を正本とします。まずReact移行を完了し、その後に機能backlogへ戻ります。
 
-1. CMS-005: 記事一覧の検索・絞り込み
-2. CMS-006以降をroadmap順に実装
+1. CMS-R002: 記事一覧・detail閲覧のReact化
+2. CMS-R003〜R006を順に実装
+3. CMS-005以降をroadmap順に実装
 
 各user-facing taskは関連するPlaywright E2EがlocalとCIで成功するまで`done`にしません。
 

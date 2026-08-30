@@ -4,22 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --var ACCESS_BYPASS:true --var WRITE_HOST:127.0.0.1",
-    "check": "npm run check:types && npm run test:unit && npm run test:e2e",
-    "check:types": "tsc --noEmit && tsc --project tsconfig.e2e.json",
+    "build:ui": "vite build",
+    "dev": "npm run build:ui && wrangler dev --var ACCESS_BYPASS:true --var WRITE_HOST:127.0.0.1",
+    "check": "npm run build:ui && npm run check:types && npm run test:unit && npm run test:e2e",
+    "check:types": "tsc --noEmit && tsc --project tsconfig.ui.json && tsc --project tsconfig.e2e.json",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build:ui && wrangler deploy"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260719.1",
+    "@cloudflare/workers-types": "^5.20260830.1",
     "@playwright/test": "^1.61.1",
     "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
     "typescript": "^5.9.3",
+    "vite": "^8.2.2",
     "vitest": "^4.1.10",
-    "wrangler": "^4.112.0"
+    "wrangler": "^4.127.1"
   },
   "dependencies": {
-    "jose": "^6.2.3"
+    "jose": "^6.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

@@ -1,0 +1,33 @@
+:root {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #202124;
+  background: #f7f7f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  width: min(680px, calc(100% - 32px));
+  margin: 64px auto;
+  padding: 32px;
+  border: 1px solid #deded8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.eyebrow {
+  color: #666;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+a {
+  color: #315ca8;
+}

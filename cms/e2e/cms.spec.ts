@@ -230,6 +230,19 @@ async function openNewPostEditor(page: Page) {
   await page.getByRole("button", { name: "本文を編集" }).click();
 }
 
+test("serves the React 19 migration preview behind the Worker", async ({ page }) => {
+  await page.goto("/react-preview");
+
+  await expect(
+    page.getByRole("heading", { name: "Blog CMS", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("React 19 / Viteによる移行基盤")).toBeVisible();
+  await expect(page.getByRole("link", { name: "従来のCMSへ戻る" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+});
+
 test("opens an article, edits it in two panes, and cancels", async ({ page }) => {
   await mockCmsApi(page);
   await page.goto("/");
