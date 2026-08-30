@@ -63,6 +63,21 @@ button:disabled {
   font-size: clamp(1.5rem, 4vw, 2rem);
 }
 
+.route-pending {
+  position: fixed;
+  z-index: 10;
+  top: 14px;
+  left: 50%;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid #9db5df;
+  border-radius: 999px;
+  color: #244b8d;
+  background: #edf3ff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  transform: translateX(-50%);
+}
+
 .badge,
 .migration-badge {
   padding: 6px 10px;

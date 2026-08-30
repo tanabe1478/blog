@@ -21,6 +21,8 @@ interface MockOptions {
   deploymentError?: boolean;
   deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
   existingContent?: string;
+  postDelayMs?: number;
+  postError?: boolean;
   imageError?: boolean;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
@@ -112,6 +114,16 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
       request.method() === "GET" &&
       url.pathname === `/api/posts/${EXISTING_NAME}`
     ) {
+      if (options.postDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, options.postDelayMs));
+      }
+      if (options.postError) {
+        await route.fulfill({
+          status: 502,
+          json: { error: "記事を取得できませんでした" },
+        });
+        return;
+      }
       await route.fulfill({
         json: {
           post: {
@@ -289,6 +301,43 @@ test("lists articles in the React CMS", async ({ page }) => {
   ).toContainText("2026-07-20 10:00 · existing-post.md");
 });
 
+test("keeps the article list visible while a Suspense transition loads detail", async ({
+  page,
+}) => {
+  await mockCmsApi(page, { postDelayMs: 700 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Existing title/ }).click();
+
+  await expect(page.getByText("記事を開いています…")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "記事一覧" })).toBeVisible();
+  await expect(page.getByText("記事を読み込んでいます…")).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+});
+
+test("shows the Suspense fallback for a direct article URL", async ({ page }) => {
+  await mockCmsApi(page, { postDelayMs: 500 });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+
+  await expect(page.getByText("記事を読み込んでいます…")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+});
+
+test("shows a recoverable error when Suspense article loading fails", async ({ page }) => {
+  await mockCmsApi(page, { postError: true });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+
+  await expect(
+    page.getByRole("heading", { name: "記事を表示できませんでした" }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("記事を取得できませんでした");
+  await page.getByRole("button", { name: "記事一覧へ戻る" }).click();
+  await expect(page.getByRole("heading", { name: "記事一覧" })).toBeVisible();
+});
+
 test("opens a rendered article detail in the React CMS", async ({ page }) => {
   await mockCmsApi(page, { existingContent: `\n${EXISTING_CONTENT}` });
   await page.goto("/");
@@ -362,6 +411,20 @@ test("saves a React article with its current SHA", async ({ page }) => {
   await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Saved in React", exact: true }),
+  ).toBeVisible();
+});
+
+test("reopens the cached article version after saving", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Markdown本文").fill("# Cached saved title\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+  await page.getByRole("button", { name: "← 記事一覧へ" }).click();
+  await page.getByRole("button", { name: /Existing title/ }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Cached saved title", exact: true }),
   ).toBeVisible();
 });
 

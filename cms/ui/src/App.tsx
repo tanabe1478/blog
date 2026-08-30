@@ -1,8 +1,36 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useState,
+  useTransition,
+  type ComponentType,
+  type FormEvent,
+} from "react";
 
-import { ArticleWorkspace, type InitialDeployment } from "./ArticleWorkspace";
-import { fetchPost, fetchPosts, type PostDocument, type PostSummary } from "./api";
+import type {
+  ArticleWorkspaceProps,
+  InitialDeployment,
+} from "./ArticleWorkspace";
+import { fetchPosts, type PostSummary } from "./api";
 import { readDraft, writeDraft, type LocalDraft } from "./drafts";
+import { invalidatePost, preloadPost, readPost } from "./postResource";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
+
+let articleWorkspacePromise:
+  | Promise<{ default: ComponentType<ArticleWorkspaceProps> }>
+  | undefined;
+const loadArticleWorkspace = () => {
+  articleWorkspacePromise ??= import("./ArticleWorkspace").then((module) => ({
+    default: module.ArticleWorkspace as ComponentType<ArticleWorkspaceProps>,
+  }));
+  return articleWorkspacePromise;
+};
+const ArticleWorkspace = lazy(loadArticleWorkspace);
+
+function preloadArticleWorkspace(): void {
+  void loadArticleWorkspace();
+}
 
 type Loadable<T> =
   | { state: "loading" }
@@ -153,9 +181,11 @@ function NewPostForm({ onStart, onClose }: {
 
 function PostList({
   onSelect,
+  onPreload,
   onStartDraft,
 }: {
   onSelect: (name: string) => void;
+  onPreload: (name: string) => void;
   onStartDraft: (started: StartedDraft) => void;
 }) {
   const [posts, setPosts] = useState<Loadable<PostSummary[]>>({ state: "loading" });
@@ -198,7 +228,13 @@ function PostList({
           <ul className="post-list">
             {posts.value.map((post) => (
               <li key={post.name}>
-                <button className="post-link" type="button" onClick={() => onSelect(post.name)}>
+                <button
+                  className="post-link"
+                  type="button"
+                  onClick={() => onSelect(post.name)}
+                  onMouseEnter={() => onPreload(post.name)}
+                  onFocus={() => onPreload(post.name)}
+                >
                   <span className="post-title">{post.title}</span>
                   <code className="post-meta">
                     {post.date ? `${post.date} · ${post.name}` : post.name}
@@ -224,45 +260,34 @@ function PostDetail({
   onBack: () => void;
   onRenamed: (name: string, deployment: InitialDeployment) => void;
 }) {
-  const [post, setPost] = useState<Loadable<PostDocument>>({ state: "loading" });
+  const post = readPost(name);
 
   useEffect(() => {
-    const controller = new AbortController();
-    setPost({ state: "loading" });
-    fetchPost(name, controller.signal).then(
-      (value) => {
-        document.title = `${value.name} - Blog CMS`;
-        setPost({ state: "ready", value });
-      },
-      (error: unknown) => {
-        if (!controller.signal.aborted) {
-          setPost({ state: "error", message: message(error, "記事を取得できませんでした") });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [name]);
+    document.title = `${post.name} - Blog CMS`;
+  }, [post.name]);
 
   return (
     <>
       <button className="back-button" type="button" onClick={onBack}>← 記事一覧へ</button>
       <section className="panel" aria-labelledby="post-heading">
         <h2 id="post-heading">{name}</h2>
-        {post.state === "loading" && <p role="status">Markdownを取得しています…</p>}
-        {post.state === "error" && <p role="alert" className="error-message">{post.message}</p>}
-        {post.state === "ready" && (
-          <>
-            <p className="source-path">{post.value.path}</p>
-            <ArticleWorkspace
-              initialPost={post.value}
-              initialDraft={readDraft(name)}
-              initialDeployment={initialDeployment}
-              onRenamed={onRenamed}
-            />
-          </>
-        )}
+        <p className="source-path">{post.path}</p>
+        <ArticleWorkspace
+          initialPost={post}
+          initialDraft={readDraft(name)}
+          initialDeployment={initialDeployment}
+          onRenamed={onRenamed}
+        />
       </section>
     </>
+  );
+}
+
+function PostDetailFallback() {
+  return (
+    <section className="panel" aria-busy="true">
+      <p role="status">記事を読み込んでいます…</p>
+    </section>
   );
 }
 
@@ -318,26 +343,40 @@ export function App() {
   const [initialDeployment, setInitialDeployment] = useState<
     { name: string; deployment: InitialDeployment } | undefined
   >();
+  const [retryVersion, setRetryVersion] = useState(0);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (route.view === "list") document.title = "Blog CMS";
   }, [route]);
 
   const startDraft = (started: StartedDraft) => {
-    setStartedDraft(started);
-    navigate({ view: "draft", name: started.draft.name });
+    preloadArticleWorkspace();
+    startTransition(() => {
+      setStartedDraft(started);
+      navigate({ view: "draft", name: started.draft.name });
+    });
+  };
+
+  const preloadDetail = (name: string) => {
+    preloadPost(name);
+    preloadArticleWorkspace();
   };
 
   const showPost = (name: string) => {
-    setStartedDraft(undefined);
-    setInitialDeployment(undefined);
-    navigate({ view: "post", name });
+    startTransition(() => {
+      setStartedDraft(undefined);
+      setInitialDeployment(undefined);
+      navigate({ view: "post", name });
+    });
   };
 
   const showChangedPost = (name: string, deployment: InitialDeployment) => {
-    setStartedDraft(undefined);
-    setInitialDeployment({ name, deployment });
-    navigate({ view: "post", name }, true);
+    startTransition(() => {
+      setStartedDraft(undefined);
+      setInitialDeployment({ name, deployment });
+      navigate({ view: "post", name }, true);
+    });
   };
 
   const showList = () => {
@@ -352,28 +391,48 @@ export function App() {
         <h1>Blog CMS</h1>
         <span className="badge">GitHub連携</span>
       </header>
+      {isPending && (
+        <p className="route-pending" role="status">
+          記事を開いています…
+        </p>
+      )}
       <main className="site-main">
-        {route.view === "post" && (
-          <PostDetail
-            name={route.name}
-            initialDeployment={
-              initialDeployment?.name === route.name ? initialDeployment.deployment : undefined
-            }
-            onBack={showList}
-            onRenamed={showChangedPost}
-          />
-        )}
-        {route.view === "draft" && (
-          <NewDraftDetail
-            name={route.name}
-            started={startedDraft?.draft.name === route.name ? startedDraft : undefined}
-            onCreated={showChangedPost}
-            onDiscard={showList}
-          />
-        )}
-        {route.view === "list" && (
-          <PostList onSelect={showPost} onStartDraft={startDraft} />
-        )}
+        <Suspense fallback={<PostDetailFallback />}>
+          {route.view === "post" && (
+            <RouteErrorBoundary
+              resetKey={`${route.name}:${retryVersion}`}
+              onBack={showList}
+              onRetry={() => {
+                invalidatePost(route.name);
+                setRetryVersion((value) => value + 1);
+              }}
+            >
+              <PostDetail
+                name={route.name}
+                initialDeployment={
+                  initialDeployment?.name === route.name ? initialDeployment.deployment : undefined
+                }
+                onBack={showList}
+                onRenamed={showChangedPost}
+              />
+            </RouteErrorBoundary>
+          )}
+          {route.view === "draft" && (
+            <NewDraftDetail
+              name={route.name}
+              started={startedDraft?.draft.name === route.name ? startedDraft : undefined}
+              onCreated={showChangedPost}
+              onDiscard={showList}
+            />
+          )}
+          {route.view === "list" && (
+            <PostList
+              onSelect={showPost}
+              onPreload={preloadDetail}
+              onStartDraft={startDraft}
+            />
+          )}
+        </Suspense>
       </main>
     </>
   );

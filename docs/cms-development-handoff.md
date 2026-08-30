@@ -76,6 +76,8 @@ Blog: https://tanabe1478.github.io/
 | `cms/src/github.ts` | GitHub GraphQL/Contents API、metadata解析、SHA競合制御 |
 | `cms/src/gyazo.ts` | 画像signature/size検証とGyazo upload |
 | `cms/ui/` | React 19 CMS source。Viteで`cms/dist/`へbuild |
+| `cms/ui/src/postResource.ts` | Suspense用の記事Promise cacheとmutation後のcache整合性 |
+| `cms/ui/src/RouteErrorBoundary.tsx` | detail取得・render失敗からの再試行/一覧復帰 |
 | `cms/vite.config.ts` | React build設定 |
 | `cms/playwright.config.ts` | Browser E2Eとlocal Wrangler起動設定 |
 | `cms/tests/access.test.ts` | Access JWT検証のunit test |
@@ -366,6 +368,14 @@ uploadは選択/drop直後に外部副作用を発生させます。記事編集
 reload時はdraftを勝手に適用せず、GitHub版または未保存記事の復元画面で**下書きを復元**と**下書きを破棄**を選択します。base SHAと最新GitHub SHAが異なる場合はwarningを表示し、復元後もbase SHAを使うことで既存の`409`競合検知を維持します。
 
 GitHub保存成功または確認付きcancelでdraftを削除します。`localStorage`はAccess logout後も端末に残るため、共有端末では必ず破棄します。quotaやbrowser設定でstorageが使えない場合はeditorを止めず、退避warningを表示します。
+
+## Suspenseを使うread遷移
+
+記事一覧からdetailへの遷移は`startTransition`を使い、記事dataまたはlazy chunkの取得中も一覧を維持します。操作feedbackは`useTransition().isPending`で即時表示し、React Issue #31819の300ms fallback throttlingだけに依存しません。直接detail URLを開いた場合はdetail境界のfallbackを表示します。
+
+記事Promiseは`postResource.ts`で記事名単位に安定してcacheします。保存/create/renameではcacheを最新本文へ更新し、deleteでは無効化します。hover/focus時には記事dataと`ArticleWorkspace` chunkをpreloadします。
+
+Suspenseの対象はread遷移とcode splittingだけです。保存、Gyazo、rename、delete、draft autosave、deploy pollingはprogress/errorを明示するmutationなのでSuspense化しません。
 
 ## Live preview
 

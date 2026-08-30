@@ -169,6 +169,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-016 | Access利用者の監査情報 | G | `planned` |
 | CMS-017 | token期限・rotation状態の確認 | G | `planned` |
 | CMS-018 | Production新規作成E2E確認手順 | G | `planned` |
+| CMS-019 | Suspense記事遷移とeditor code splitting | D | `done` |
 
 ---
 
@@ -199,6 +200,33 @@ Vitestの責務:
 6. document、CI、deploy確認まで完了する。
 
 E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Productionに対する破壊的E2Eは通常CIへ入れず、CMS-018の明示的な手順で扱います。
+
+### CMS-019 Suspense記事遷移とeditor code splitting
+
+状態: `done`
+
+目的:
+
+- 記事取得中も一覧を消さず、操作へのfeedbackを即時表示する。
+- 一覧表示に不要なeditor/Markdown rendererを初期bundleから分離する。
+- React Issue #31819のSuspense fallback throttlingで無反応に見える状態を避ける。
+
+実装:
+
+- 安定したPromiseを保持する記事resource cache
+- detail境界だけのSuspenseと復旧可能なerror boundary
+- `startTransition`による記事遷移
+- fallbackに依存しない`useTransition().isPending`表示
+- hover/focus時の記事dataとeditor chunk preload
+- `ArticleWorkspace`、`react-markdown`、`remark-gfm`のlazy chunk分離
+- save/create/rename後のcache更新とdelete時の無効化
+- mutation、Gyazo、deploy pollingはSuspense化せず明示的stateを維持
+
+確認:
+
+- 遅延APIでも一覧とpending表示を維持するPlaywright E2E
+- 直接detail URLのfallbackと取得失敗からの復旧E2E
+- 保存後にcacheから最新本文を再表示するE2E
 
 ## Milestone 0: 自動E2Eでbrowser動作を担保する
 

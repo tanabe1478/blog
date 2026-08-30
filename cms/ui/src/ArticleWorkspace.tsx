@@ -18,6 +18,7 @@ import {
 import { DeploymentStatus, type DeploymentPurpose } from "./DeploymentStatus";
 import { removeDraft, writeDraft, type LocalDraft } from "./drafts";
 import { MarkdownArticle } from "./MarkdownArticle";
+import { invalidatePost, setCachedPost } from "./postResource";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -26,7 +27,7 @@ export interface InitialDeployment {
   purpose: DeploymentPurpose;
 }
 
-interface ArticleWorkspaceProps {
+export interface ArticleWorkspaceProps {
   initialPost: PostDocument;
   initialDraft?: LocalDraft;
   initialDeployment?: InitialDeployment;
@@ -178,13 +179,15 @@ export function ArticleWorkspace({
         const created = await createPost(post.name, content);
         removeDraft(post.name);
         setDraftStatus("");
-        setPost({
+        const createdPost = {
           ...post,
           content,
           sha: created.sha,
           githubUrl: created.githubUrl,
           publicUrl: created.publicUrl,
-        });
+        };
+        setPost(createdPost);
+        setCachedPost(createdPost);
         setBaseSha(created.sha);
         setCreating(false);
         setEditing(false);
@@ -199,7 +202,9 @@ export function ArticleWorkspace({
         const update = await updatePost(post.name, content, baseSha);
         removeDraft(post.name);
         setDraftStatus("");
-        setPost({ ...post, content, sha: update.sha, githubUrl: update.githubUrl });
+        const updatedPost = { ...post, content, sha: update.sha, githubUrl: update.githubUrl };
+        setPost(updatedPost);
+        setCachedPost(updatedPost);
         setBaseSha(update.sha);
         setEditing(false);
         setStatus("GitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
@@ -238,14 +243,18 @@ export function ArticleWorkspace({
         commitSha: renamed.commitSha,
         purpose: "publish",
       };
-      setPost({
+      const oldName = post.name;
+      const renamedPost = {
         ...post,
         name: renamed.name,
         path: `Content/posts/${renamed.name}`,
         sha: renamed.sha,
         githubUrl: renamed.githubUrl,
         publicUrl: renamed.publicUrl,
-      });
+      };
+      setPost(renamedPost);
+      invalidatePost(oldName);
+      setCachedPost(renamedPost);
       setBaseSha(renamed.sha);
       setRenameConfirmation("");
       setOperation(undefined);
@@ -269,6 +278,7 @@ export function ArticleWorkspace({
     try {
       const deletion = await deletePost(post.name, post.sha, deleteConfirmation);
       removeDraft(post.name);
+      invalidatePost(post.name);
       setPendingDraft(undefined);
       setDraftStatus("");
       setDeleted(true);

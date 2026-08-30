@@ -46,6 +46,10 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
 
+記事選択は`startTransition`で行い、取得中も一覧を残して`isPending`を即時表示します。detailはSuspense境界とerror boundaryを持ち、hover/focus時に記事dataとeditor chunkをpreloadします。`ArticleWorkspace`とMarkdown rendererはlazy chunkへ分離しています。
+
+React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense fallbackだけに依存させません。保存・Gyazo・rename・delete・deploy pollingはSuspense化せず、明示的な進捗/error stateを維持します。
+
 ## React editing
 
 既存記事の編集時はcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
