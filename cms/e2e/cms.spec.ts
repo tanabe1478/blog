@@ -20,6 +20,7 @@ interface MockOptions {
   renameConflict?: boolean;
   deploymentError?: boolean;
   deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
+  existingContent?: string;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
   onDelete?: (payload: unknown) => void;
@@ -94,7 +95,7 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
           post: {
             name: EXISTING_NAME,
             path: `Content/posts/${EXISTING_NAME}`,
-            content: EXISTING_CONTENT,
+            content: options.existingContent ?? EXISTING_CONTENT,
             sha: "a".repeat(40),
             githubUrl:
               "https://github.com/tanabe1478/blog/blob/main/Content/posts/existing-post.md",
@@ -230,17 +231,51 @@ async function openNewPostEditor(page: Page) {
   await page.getByRole("button", { name: "本文を編集" }).click();
 }
 
-test("serves the React 19 migration preview behind the Worker", async ({ page }) => {
+test("lists articles in the React CMS", async ({ page }) => {
+  await mockCmsApi(page);
   await page.goto("/react-preview");
 
   await expect(
     page.getByRole("heading", { name: "Blog CMS", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("React 19 / Viteによる移行基盤")).toBeVisible();
-  await expect(page.getByRole("link", { name: "従来のCMSへ戻る" })).toHaveAttribute(
+  await expect(page.getByText("1件の記事")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Existing title/ }),
+  ).toContainText("2026-07-20 10:00 · existing-post.md");
+});
+
+test("opens a rendered article detail in the React CMS", async ({ page }) => {
+  await mockCmsApi(page, { existingContent: `\n${EXISTING_CONTENT}` });
+  await page.goto("/react-preview");
+  await page.getByRole("button", { name: /Existing title/ }).click();
+
+  await expect(page).toHaveURL(/\/react-preview\?post=existing-post\.md$/);
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Existing paragraph.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
     "href",
-    "/",
+    "https://tanabe1478.github.io/posts/existing-post/",
   );
+  await page.getByRole("button", { name: "← 記事一覧へ" }).click();
+  await expect(page).toHaveURL("http://127.0.0.1:8787/react-preview");
+});
+
+test("does not execute raw HTML or unsafe URLs in React article detail", async ({
+  page,
+}) => {
+  await mockCmsApi(page, {
+    existingContent:
+      '---\ndate: 2026-07-20 10:00\n---\n\n# Safe title\n\n<img src="x" onerror="alert(1)">\n\n[unsafe](javascript:alert(1))',
+  });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+
+  const article = page.locator(".markdown-article");
+  await expect(page.getByRole("heading", { name: "Safe title" })).toBeVisible();
+  await expect(article.locator("[onerror]")).toHaveCount(0);
+  await expect(article.locator("script")).toHaveCount(0);
+  await expect(article.locator('a[href^="javascript:"]')).toHaveCount(0);
 });
 
 test("opens an article, edits it in two panes, and cancels", async ({ page }) => {

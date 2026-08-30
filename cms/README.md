@@ -16,9 +16,9 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 
 ## React migration
 
-CMS UIはReact 19へ段階移行中です。`CMS-R001`でReact 19.2.8、Vite 8.2.2、Wrangler Assets基盤を追加しました。現行の`/`は移行完了まで従来UIを維持します。
+CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。`CMS-R001`でReact/Vite/Assets基盤、`CMS-R002`で記事一覧と描画済みdetailを実装済みです。現行の`/`は主要flow完成まで利用できます。
 
-認証後の移行preview:
+認証後のReact版:
 
 ```text
 GET /react-preview

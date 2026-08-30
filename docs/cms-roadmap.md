@@ -28,12 +28,12 @@ Milestone G: 運用・監査を改善する
 
 ## React移行task
 
-CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReactへ段階移行します。移行中もProduction CMSを利用可能に保ち、各段階で既存E2Eをすべて通します。
+CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReactで作り直します。旧DOM・CSS・Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証とuser flowの安全性だけを維持します。Productionをplaceholderにはせず、主要flowが揃った時点で`/`をReactへ切り替えます。
 
 | ID | Task | 状態 |
 | --- | --- | --- |
 | CMS-R001 | React 19 / Vite / Cloudflare Assets基盤 | `done` |
-| CMS-R002 | 記事一覧・detail閲覧のReact化 | `planned` |
+| CMS-R002 | 記事一覧・detail閲覧のReact化 | `done` |
 | CMS-R003 | 編集・preview・GyazoのReact化 | `planned` |
 | CMS-R004 | draft・新規作成のReact化 | `planned` |
 | CMS-R005 | deploy status・rename・deleteのReact化 | `planned` |
@@ -55,12 +55,28 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - Wrangler 4.127.1へ更新し`npm audit` 0件
 - 40 Vitestと16 Playwright E2Eで確認
 
+### CMS-R002 記事一覧・detail閲覧のReact化
+
+状態: `done`
+
+実装:
+
+- React stateとfetch lifecycleによる記事一覧
+- History APIによる一覧/detail遷移
+- React stateによるloading/error表示
+- `react-markdown` 10.1.0と`remark-gfm` 4.0.1
+- frontmatterを除外したMarkdown表示
+- raw HTMLを実行せず、unsafe URL protocolを拒否
+- 公開ページ / GitHub source link
+- React専用E2Eで一覧・detail・navigation・安全性を確認
+
 移行原則:
 
 - React assetをAccess認証より前に配信しない。
-- 画面単位で移行し、既存機能を一括置換しない。
-- React化したuser flowもPlaywright E2Eを維持する。
-- CMS-R006までは従来UIをfallbackとして残す。
+- 旧DOM、CSS、Vanilla JavaScriptとの互換性を要求しない。
+- Worker API、Markdownデータ、認証・競合制御は維持する。
+- React化したuser flowをPlaywright E2Eで新しく担保する。
+- 主要flow完成まではProduction `/`を壊さず、完成時に一度にReactへ切り替える。
 
 ## Task一覧
 
