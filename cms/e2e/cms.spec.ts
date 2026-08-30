@@ -265,19 +265,8 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
   });
 }
 
-async function openNewPostEditor(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "新規記事" }).click();
-  await page.locator("#new-slug").fill("new-post");
-  await page.locator("#new-title").fill("New title");
-  await page.locator("#new-date").fill("2026-07-21T09:30");
-  await page.locator("#new-description").fill("Created from E2E");
-  await page.locator("#new-tags").fill("技術, 日記");
-  await page.getByRole("button", { name: "本文を編集" }).click();
-}
-
 async function openReactNewPostEditor(page: Page) {
-  await page.goto("/react-preview");
+  await page.goto("/");
   await page.getByRole("button", { name: "新規記事", exact: true }).click();
   await page.getByLabel("slug").fill("new-post");
   await page.getByLabel("タイトル").fill("New title");
@@ -289,7 +278,7 @@ async function openReactNewPostEditor(page: Page) {
 
 test("lists articles in the React CMS", async ({ page }) => {
   await mockCmsApi(page);
-  await page.goto("/react-preview");
+  await page.goto("/");
 
   await expect(
     page.getByRole("heading", { name: "Blog CMS", exact: true }),
@@ -302,10 +291,10 @@ test("lists articles in the React CMS", async ({ page }) => {
 
 test("opens a rendered article detail in the React CMS", async ({ page }) => {
   await mockCmsApi(page, { existingContent: `\n${EXISTING_CONTENT}` });
-  await page.goto("/react-preview");
+  await page.goto("/");
   await page.getByRole("button", { name: /Existing title/ }).click();
 
-  await expect(page).toHaveURL(/\/react-preview\?post=existing-post\.md$/);
+  await expect(page).toHaveURL(/\/\?post=existing-post\.md$/);
   await expect(
     page.getByRole("heading", { name: "Existing title", exact: true }),
   ).toBeVisible();
@@ -315,7 +304,7 @@ test("opens a rendered article detail in the React CMS", async ({ page }) => {
     "https://tanabe1478.github.io/posts/existing-post/",
   );
   await page.getByRole("button", { name: "← 記事一覧へ" }).click();
-  await expect(page).toHaveURL("http://127.0.0.1:8787/react-preview");
+  await expect(page).toHaveURL("http://127.0.0.1:8787/");
 });
 
 test("does not execute raw HTML or unsafe URLs in React article detail", async ({
@@ -325,7 +314,7 @@ test("does not execute raw HTML or unsafe URLs in React article detail", async (
     existingContent:
       '---\ndate: 2026-07-20 10:00\n---\n\n# Safe title\n\n<img src="x" onerror="alert(1)">\n\n[unsafe](javascript:alert(1))',
   });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
 
   const article = page.locator(".markdown-article");
   await expect(page.getByRole("heading", { name: "Safe title" })).toBeVisible();
@@ -336,7 +325,7 @@ test("does not execute raw HTML or unsafe URLs in React article detail", async (
 
 test("edits and previews an article in React, then cancels", async ({ page }) => {
   await mockCmsApi(page);
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
 
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const textarea = page.getByLabel("Markdown本文");
@@ -360,7 +349,7 @@ test("saves a React article with its current SHA", async ({ page }) => {
       updatePayload = payload;
     },
   });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.getByLabel("Markdown本文").fill("# Saved in React\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
@@ -378,7 +367,7 @@ test("saves a React article with its current SHA", async ({ page }) => {
 
 test("keeps React editor content when saving conflicts", async ({ page }) => {
   await mockCmsApi(page, { updateConflict: true });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const textarea = page.getByLabel("Markdown本文");
   await textarea.fill("# Conflict in React\n");
@@ -393,7 +382,7 @@ test("uploads a dropped image and inserts Gyazo Markdown in React", async ({
   page,
 }) => {
   await mockCmsApi(page);
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const textarea = page.getByLabel("Markdown本文");
 
@@ -415,7 +404,7 @@ test("uploads a dropped image and inserts Gyazo Markdown in React", async ({
 
 test("uploads a selected image from the React file picker", async ({ page }) => {
   await mockCmsApi(page);
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
 
   await page.getByLabel("画像ファイル").setInputFiles({
@@ -429,7 +418,7 @@ test("uploads a selected image from the React file picker", async ({ page }) => 
 
 test("keeps React content when Gyazo upload fails", async ({ page }) => {
   await mockCmsApi(page, { imageError: true });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const textarea = page.getByLabel("Markdown本文");
   const before = await textarea.inputValue();
@@ -446,7 +435,7 @@ test("keeps React content when Gyazo upload fails", async ({ page }) => {
 
 test("recovers and discards an existing React draft", async ({ page }) => {
   await mockCmsApi(page);
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const draftContent = "# React draft\n\nReload後も残る本文。";
   await page.getByLabel("Markdown本文").fill(draftContent);
@@ -475,7 +464,7 @@ test("uses the original SHA when saving a restored React draft", async ({ page }
       updatePayload = payload;
     },
   });
-  await page.goto("/react-preview");
+  await page.goto("/");
   const draftSha = "d".repeat(40);
   await page.evaluate(
     ({ name, sha }) => {
@@ -493,7 +482,7 @@ test("uses the original SHA when saving a restored React draft", async ({ page }
     },
     { name: EXISTING_NAME, sha: draftSha },
   );
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await expect(page.getByText(/GitHub版が更新されている/)).toBeVisible();
   await page.getByRole("button", { name: "下書きを復元" }).click();
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
@@ -548,7 +537,7 @@ test("keeps the React new article editor usable without localStorage", async ({ 
 
 test("tracks React publication from pending to published", async ({ page }) => {
   await mockCmsApi(page, { deploymentStates: ["pending", "running", "published"] });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.getByLabel("Markdown本文").fill("# Publish from React\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
@@ -564,7 +553,7 @@ test("tracks React publication from pending to published", async ({ page }) => {
 
 test("shows React deployment failure without losing the saved article", async ({ page }) => {
   await mockCmsApi(page, { deploymentStates: ["failed"] });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.getByLabel("Markdown本文").fill("# Saved before failure\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
@@ -580,7 +569,7 @@ test("renames a React article after exact filename confirmation", async ({ page 
       renamePayload = payload;
     },
   });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "slug変更", exact: true }).click();
   await page.getByLabel("新しいslug").fill("renamed-post");
   const submit = page.getByRole("button", { name: "slugを変更", exact: true });
@@ -601,7 +590,7 @@ test("renames a React article after exact filename confirmation", async ({ page 
 
 test("keeps the React rename panel open on conflict", async ({ page }) => {
   await mockCmsApi(page, { renameConflict: true });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "slug変更", exact: true }).click();
   await page.getByLabel("新しいslug").fill("renamed-post");
   await page.getByLabel("確認用filename").fill(EXISTING_NAME);
@@ -619,7 +608,7 @@ test("deletes a React article after exact filename confirmation", async ({ page 
       deletePayload = payload;
     },
   });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "削除", exact: true }).click();
   const submit = page.getByRole("button", { name: "記事を削除", exact: true });
   await expect(submit).toBeDisabled();
@@ -635,7 +624,7 @@ test("deletes a React article after exact filename confirmation", async ({ page 
 
 test("keeps a React article visible when deletion conflicts", async ({ page }) => {
   await mockCmsApi(page, { deleteConflict: true });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByLabel("削除確認").fill(EXISTING_NAME);
   await page.getByRole("button", { name: "記事を削除", exact: true }).click();
@@ -647,378 +636,11 @@ test("keeps a React article visible when deletion conflicts", async ({ page }) =
 
 test("keeps React saved state when deployment lookup fails", async ({ page }) => {
   await mockCmsApi(page, { deploymentError: true });
-  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.getByLabel("Markdown本文").fill("# Saved with status error\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   await expect(page.locator(".deployment-status")).toContainText("記事は保存済みですが、公開状況を取得できません");
   await expect(page.getByRole("heading", { name: "Saved with status error" })).toBeVisible();
-});
-
-test("opens an article, edits it in two panes, and cancels", async ({ page }) => {
-  await mockCmsApi(page);
-  await page.goto("/");
-
-  await expect(page.getByText("1件の記事")).toBeVisible();
-  await page.getByRole("link", { name: /Existing title/ }).click();
-
-  const textarea = page.getByLabel("Markdown本文");
-  await expect(textarea).toBeHidden();
-  await expect(
-    page.getByRole("heading", { name: "Existing title", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
-    "href",
-    "https://tanabe1478.github.io/posts/existing-post/",
-  );
-  await expect(
-    page.getByRole("link", { name: "GitHubで元ファイルを開く" }),
-  ).toHaveAttribute(
-    "href",
-    "https://github.com/tanabe1478/blog/blob/main/Content/posts/existing-post.md",
-  );
-
-  await page.getByRole("button", { name: "編集", exact: true }).click();
-  await expect(textarea).toBeVisible();
-  await textarea.fill("# Changed title\n\nChanged body.");
-  await expect(
-    page.getByRole("heading", { name: "Changed title", exact: true }),
-  ).toBeVisible();
-
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(textarea).toBeHidden();
-  await expect(
-    page.getByRole("heading", { name: "Existing title", exact: true }),
-  ).toBeVisible();
-});
-
-test("recovers an existing article draft after reload and can discard it", async ({
-  page,
-}) => {
-  await mockCmsApi(page);
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "編集", exact: true }).click();
-
-  const textarea = page.getByLabel("Markdown本文");
-  const draftContent = "# Existing draft\n\nReloadしても残る本文。";
-  await textarea.fill(draftContent);
-  await expect(page.locator("#draft-state")).toContainText(
-    "下書きをこの端末に保存しました",
-  );
-
-  await page.reload();
-  await expect(page.locator("#draft-notice")).toBeVisible();
-  await expect(page.getByRole("button", { name: "編集", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "削除", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "slug変更", exact: true })).toBeDisabled();
-  await expect(
-    page.getByRole("heading", { name: "Existing title", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "下書きを復元" }).click();
-  await expect(textarea).toHaveValue(draftContent);
-
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(textarea).toBeHidden();
-  await expect(page.locator("#draft-notice")).toBeHidden();
-  expect(
-    await page.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.includes(":draft:v1:")),
-    ),
-  ).toEqual([]);
-});
-
-test("uses the draft base SHA when GitHub changed after drafting", async ({
-  page,
-}) => {
-  let updatePayload: unknown;
-  await page.addInitScript(
-    ({ name, sha }) => {
-      const key = `blog-cms:draft:v1:${location.host}:${name}`;
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          version: 1,
-          name,
-          content: "# Stale draft\n\n競合対象の本文。",
-          baseSha: sha,
-          isNew: false,
-          savedAt: "2026-07-20T10:30:00.000Z",
-        }),
-      );
-    },
-    { name: EXISTING_NAME, sha: "d".repeat(40) },
-  );
-  await mockCmsApi(page, {
-    updateConflict: true,
-    onUpdate: (payload) => {
-      updatePayload = payload;
-    },
-  });
-  await page.goto(`/?post=${EXISTING_NAME}`);
-
-  await expect(page.locator("#draft-notice")).toContainText(
-    "GitHub版が更新されているため",
-  );
-  await page.getByRole("button", { name: "下書きを復元" }).click();
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  expect(updatePayload).toMatchObject({ sha: "d".repeat(40) });
-  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
-  await expect(page.getByLabel("Markdown本文")).toHaveValue(/競合対象の本文。/);
-});
-
-test("recovers a new article after reload and clears its draft after save", async ({
-  page,
-}) => {
-  await mockCmsApi(page);
-  await openNewPostEditor(page);
-
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill(`${await textarea.inputValue()}Reload対象の本文。\n`);
-  await expect(page.locator("#draft-state")).toContainText(
-    "下書きをこの端末に保存しました",
-  );
-  await expect(page).toHaveURL(/\?draft=new-post\.md$/);
-
-  await page.reload();
-  await expect(page.locator("#draft-notice")).toBeVisible();
-  await page.getByRole("button", { name: "下書きを復元" }).click();
-  await expect(textarea).toHaveValue(/Reload対象の本文。/);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  await expect(textarea).toBeHidden();
-  expect(
-    await page.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.includes(":draft:v1:")),
-    ),
-  ).toEqual([]);
-});
-
-test("keeps editing when browser storage is unavailable", async ({ page }) => {
-  await page.addInitScript(() => {
-    Storage.prototype.setItem = () => {
-      throw new DOMException("storage unavailable", "QuotaExceededError");
-    };
-  });
-  await mockCmsApi(page);
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "編集", exact: true }).click();
-
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill("# Storage failure\n\n本文は編集できる。");
-  await expect(page.locator("#draft-state")).toContainText(
-    "端末下書きを保存できません",
-  );
-  await expect(textarea).toHaveValue(/本文は編集できる。/);
-});
-
-test("creates an unsaved article and saves it for the first time", async ({
-  page,
-}) => {
-  let createPayload: unknown;
-  await mockCmsApi(page, {
-    onCreate: (payload) => {
-      createPayload = payload;
-    },
-  });
-  await openNewPostEditor(page);
-
-  const textarea = page.getByLabel("Markdown本文");
-  await expect(textarea).toHaveValue(
-    /date: 2026-07-21 09:30[\s\S]*description: "Created from E2E"[\s\S]*tags: 技術, 日記[\s\S]*# New title/,
-  );
-  await expect(
-    page.getByRole("heading", { name: "New title", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "公開ページを開く" })).toBeHidden();
-
-  await textarea.fill(`${await textarea.inputValue()}本文です。\n`);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  expect(createPayload).toMatchObject({
-    name: "new-post.md",
-    content: expect.stringContaining("本文です。"),
-  });
-  await expect(textarea).toBeHidden();
-  await expect(page.getByText("公開処理はGitHub Actionsで進みます。", { exact: false })).toBeVisible();
-  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
-    "href",
-    "https://tanabe1478.github.io/posts/new-post/",
-  );
-  await expect(page).toHaveURL(/\?post=new-post\.md$/);
-});
-
-test("renames an article after slug and filename confirmation", async ({ page }) => {
-  let renamePayload: unknown;
-  await mockCmsApi(page, {
-    onRename: (payload) => {
-      renamePayload = payload;
-    },
-  });
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "slug変更", exact: true }).click();
-
-  const slug = page.locator("#rename-slug");
-  const confirmation = page.locator("#rename-confirmation");
-  const submit = page.getByRole("button", { name: "slugを変更", exact: true });
-  await slug.fill("renamed-post");
-  await confirmation.fill("wrong.md");
-  await expect(submit).toBeDisabled();
-  await confirmation.fill(EXISTING_NAME);
-  await expect(submit).toBeEnabled();
-  await submit.click();
-
-  expect(renamePayload).toMatchObject({
-    newName: "renamed-post.md",
-    confirmation: EXISTING_NAME,
-    sha: "a".repeat(40),
-    content: EXISTING_CONTENT,
-  });
-  await expect(page.getByRole("heading", { name: "renamed-post.md" })).toBeVisible();
-  await expect(page).toHaveURL(/\?post=renamed-post\.md$/);
-  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
-    "href",
-    "https://tanabe1478.github.io/posts/renamed-post/",
-  );
-  await expect(page.locator("#deployment-status")).toContainText("公開済み");
-});
-
-test("keeps the old slug when rename conflicts", async ({ page }) => {
-  await mockCmsApi(page, { renameConflict: true });
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "slug変更", exact: true }).click();
-  await page.locator("#rename-slug").fill("renamed-post");
-  await page.locator("#rename-confirmation").fill(EXISTING_NAME);
-  await page.getByRole("button", { name: "slugを変更", exact: true }).click();
-
-  await expect(page.getByText(/元記事が更新されたか、新slugが既に存在します/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: EXISTING_NAME })).toBeVisible();
-  await expect(page.locator("#rename-form")).toBeVisible();
-});
-
-test("deletes an article after exact filename confirmation", async ({ page }) => {
-  let deletePayload: unknown;
-  await mockCmsApi(page, {
-    onDelete: (payload) => {
-      deletePayload = payload;
-    },
-  });
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "削除", exact: true }).click();
-
-  const confirmation = page.getByLabel("削除確認用ファイル名");
-  const submit = page.getByRole("button", { name: "記事を削除", exact: true });
-  await expect(submit).toBeDisabled();
-  await confirmation.fill("wrong.md");
-  await expect(submit).toBeDisabled();
-  await confirmation.fill(EXISTING_NAME);
-  await expect(submit).toBeEnabled();
-  await submit.click();
-
-  expect(deletePayload).toEqual({
-    sha: "a".repeat(40),
-    confirmation: EXISTING_NAME,
-  });
-  await expect(page.getByText("GitHubから記事を削除しました", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: "編集", exact: true })).toBeHidden();
-  await expect(page.getByRole("button", { name: "削除", exact: true })).toBeHidden();
-  await expect(page.locator("#deployment-status")).toContainText(
-    "公開サイトからの削除が反映されました",
-  );
-});
-
-test("keeps an article visible when deletion conflicts", async ({ page }) => {
-  await mockCmsApi(page, { deleteConflict: true });
-  await page.goto(`/?post=${EXISTING_NAME}`);
-  await page.getByRole("button", { name: "削除", exact: true }).click();
-  await page.getByLabel("削除確認用ファイル名").fill(EXISTING_NAME);
-  await page.getByRole("button", { name: "記事を削除", exact: true }).click();
-
-  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Existing title", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator("#delete-form")).toBeVisible();
-});
-
-test("shows deployment progress until the article is public", async ({ page }) => {
-  await mockCmsApi(page, {
-    deploymentStates: ["pending", "running", "published"],
-  });
-  await openNewPostEditor(page);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  const deployment = page.locator("#deployment-status");
-  await expect(deployment).toContainText("build待ち");
-  await page.getByRole("button", { name: "公開状況を再確認" }).click();
-  await expect(deployment).toContainText("公開処理を実行中");
-  await expect(page.getByRole("link", { name: "GitHub Actionsを開く" })).toHaveAttribute(
-    "href",
-    "https://github.com/tanabe1478/blog/actions/runs/789",
-  );
-  await page.getByRole("button", { name: "公開状況を再確認" }).click();
-  await expect(deployment).toContainText("公開済み");
-  await expect(page.getByRole("link", { name: "公開ページを開く" })).toHaveAttribute(
-    "data-published",
-    "true",
-  );
-});
-
-test("shows a failed deployment without losing the saved article", async ({
-  page,
-}) => {
-  await mockCmsApi(page, { deploymentStates: ["failed"] });
-  await openNewPostEditor(page);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  await expect(page.locator("#deployment-status")).toContainText(
-    "公開処理に失敗しました",
-  );
-  await expect(page.getByRole("link", { name: "GitHub Actionsを開く" })).toBeVisible();
-  await expect(page.getByLabel("Markdown本文")).toBeHidden();
-});
-
-test("keeps the saved article when deployment status cannot be loaded", async ({
-  page,
-}) => {
-  await mockCmsApi(page, { deploymentError: true });
-  await openNewPostEditor(page);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  await expect(page.locator("#deployment-status")).toContainText(
-    "記事は保存済みですが、公開状況を取得できません",
-  );
-  await expect(page.getByLabel("Markdown本文")).toBeHidden();
-  await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
-});
-
-test("keeps an unsaved new article when creation conflicts", async ({ page }) => {
-  await mockCmsApi(page, { createConflict: true });
-  await openNewPostEditor(page);
-
-  const textarea = page.getByLabel("Markdown本文");
-  const content = `${await textarea.inputValue()}競合しても残る本文。\n`;
-  await textarea.fill(content);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  await expect(page.getByText("同じslugの記事が既に存在します")).toBeVisible();
-  await expect(textarea).toBeVisible();
-  await expect(textarea).toHaveValue(content);
-});
-
-test("keeps an unsaved new article when creation fails", async ({ page }) => {
-  await mockCmsApi(page, { createError: true });
-  await openNewPostEditor(page);
-
-  const textarea = page.getByLabel("Markdown本文");
-  const content = `${await textarea.inputValue()}失敗しても残る本文。\n`;
-  await textarea.fill(content);
-  await page.getByRole("button", { name: "GitHubへ保存" }).click();
-
-  await expect(page.getByText("記事を作成できませんでした")).toBeVisible();
-  await expect(textarea).toBeVisible();
-  await expect(textarea).toHaveValue(content);
 });

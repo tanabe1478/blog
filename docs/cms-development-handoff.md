@@ -75,18 +75,15 @@ Blog: https://tanabe1478.github.io/
 | `cms/src/access.ts` | Cloudflare Access JWTの署名・issuer・audience・email検証 |
 | `cms/src/github.ts` | GitHub GraphQL/Contents API、metadata解析、SHA競合制御 |
 | `cms/src/gyazo.ts` | 画像signature/size検証とGyazo upload |
-| `cms/src/page.ts` | 移行完了まで残す従来inline UI |
-| `cms/ui/` | React 19 UI source。Viteで`cms/dist/`へbuild |
+| `cms/ui/` | React 19 CMS source。Viteで`cms/dist/`へbuild |
 | `cms/vite.config.ts` | React build設定 |
 | `cms/playwright.config.ts` | Browser E2Eとlocal Wrangler起動設定 |
 | `cms/tests/access.test.ts` | Access JWT検証のunit test |
-| `cms/tests/index.test.ts` | route、GitHub/Gyazo連携、HTML script構文等のtest |
+| `cms/tests/index.test.ts` | route、GitHub/Gyazo連携、asset security headerのtest |
 | `cms/wrangler.jsonc` | Worker名、Account、entry point、通常変数 |
 | `cms/README.md` | 機能別の短い運用説明 |
 
-`page.ts`はReact移行完了まで、HTML全体をtemplate literalとして持ちます。inline script内の正規表現やbackslashを編集すると、TypeScript側のtemplate literalでescapeが消える可能性があります。`npm run check`のscript構文testを必ず通してください。
-
-React移行は`cms-roadmap.md`のCMS-R001〜R006を正本とします。R001〜R005が完了し、`/react-preview`で主要flow（閲覧・編集・Gyazo・draft・新規作成・deploy status・rename・delete）を利用できます。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は要求しません。`wrangler.jsonc`のAssetsは`run_worker_first: true`にしてあり、assetもAccess JWT検証を迂回しません。`npm run dev`、`npm run check`、`npm run deploy`はReact UIを先にbuildします。
+React移行CMS-R001〜R006は完了しています。Production `/`はReact CMSで、旧inline UIと`/react-preview` routeは削除済みです。`wrangler.jsonc`のAssetsは`run_worker_first: true`にしてあり、HTML/JavaScript/CSSもAccess JWT検証を迂回しません。`npm run dev`、`npm run check`、`npm run deploy`はReact UIを先にbuildします。
 
 ## Wranglerとは何か
 
@@ -374,7 +371,7 @@ GitHub保存成功または確認付きcancelでdraftを削除します。`local
 
 記事detailの閲覧時はMarkdown textareaを隠し、描画済み記事を表示します。編集時は左Markdown・右Previewの2ペインになり、800px以下は縦1列です。閲覧表示と編集Previewは同じrendererを使います。
 
-現在のrendererは`cms/src/page.ts`内の小さな安全指向parserで、DOM APIと`textContent`だけで要素を作ります。raw HTMLを`innerHTML`へ渡しません。
+rendererは`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を使います。raw HTML pluginは追加せず、危険なURL protocolを拒否します。
 
 対応範囲:
 
@@ -439,7 +436,7 @@ cms/e2e/*.spec.ts
 | `github.ts` | request URL/header/body、metadata、SHA、error mapping |
 | `gyazo.ts` | MIMEだけでなくsignature、size、response検証 |
 | `index.ts` | method/path/status、Origin/host、security header |
-| `page.ts` | 関連Playwright E2E、必要に応じてagent-browser目視確認 |
+| `cms/ui/` | 関連Playwright E2E、必要に応じてagent-browser目視確認 |
 | workflow/config | YAML/JSONC差分、scope、trigger path、CI run |
 
 ### Agent-browserでCMSを確認する例
@@ -598,11 +595,10 @@ Secretの問題はcode rollbackでは戻りません。Secret storage側で正�
 
 ## 次の実装task
 
-優先順と完了条件は`cms-roadmap.md`を正本とします。まずReact移行を完了し、その後に機能backlogへ戻ります。
+優先順と完了条件は`cms-roadmap.md`を正本とします。React移行は完了したため、機能backlogへ戻ります。
 
-1. CMS-R006で`/`をReactへ切り替えて旧inline UIを削除
-2. ProductionでAccess配下のReact assetとread flowを確認
-3. CMS-005以降をroadmap順に実装
+1. ProductionでAccess配下のReact assetとread flowを確認
+2. CMS-005以降をroadmap順に実装
 
 各user-facing taskは関連するPlaywright E2EがlocalとCIで成功するまで`done`にしません。
 

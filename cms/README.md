@@ -14,14 +14,14 @@ health check:
 GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 ```
 
-## React migration
+## React CMS
 
-CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。記事一覧・detail・編集・Gyazo・draft・新規作成・deploy status・rename・deleteまでReactで実装済みです。現行の`/`は最終切替まで利用できます。
+CMS UIはReact 19です。旧inline HTML/CSS/Vanilla JavaScriptは削除し、Markdown/API/認証と安全なuser flowを維持しています。記事一覧・detail・編集・Gyazo・draft・新規作成・deploy status・rename・deleteをReactで提供します。
 
-認証後のReact版:
+認証後のCMS:
 
 ```text
-GET /react-preview
+GET /
 ```
 
 `assets.run_worker_first=true`により、React HTML/JavaScript/CSSもWorkerのCloudflare Access JWT検証後だけ配信します。React UIのbuildは`npm run build:ui`、通常の`npm run check`と`npm run deploy`にも自動で含まれます。移行順は`docs/cms-roadmap.md`を正本とします。
@@ -48,13 +48,13 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 ## React editing
 
-React版`/react-preview`では、既存記事の編集時にcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
+既存記事の編集時はcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
 
 file pickerとdrag-and-dropの両方でGyazoへuploadし、現在のcursor/selection位置へlinked-image Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
 
 ## Local draft
 
-React版と従来版では、編集中のMarkdownを400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。
+編集中のMarkdownは400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。
 
 下書きには保存時のGitHub SHAを記録します。GitHub版がその後更新された場合、復元後も古いSHAを使って保存するため`409`となり、最新記事を無意識に上書きしません。
 

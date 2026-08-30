@@ -50,55 +50,7 @@ describe("CMS Worker", () => {
     expect(response.status).toBe(200);
   });
 
-  it("renders article details and editing controls", async () => {
-    const response = await fetch("/");
-    const content = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe(
-      "text/html; charset=utf-8",
-    );
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-security-policy")).toContain(
-      "default-src 'none'",
-    );
-    expect(content).toContain("<h1>Blog CMS</h1>");
-    expect(content).toContain("GitHub連携");
-    expect(content).toContain('id="new-post"');
-    expect(content).toContain('id="new-post-form"');
-    expect(content).toContain('id="public-link"');
-    expect(content).toContain('公開ページを開く');
-    expect(content).toContain('id="draft-notice"');
-    expect(content).toContain('id="draft-restore"');
-    expect(content).toContain('id="draft-discard"');
-    expect(content).toContain("localStorage.setItem(draftKey(activePost)");
-    expect(content).toContain('id="deployment-status"');
-    expect(content).toContain('id="deployment-refresh"');
-    expect(content).toContain('GitHub Actionsを開く');
-    expect(content).toContain('id="rename"');
-    expect(content).toContain('id="rename-form"');
-    expect(content).toContain('id="rename-slug"');
-    expect(content).toContain('id="rename-confirmation"');
-    expect(content).toContain('id="delete"');
-    expect(content).toContain('id="delete-form"');
-    expect(content).toContain('id="delete-confirmation"');
-    expect(content).toContain('id="edit"');
-    expect(content).toContain('id="image"');
-    expect(content).toContain("postContent.addEventListener('drop'");
-    expect(content).toContain('id="detail"');
-    expect(content).toContain(
-      'id="post-content" aria-label="Markdown本文" readonly hidden',
-    );
-    expect(content).toContain(
-      'id="preview" class="preview" aria-label="記事プレビュー" hidden',
-    );
-    expect(content).toContain("postContent.hidden = !editing");
-    const script = content.match(/<script>([\s\S]*)<\/script>/)?.[1];
-    expect(script).toBeDefined();
-    expect(() => new Function(script ?? "")).not.toThrow();
-  });
-
-  it("serves the React migration preview through the authenticated Worker", async () => {
+  it("serves the React CMS root through the authenticated Worker", async () => {
     const assets = {
       fetch: vi.fn().mockResolvedValue(
         new Response('<div id="root"></div>', {
@@ -106,7 +58,7 @@ describe("CMS Worker", () => {
         }),
       ),
     };
-    const request = new Request("https://cms.example.test/react-preview");
+    const request = new Request("https://cms.example.test/");
 
     const response = await worker.fetch(
       request as Parameters<typeof worker.fetch>[0],
@@ -131,6 +83,13 @@ describe("CMS Worker", () => {
     expect(assets.fetch).toHaveBeenCalledWith(
       expect.objectContaining({ url: "https://cms.example.test/" }),
     );
+  });
+
+  it("does not keep the React migration preview route", async () => {
+    const response = await fetch("/react-preview");
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Not found" });
   });
 
   it("returns Markdown posts from the public repository", async () => {

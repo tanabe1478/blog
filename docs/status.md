@@ -33,7 +33,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 保存commitを基準にbuild待ち・実行中・公開済み・失敗statusをCMSへ表示済み。
 - filename確認・SHA競合検知・Production限定の記事削除に対応済み。
 - GraphQL atomic commitとHEAD/SHA競合検知付きのslug変更に対応済み。
-- React 19版で閲覧・編集・Gyazo・draft・新規作成・deploy status・rename・deleteの主要flowを実装済み。
+- CMS `/`をReact 19へ切替済み。旧inline UIと移行用`/react-preview`は削除済み。
 - Cloudflare resourceとtokenは`yurubo`から分離済み。
 
 ### docs
@@ -95,7 +95,7 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### Blog CMS
 
-- React移行（記事一覧・detail、編集、draft、新規作成、破壊操作の順）。
+- React移行は完了。次はroadmapの機能backlogを順に実装する。
 - 一覧のsearch/filter。
 - fine-grained tokenの期限・rotation手順の定期確認。
 

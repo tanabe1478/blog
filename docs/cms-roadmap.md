@@ -37,7 +37,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-R003 | 編集・preview・GyazoのReact化 | `done` |
 | CMS-R004 | draft・新規作成のReact化 | `done` |
 | CMS-R005 | deploy status・rename・deleteのReact化 | `done` |
-| CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `planned` |
+| CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `done` |
 
 ### CMS-R001 React 19 / Vite / Cloudflare Assets基盤
 
@@ -51,9 +51,23 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - Wrangler Assets bindingと`run_worker_first: true`
 - Access JWT検証後だけReact HTML/assetを配信
 - 外部script/styleだけを許可するReact UI用CSP
-- `/react-preview`で移行基盤を確認
+- 移行中は`/react-preview`で基盤を確認
 - Wrangler 4.127.1へ更新し`npm audit` 0件
 - 40 Vitestと16 Playwright E2Eで確認
+
+### CMS-R006 旧inline UI削除、CSP強化、移行完了
+
+状態: `done`
+
+実装:
+
+- Production `/`をAccess認証後のReact asset配信へ切替
+- `/react-preview` routeを削除
+- `cms/src/page.ts`と旧inline HTML/CSS/Vanilla JavaScriptを削除
+- `'unsafe-inline'`を含まないReact CSPへ統一
+- legacy UI専用Playwright E2Eを削除
+- Worker unit testをReact root/asset security headerへ更新
+- React主要flowのPlaywright E2EをProduction path `/`で確認
 
 ### CMS-R005 deploy status・rename・deleteのReact化
 

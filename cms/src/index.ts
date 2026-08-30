@@ -19,7 +19,6 @@ import {
   MAX_IMAGE_BYTES,
   uploadToGyazo,
 } from "./gyazo";
-import { cmsPage } from "./page";
 
 function json(data: unknown, status = 200, cacheControl = "no-store"): Response {
   return Response.json(data, {
@@ -46,27 +45,11 @@ function postNameFromPath(pathname: string): string | undefined {
   }
 }
 
-function html(content: string): Response {
-  return new Response(content, {
-    headers: {
-      "cache-control": "no-store",
-      "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; connect-src 'self'; img-src https: data:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
-      "referrer-policy": "no-referrer",
-      "x-content-type-options": "nosniff",
-    },
-  });
-}
-
 async function reactAsset(request: Request, env: Env): Promise<Response> {
   if (!env.ASSETS) {
     return json({ error: "React UI assets are not built" }, 503);
   }
   const url = new URL(request.url);
-  if (url.pathname === "/react-preview") {
-    url.pathname = "/";
-  }
   const asset = await env.ASSETS.fetch(new Request(url, request));
   const headers = new Headers(asset.headers);
   headers.set("referrer-policy", "no-referrer");
@@ -101,13 +84,9 @@ export default {
 
     if (
       request.method === "GET" &&
-      (url.pathname === "/react-preview" || url.pathname.startsWith("/assets/"))
+      (url.pathname === "/" || url.pathname.startsWith("/assets/"))
     ) {
       return reactAsset(request, env);
-    }
-
-    if (request.method === "GET" && url.pathname === "/") {
-      return html(cmsPage);
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
