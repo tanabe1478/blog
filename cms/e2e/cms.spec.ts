@@ -130,6 +130,29 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
     }
 
     if (
+      request.method() === "GET" &&
+      (url.pathname === "/api/posts/new-post.md" ||
+        url.pathname === "/api/posts/renamed-post.md")
+    ) {
+      const name = url.pathname.endsWith("new-post.md")
+        ? "new-post.md"
+        : "renamed-post.md";
+      await route.fulfill({
+        json: {
+          post: {
+            name,
+            path: `Content/posts/${name}`,
+            content: name === "new-post.md" ? "# New title\n" : EXISTING_CONTENT,
+            sha: "b".repeat(40),
+            githubUrl: `https://github.com/tanabe1478/blog/blob/main/Content/posts/${name}`,
+            publicUrl: `https://tanabe1478.github.io/posts/${name.slice(0, -3)}/`,
+          },
+        },
+      });
+      return;
+    }
+
+    if (
       request.method() === "PUT" &&
       url.pathname === `/api/posts/${EXISTING_NAME}`
     ) {
@@ -521,6 +544,116 @@ test("keeps the React new article editor usable without localStorage", async ({ 
   await textarea.fill(`${await textarea.inputValue()}Still editable.\n`);
   await expect(page.getByText(/端末下書きを保存できません/)).toBeVisible();
   await expect(textarea).toHaveValue(/Still editable/);
+});
+
+test("tracks React publication from pending to published", async ({ page }) => {
+  await mockCmsApi(page, { deploymentStates: ["pending", "running", "published"] });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Markdown本文").fill("# Publish from React\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  const deployment = page.locator(".deployment-status");
+  await expect(deployment).toContainText("build待ち");
+  await deployment.getByRole("button", { name: "公開状況を再確認" }).click();
+  await expect(deployment).toContainText("公開処理を実行中");
+  await deployment.getByRole("button", { name: "公開状況を再確認" }).click();
+  await expect(deployment).toContainText("公開済み");
+  await expect(deployment.getByRole("link", { name: "GitHub Actionsを開く" })).toBeVisible();
+});
+
+test("shows React deployment failure without losing the saved article", async ({ page }) => {
+  await mockCmsApi(page, { deploymentStates: ["failed"] });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Markdown本文").fill("# Saved before failure\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  await expect(page.locator(".deployment-status")).toContainText("公開処理に失敗しました");
+  await expect(page.getByRole("heading", { name: "Saved before failure" })).toBeVisible();
+});
+
+test("renames a React article after exact filename confirmation", async ({ page }) => {
+  let renamePayload: unknown;
+  await mockCmsApi(page, {
+    onRename: (payload) => {
+      renamePayload = payload;
+    },
+  });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "slug変更", exact: true }).click();
+  await page.getByLabel("新しいslug").fill("renamed-post");
+  const submit = page.getByRole("button", { name: "slugを変更", exact: true });
+  await expect(submit).toBeDisabled();
+  await page.getByLabel("確認用filename").fill(EXISTING_NAME);
+  await submit.click();
+
+  expect(renamePayload).toMatchObject({
+    newName: "renamed-post.md",
+    confirmation: EXISTING_NAME,
+    sha: "a".repeat(40),
+    content: EXISTING_CONTENT,
+  });
+  await expect(page).toHaveURL(/\?post=renamed-post\.md$/);
+  await expect(page.getByRole("heading", { name: "renamed-post.md" })).toBeVisible();
+  await expect(page.locator(".deployment-status")).toContainText("公開済み");
+});
+
+test("keeps the React rename panel open on conflict", async ({ page }) => {
+  await mockCmsApi(page, { renameConflict: true });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "slug変更", exact: true }).click();
+  await page.getByLabel("新しいslug").fill("renamed-post");
+  await page.getByLabel("確認用filename").fill(EXISTING_NAME);
+  await page.getByRole("button", { name: "slugを変更", exact: true }).click();
+
+  await expect(page.getByText(/元記事が更新されたか、新slugが既に存在します/)).toBeVisible();
+  await expect(page.locator(".rename-panel")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`\\?post=${EXISTING_NAME}$`));
+});
+
+test("deletes a React article after exact filename confirmation", async ({ page }) => {
+  let deletePayload: unknown;
+  await mockCmsApi(page, {
+    onDelete: (payload) => {
+      deletePayload = payload;
+    },
+  });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "削除", exact: true }).click();
+  const submit = page.getByRole("button", { name: "記事を削除", exact: true });
+  await expect(submit).toBeDisabled();
+  await page.getByLabel("削除確認").fill(EXISTING_NAME);
+  await submit.click();
+
+  expect(deletePayload).toEqual({ sha: "a".repeat(40), confirmation: EXISTING_NAME });
+  await expect(page.getByText(/GitHubから記事を削除しました/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "編集", exact: true })).toBeHidden();
+  await expect(page.getByRole("link", { name: "旧公開ページを確認" })).toBeVisible();
+  await expect(page.locator(".deployment-status")).toContainText("公開サイトからの削除が反映されました");
+});
+
+test("keeps a React article visible when deletion conflicts", async ({ page }) => {
+  await mockCmsApi(page, { deleteConflict: true });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "削除", exact: true }).click();
+  await page.getByLabel("削除確認").fill(EXISTING_NAME);
+  await page.getByRole("button", { name: "記事を削除", exact: true }).click();
+
+  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
+  await expect(page.locator(".delete-panel")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Existing title" })).toBeVisible();
+});
+
+test("keeps React saved state when deployment lookup fails", async ({ page }) => {
+  await mockCmsApi(page, { deploymentError: true });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Markdown本文").fill("# Saved with status error\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  await expect(page.locator(".deployment-status")).toContainText("記事は保存済みですが、公開状況を取得できません");
+  await expect(page.getByRole("heading", { name: "Saved with status error" })).toBeVisible();
 });
 
 test("opens an article, edits it in two panes, and cancels", async ({ page }) => {

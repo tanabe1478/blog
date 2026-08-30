@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 
-import { ArticleWorkspace } from "./ArticleWorkspace";
+import { ArticleWorkspace, type InitialDeployment } from "./ArticleWorkspace";
 import { fetchPost, fetchPosts, type PostDocument, type PostSummary } from "./api";
 import { readDraft, writeDraft, type LocalDraft } from "./drafts";
 
@@ -213,7 +213,17 @@ function PostList({
   );
 }
 
-function PostDetail({ name, onBack }: { name: string; onBack: () => void }) {
+function PostDetail({
+  name,
+  initialDeployment,
+  onBack,
+  onRenamed,
+}: {
+  name: string;
+  initialDeployment?: InitialDeployment;
+  onBack: () => void;
+  onRenamed: (name: string, deployment: InitialDeployment) => void;
+}) {
   const [post, setPost] = useState<Loadable<PostDocument>>({ state: "loading" });
 
   useEffect(() => {
@@ -243,7 +253,12 @@ function PostDetail({ name, onBack }: { name: string; onBack: () => void }) {
         {post.state === "ready" && (
           <>
             <p className="source-path">{post.value.path}</p>
-            <ArticleWorkspace initialPost={post.value} initialDraft={readDraft(name)} />
+            <ArticleWorkspace
+              initialPost={post.value}
+              initialDraft={readDraft(name)}
+              initialDeployment={initialDeployment}
+              onRenamed={onRenamed}
+            />
           </>
         )}
       </section>
@@ -259,7 +274,7 @@ function NewDraftDetail({
 }: {
   name: string;
   started?: StartedDraft;
-  onCreated: (name: string) => void;
+  onCreated: (name: string, deployment: InitialDeployment) => void;
   onDiscard: () => void;
 }) {
   const draft = started?.draft ?? readDraft(name);
@@ -300,6 +315,9 @@ function NewDraftDetail({
 export function App() {
   const [route, navigate] = useCmsRoute();
   const [startedDraft, setStartedDraft] = useState<StartedDraft>();
+  const [initialDeployment, setInitialDeployment] = useState<
+    { name: string; deployment: InitialDeployment } | undefined
+  >();
 
   useEffect(() => {
     if (route.view === "list") document.title = "Blog CMS";
@@ -312,11 +330,19 @@ export function App() {
 
   const showPost = (name: string) => {
     setStartedDraft(undefined);
+    setInitialDeployment(undefined);
     navigate({ view: "post", name });
+  };
+
+  const showChangedPost = (name: string, deployment: InitialDeployment) => {
+    setStartedDraft(undefined);
+    setInitialDeployment({ name, deployment });
+    navigate({ view: "post", name }, true);
   };
 
   const showList = () => {
     setStartedDraft(undefined);
+    setInitialDeployment(undefined);
     navigate({ view: "list" });
   };
 
@@ -328,13 +354,20 @@ export function App() {
       </header>
       <main className="site-main">
         {route.view === "post" && (
-          <PostDetail name={route.name} onBack={showList} />
+          <PostDetail
+            name={route.name}
+            initialDeployment={
+              initialDeployment?.name === route.name ? initialDeployment.deployment : undefined
+            }
+            onBack={showList}
+            onRenamed={showChangedPost}
+          />
         )}
         {route.view === "draft" && (
           <NewDraftDetail
             name={route.name}
             started={startedDraft?.draft.name === route.name ? startedDraft : undefined}
-            onCreated={showPost}
+            onCreated={showChangedPost}
             onDiscard={showList}
           />
         )}

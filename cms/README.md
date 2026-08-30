@@ -16,7 +16,7 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 
 ## React migration
 
-CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。記事一覧・detail・編集・Gyazo upload・local draft・新規記事作成までReactで実装済みです。現行の`/`は主要flow完成まで利用できます。
+CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。記事一覧・detail・編集・Gyazo・draft・新規作成・deploy status・rename・deleteまでReactで実装済みです。現行の`/`は最終切替まで利用できます。
 
 認証後のReact版:
 
@@ -79,6 +79,12 @@ previewはheading、paragraph、list、blockquote、code block、link、Gyazoを
 WorkerはProduction Origin、現在Blob SHA、新path不存在、main HEADを確認します。GitHub GraphQL `createCommitOnBranch`で新path追加と旧path削除を1つのatomic commitにするため、部分成功しません。main更新・old SHA変更・new slug既存は`409`です。
 
 成功後は新しいBlob SHA、GitHub URL、公開URLへdetailを切り替え、rename commitのDeploy Blog statusを追跡します。Previewからのrenameは`403`、`index`は新旧とも指定できません。
+
+## React deployment and destructive operations
+
+React版は記事保存/create/rename/deleteのsource commit SHAから`Deploy Blog`を追跡します。status取得失敗はGitHub保存成功と分離し、手動再確認とGitHub Actions linkを提供します。
+
+renameは現在SHA・本文・old filename確認を含むatomic requestを送り、旧URLがredirectされないことをUIで警告します。deleteは現在SHAとfilename完全一致を要求し、成功後も公開サイトから消えるまでstatusを追跡します。
 
 ## Article deletion
 

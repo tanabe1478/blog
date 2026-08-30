@@ -4,36 +4,49 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
+  type FormEvent,
 } from "react";
 
 import {
   createPost,
+  deletePost,
+  renamePost,
   updatePost,
   uploadImage,
   type PostDocument,
 } from "./api";
+import { DeploymentStatus, type DeploymentPurpose } from "./DeploymentStatus";
 import { removeDraft, writeDraft, type LocalDraft } from "./drafts";
 import { MarkdownArticle } from "./MarkdownArticle";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
+export interface InitialDeployment {
+  commitSha: string;
+  purpose: DeploymentPurpose;
+}
+
 interface ArticleWorkspaceProps {
   initialPost: PostDocument;
   initialDraft?: LocalDraft;
+  initialDeployment?: InitialDeployment;
   isNew?: boolean;
   startEditing?: boolean;
   initialDraftStored?: boolean;
-  onCreated?: (name: string) => void;
+  onCreated?: (name: string, deployment: InitialDeployment) => void;
+  onRenamed?: (name: string, deployment: InitialDeployment) => void;
   onDiscardNew?: () => void;
 }
 
 export function ArticleWorkspace({
   initialPost,
   initialDraft,
+  initialDeployment,
   isNew = false,
   startEditing = false,
   initialDraftStored = true,
   onCreated,
+  onRenamed,
   onDiscardNew,
 }: ArticleWorkspaceProps) {
   const [post, setPost] = useState(initialPost);
@@ -51,6 +64,13 @@ export function ArticleWorkspace({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [operation, setOperation] = useState<"rename" | "delete">();
+  const [operationBusy, setOperationBusy] = useState(false);
+  const [renameSlug, setRenameSlug] = useState(initialPost.name.slice(0, -3));
+  const [renameConfirmation, setRenameConfirmation] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleted, setDeleted] = useState(false);
+  const [deployment, setDeployment] = useState<InitialDeployment | undefined>(initialDeployment);
   const [status, setStatus] = useState(
     startEditing && creating
       ? "未保存の新規記事です。本文を書いてGitHubへ保存してください。"
@@ -166,7 +186,12 @@ export function ArticleWorkspace({
         setCreating(false);
         setEditing(false);
         setStatus("新規記事をGitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
-        onCreated?.(created.name);
+        const nextDeployment: InitialDeployment = {
+          commitSha: created.commitSha,
+          purpose: "publish",
+        };
+        setDeployment(nextDeployment);
+        onCreated?.(created.name, nextDeployment);
       } else {
         const update = await updatePost(post.name, content, baseSha);
         removeDraft(post.name);
@@ -175,12 +200,83 @@ export function ArticleWorkspace({
         setBaseSha(update.sha);
         setEditing(false);
         setStatus("GitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
+        setDeployment({ commitSha: update.commitSha, purpose: "publish" });
       }
     } catch (cause) {
       setError(true);
       setStatus(cause instanceof Error ? cause.message : "記事を保存できませんでした。");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const renameIsValid =
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(renameSlug) &&
+    renameSlug !== "index" &&
+    `${renameSlug}.md` !== post.name &&
+    renameConfirmation === post.name;
+
+  const submitRename = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!renameIsValid || !post.sha) return;
+    setOperationBusy(true);
+    setError(false);
+    setStatus("GitHubでslugを変更しています…");
+    try {
+      const renamed = await renamePost(
+        post.name,
+        `${renameSlug}.md`,
+        post.content,
+        post.sha,
+        renameConfirmation,
+      );
+      removeDraft(post.name);
+      const nextDeployment: InitialDeployment = {
+        commitSha: renamed.commitSha,
+        purpose: "publish",
+      };
+      setPost({
+        ...post,
+        name: renamed.name,
+        path: `Content/posts/${renamed.name}`,
+        sha: renamed.sha,
+        githubUrl: renamed.githubUrl,
+        publicUrl: renamed.publicUrl,
+      });
+      setBaseSha(renamed.sha);
+      setRenameConfirmation("");
+      setOperation(undefined);
+      setDeployment(nextDeployment);
+      setStatus("slugを変更しました。旧公開URLはredirectされません。");
+      onRenamed?.(renamed.name, nextDeployment);
+    } catch (cause) {
+      setError(true);
+      setStatus(cause instanceof Error ? cause.message : "slugを変更できませんでした。");
+    } finally {
+      setOperationBusy(false);
+    }
+  };
+
+  const submitDelete = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (deleteConfirmation !== post.name || !post.sha) return;
+    setOperationBusy(true);
+    setError(false);
+    setStatus("GitHubから記事を削除しています…");
+    try {
+      const deletion = await deletePost(post.name, post.sha, deleteConfirmation);
+      removeDraft(post.name);
+      setPendingDraft(undefined);
+      setDraftStatus("");
+      setDeleted(true);
+      setOperation(undefined);
+      setDeployment({ commitSha: deletion.commitSha, purpose: "delete" });
+      setStatus("GitHubから記事を削除しました。公開サイトへの反映を確認しています。");
+    } catch (cause) {
+      setError(true);
+      setStatus(cause instanceof Error ? cause.message : "記事を削除できませんでした。");
+    } finally {
+      setOperationBusy(false);
     }
   };
 
@@ -263,6 +359,78 @@ export function ArticleWorkspace({
         </aside>
       )}
 
+      {operation === "rename" && (
+        <aside className="rename-panel">
+          <p>
+            slugを変更すると公開URLも変わります。旧URLからのredirectは作成されず、外部linkは切れます。
+          </p>
+          <form onSubmit={submitRename}>
+            <label>
+              新しいslug
+              <input
+                name="rename-slug"
+                required
+                maxLength={100}
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                value={renameSlug}
+                disabled={operationBusy}
+                onChange={(event) => setRenameSlug(event.target.value)}
+              />
+            </label>
+            <label>
+              確認用filename
+              <input
+                name="rename-confirmation"
+                required
+                value={renameConfirmation}
+                disabled={operationBusy}
+                onChange={(event) => setRenameConfirmation(event.target.value)}
+              />
+              <span className="field-help"><code>{post.name}</code> と入力してください。</span>
+            </label>
+            <div>
+              <button className="primary" type="submit" disabled={!renameIsValid || operationBusy}>
+                {operationBusy ? "変更中…" : "slugを変更"}
+              </button>
+              <button type="button" disabled={operationBusy} onClick={() => setOperation(undefined)}>
+                変更をやめる
+              </button>
+            </div>
+          </form>
+        </aside>
+      )}
+
+      {operation === "delete" && (
+        <aside className="delete-panel">
+          <p>削除するとGitHubから記事fileを削除し、次のdeployで公開サイトからも消えます。</p>
+          <form onSubmit={submitDelete}>
+            <label>
+              削除確認
+              <input
+                name="delete-confirmation"
+                required
+                value={deleteConfirmation}
+                disabled={operationBusy}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+              />
+              <span className="field-help"><code>{post.name}</code> と入力してください。</span>
+            </label>
+            <div>
+              <button
+                className="danger"
+                type="submit"
+                disabled={deleteConfirmation !== post.name || operationBusy}
+              >
+                {operationBusy ? "削除中…" : "記事を削除"}
+              </button>
+              <button type="button" disabled={operationBusy} onClick={() => setOperation(undefined)}>
+                削除をやめる
+              </button>
+            </div>
+          </form>
+        </aside>
+      )}
+
       {status && (
         <p className={error ? "error-message" : "workspace-status"} role={error ? "alert" : "status"}>
           {status}
@@ -318,22 +486,51 @@ export function ArticleWorkspace({
               onChange={selectImage}
             />
           </>
-        ) : (
-          <button type="button" disabled={Boolean(pendingDraft)} onClick={beginEditing}>
-            編集
-          </button>
-        )}
+        ) : !deleted ? (
+          <>
+            <button type="button" disabled={Boolean(pendingDraft) || Boolean(operation)} onClick={beginEditing}>
+              編集
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(pendingDraft) || Boolean(operation)}
+              onClick={() => {
+                setRenameSlug(post.name.slice(0, -3));
+                setRenameConfirmation("");
+                setOperation("rename");
+              }}
+            >
+              slug変更
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(pendingDraft) || Boolean(operation)}
+              onClick={() => {
+                setDeleteConfirmation("");
+                setOperation("delete");
+              }}
+            >
+              削除
+            </button>
+          </>
+        ) : null}
         {!creating && (
           <nav className="detail-links" aria-label="記事リンク">
             <a href={post.publicUrl} target="_blank" rel="noreferrer">
-              公開ページを開く
+              {deleted ? "旧公開ページを確認" : "公開ページを開く"}
             </a>
-            <a href={post.githubUrl} target="_blank" rel="noreferrer">
-              GitHubで元ファイルを開く
-            </a>
+            {!deleted && (
+              <a href={post.githubUrl} target="_blank" rel="noreferrer">
+                GitHubで元ファイルを開く
+              </a>
+            )}
           </nav>
         )}
       </div>
+
+      {deployment && (
+        <DeploymentStatus commitSha={deployment.commitSha} purpose={deployment.purpose} />
+      )}
     </>
   );
 }

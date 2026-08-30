@@ -33,6 +33,21 @@ export interface UploadedImage {
   markdown: string;
 }
 
+export interface PostRename extends PostCreation {}
+
+export interface PostDeletion {
+  commitSha: string;
+}
+
+export type DeploymentState = "pending" | "running" | "published" | "failed";
+
+export interface BlogDeployment {
+  commitSha: string;
+  state: DeploymentState;
+  runUrl?: string;
+  updatedAt?: string;
+}
+
 async function responseJson<T>(response: Response): Promise<T> {
   const data: unknown = await response.json();
   if (!response.ok) {
@@ -89,6 +104,45 @@ export async function updatePost(
     }),
   );
   return data.update;
+}
+
+export async function renamePost(
+  name: string,
+  newName: string,
+  content: string,
+  sha: string,
+  confirmation: string,
+): Promise<PostRename> {
+  const data = await responseJson<{ rename: PostRename }>(
+    await fetch(`/api/posts/${encodeURIComponent(name)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ newName, content, sha, confirmation }),
+    }),
+  );
+  return data.rename;
+}
+
+export async function deletePost(
+  name: string,
+  sha: string,
+  confirmation: string,
+): Promise<PostDeletion> {
+  const data = await responseJson<{ deletion: PostDeletion }>(
+    await fetch(`/api/posts/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sha, confirmation }),
+    }),
+  );
+  return data.deletion;
+}
+
+export async function fetchDeployment(commitSha: string): Promise<BlogDeployment> {
+  const data = await responseJson<{ deployment: BlogDeployment }>(
+    await fetch(`/api/deployments/${encodeURIComponent(commitSha)}`),
+  );
+  return data.deployment;
 }
 
 export async function uploadImage(file: File): Promise<UploadedImage> {

@@ -36,7 +36,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-R002 | 記事一覧・detail閲覧のReact化 | `done` |
 | CMS-R003 | 編集・preview・GyazoのReact化 | `done` |
 | CMS-R004 | draft・新規作成のReact化 | `done` |
-| CMS-R005 | deploy status・rename・deleteのReact化 | `planned` |
+| CMS-R005 | deploy status・rename・deleteのReact化 | `done` |
 | CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `planned` |
 
 ### CMS-R001 React 19 / Vite / Cloudflare Assets基盤
@@ -54,6 +54,25 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - `/react-preview`で移行基盤を確認
 - Wrangler 4.127.1へ更新し`npm audit` 0件
 - 40 Vitestと16 Playwright E2Eで確認
+
+### CMS-R005 deploy status・rename・deleteのReact化
+
+状態: `done`
+
+実装:
+
+- source commit SHA単位のdeploy status取得
+- pending/running時の10秒pollingと30回上限
+- published/failed/status取得失敗の独立表示
+- GitHub Actions run linkと手動再確認
+- 保存成功をstatus API失敗から分離
+- old filename/Blob SHA/contentを使うatomic rename request
+- 新slug validationとold filename完全一致確認
+- rename成功後のURL/link/SHA更新と旧URL非redirect warning
+- 現在Blob SHAとfilename完全一致を要求するdelete request
+- delete成功後も旧公開URLとdeploy statusを表示
+- rename/deleteの409/API error時に記事とpanelを維持
+- React専用Playwright E2Eでdeploy・rename・delete flowを確認
 
 ### CMS-R004 draft・新規作成のReact化
 
