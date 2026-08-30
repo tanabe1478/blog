@@ -33,7 +33,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 保存commitを基準にbuild待ち・実行中・公開済み・失敗statusをCMSへ表示済み。
 - filename確認・SHA競合検知・Production限定の記事削除に対応済み。
 - GraphQL atomic commitとHEAD/SHA競合検知付きのslug変更に対応済み。
-- React 19 / Vite / Cloudflare Assets基盤と、React版の記事一覧・描画済みdetailを実装済み。
+- React 19版の記事一覧・detail・既存記事編集・live preview・Gyazo uploadを実装済み。
 - Cloudflare resourceとtokenは`yurubo`から分離済み。
 
 ### docs

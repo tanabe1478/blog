@@ -16,7 +16,7 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 
 ## React migration
 
-CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。`CMS-R001`でReact/Vite/Assets基盤、`CMS-R002`で記事一覧と描画済みdetailを実装済みです。現行の`/`は主要flow完成まで利用できます。
+CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。React/Vite/Assets基盤、記事一覧・detail、既存記事編集・live preview・Gyazo uploadまで実装済みです。現行の`/`は主要flow完成まで利用できます。
 
 認証後のReact版:
 
@@ -45,6 +45,12 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 ## Post list
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
+
+## React editing
+
+React版`/react-preview`では、既存記事の編集時にcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
+
+file pickerとdrag-and-dropの両方でGyazoへuploadし、現在のcursor/selection位置へlinked-image Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
 
 ## Local draft
 

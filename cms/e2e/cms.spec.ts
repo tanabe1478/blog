@@ -21,6 +21,7 @@ interface MockOptions {
   deploymentError?: boolean;
   deploymentStates?: Array<"pending" | "running" | "published" | "failed">;
   existingContent?: string;
+  imageError?: boolean;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
   onDelete?: (payload: unknown) => void;
@@ -60,6 +61,27 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
                     "https://github.com/tanabe1478/blog/actions/runs/789",
                   updatedAt: "2026-07-20T15:10:00Z",
                 }),
+          },
+        },
+      });
+      return;
+    }
+
+    if (request.method() === "POST" && url.pathname === "/api/images") {
+      if (options.imageError) {
+        await route.fulfill({
+          status: 502,
+          json: { error: "画像をGyazoへアップロードできませんでした" },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          image: {
+            imageUrl: "https://i.gyazo.com/example.png",
+            permalinkUrl: "https://gyazo.com/example",
+            markdown:
+              "[![screen](https://i.gyazo.com/example.png)](https://gyazo.com/example)",
           },
         },
       });
@@ -276,6 +298,116 @@ test("does not execute raw HTML or unsafe URLs in React article detail", async (
   await expect(article.locator("[onerror]")).toHaveCount(0);
   await expect(article.locator("script")).toHaveCount(0);
   await expect(article.locator('a[href^="javascript:"]')).toHaveCount(0);
+});
+
+test("edits and previews an article in React, then cancels", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const textarea = page.getByLabel("Markdown本文");
+  await textarea.fill("# React changed\n\nPreview body.");
+  await expect(
+    page.getByRole("heading", { name: "React changed", exact: true }),
+  ).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(textarea).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+});
+
+test("saves a React article with its current SHA", async ({ page }) => {
+  let updatePayload: unknown;
+  await mockCmsApi(page, {
+    onUpdate: (payload) => {
+      updatePayload = payload;
+    },
+  });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Markdown本文").fill("# Saved in React\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  expect(updatePayload).toEqual({
+    content: "# Saved in React\n",
+    sha: "a".repeat(40),
+  });
+  await expect(page.getByLabel("Markdown本文")).toBeHidden();
+  await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Saved in React", exact: true }),
+  ).toBeVisible();
+});
+
+test("keeps React editor content when saving conflicts", async ({ page }) => {
+  await mockCmsApi(page, { updateConflict: true });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const textarea = page.getByLabel("Markdown本文");
+  await textarea.fill("# Conflict in React\n");
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
+  await expect(textarea).toHaveValue("# Conflict in React\n");
+  await expect(textarea).toBeVisible();
+});
+
+test("uploads a dropped image and inserts Gyazo Markdown in React", async ({
+  page,
+}) => {
+  await mockCmsApi(page);
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const textarea = page.getByLabel("Markdown本文");
+
+  await textarea.evaluate((element) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array([1, 2, 3])], "screen.png", { type: "image/png" }));
+    element.dispatchEvent(
+      new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer }),
+    );
+  });
+
+  await expect(textarea).toHaveValue(/https:\/\/i\.gyazo\.com\/example\.png/);
+  await expect(page.locator(".markdown-article img")).toHaveAttribute(
+    "src",
+    "https://i.gyazo.com/example.png",
+  );
+  await expect(page.getByText(/Gyazo画像を挿入しました/)).toBeVisible();
+});
+
+test("uploads a selected image from the React file picker", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+
+  await page.getByLabel("画像ファイル").setInputFiles({
+    name: "picked.png",
+    mimeType: "image/png",
+    buffer: Buffer.from([1, 2, 3]),
+  });
+
+  await expect(page.getByLabel("Markdown本文")).toHaveValue(/gyazo\.com\/example/);
+});
+
+test("keeps React content when Gyazo upload fails", async ({ page }) => {
+  await mockCmsApi(page, { imageError: true });
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const textarea = page.getByLabel("Markdown本文");
+  const before = await textarea.inputValue();
+
+  await page.getByLabel("画像ファイル").setInputFiles({
+    name: "failed.png",
+    mimeType: "image/png",
+    buffer: Buffer.from([1, 2, 3]),
+  });
+
+  await expect(page.getByText(/画像をGyazoへアップロードできませんでした/)).toBeVisible();
+  await expect(textarea).toHaveValue(before);
 });
 
 test("opens an article, edits it in two panes, and cancels", async ({ page }) => {

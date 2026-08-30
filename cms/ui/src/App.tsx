@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { ArticleWorkspace } from "./ArticleWorkspace";
 import { fetchPost, fetchPosts, type PostDocument, type PostSummary } from "./api";
-import { MarkdownArticle } from "./MarkdownArticle";
 
 type Loadable<T> =
   | { state: "loading" }
@@ -129,15 +129,7 @@ function PostDetail({ name, onBack }: { name: string; onBack: () => void }) {
         {post.state === "ready" && (
           <>
             <p className="source-path">{post.value.path}</p>
-            <MarkdownArticle content={post.value.content} />
-            <nav className="detail-links" aria-label="記事リンク">
-              <a href={post.value.publicUrl} target="_blank" rel="noreferrer">
-                公開ページを開く
-              </a>
-              <a href={post.value.githubUrl} target="_blank" rel="noreferrer">
-                GitHubで元ファイルを開く
-              </a>
-            </nav>
+            <ArticleWorkspace initialPost={post.value} />
           </>
         )}
       </section>

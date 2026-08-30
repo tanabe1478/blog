@@ -34,7 +34,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | --- | --- | --- |
 | CMS-R001 | React 19 / Vite / Cloudflare Assets基盤 | `done` |
 | CMS-R002 | 記事一覧・detail閲覧のReact化 | `done` |
-| CMS-R003 | 編集・preview・GyazoのReact化 | `planned` |
+| CMS-R003 | 編集・preview・GyazoのReact化 | `done` |
 | CMS-R004 | draft・新規作成のReact化 | `planned` |
 | CMS-R005 | deploy status・rename・deleteのReact化 | `planned` |
 | CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `planned` |
@@ -54,6 +54,23 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - `/react-preview`で移行基盤を確認
 - Wrangler 4.127.1へ更新し`npm audit` 0件
 - 40 Vitestと16 Playwright E2Eで確認
+
+### CMS-R003 編集・preview・GyazoのReact化
+
+状態: `done`
+
+実装:
+
+- React controlled textareaによるMarkdown編集
+- `react-markdown`を共有する2ペインlive preview
+- 現在Blob SHA付きの既存記事保存
+- 保存成功時のSHA/content更新
+- 409/API error時の入力維持
+- 未保存変更のcancel確認と`beforeunload`保護
+- file picker / drag-and-dropによるGyazo upload
+- cursor/selection位置へのlinked-image Markdown挿入
+- 10MB client check、upload失敗時の本文維持
+- React専用Playwright E2Eで編集・保存・競合・画像選択/drop/失敗を確認
 
 ### CMS-R002 記事一覧・detail閲覧のReact化
 

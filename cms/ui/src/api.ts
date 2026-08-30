@@ -16,6 +16,18 @@ export interface PostDocument {
   publicUrl: string;
 }
 
+export interface PostUpdate {
+  sha: string;
+  commitSha: string;
+  githubUrl: string;
+}
+
+export interface UploadedImage {
+  imageUrl: string;
+  permalinkUrl: string;
+  markdown: string;
+}
+
 async function responseJson<T>(response: Response): Promise<T> {
   const data: unknown = await response.json();
   if (!response.ok) {
@@ -46,4 +58,28 @@ export async function fetchPost(
     await fetch(`/api/posts/${encodeURIComponent(name)}`, { signal }),
   );
   return data.post;
+}
+
+export async function updatePost(
+  name: string,
+  content: string,
+  sha: string,
+): Promise<PostUpdate> {
+  const data = await responseJson<{ update: PostUpdate }>(
+    await fetch(`/api/posts/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content, sha }),
+    }),
+  );
+  return data.update;
+}
+
+export async function uploadImage(file: File): Promise<UploadedImage> {
+  const form = new FormData();
+  form.append("image", file);
+  const data = await responseJson<{ image: UploadedImage }>(
+    await fetch("/api/images", { method: "POST", body: form }),
+  );
+  return data.image;
 }
