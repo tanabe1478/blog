@@ -6,28 +6,87 @@ import {
   type DragEvent,
 } from "react";
 
-import { updatePost, uploadImage, type PostDocument } from "./api";
+import {
+  createPost,
+  updatePost,
+  uploadImage,
+  type PostDocument,
+} from "./api";
+import { removeDraft, writeDraft, type LocalDraft } from "./drafts";
 import { MarkdownArticle } from "./MarkdownArticle";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 interface ArticleWorkspaceProps {
   initialPost: PostDocument;
+  initialDraft?: LocalDraft;
+  isNew?: boolean;
+  startEditing?: boolean;
+  initialDraftStored?: boolean;
+  onCreated?: (name: string) => void;
+  onDiscardNew?: () => void;
 }
 
-export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
+export function ArticleWorkspace({
+  initialPost,
+  initialDraft,
+  isNew = false,
+  startEditing = false,
+  initialDraftStored = true,
+  onCreated,
+  onDiscardNew,
+}: ArticleWorkspaceProps) {
   const [post, setPost] = useState(initialPost);
-  const [content, setContent] = useState(initialPost.content);
-  const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(isNew);
+  const [content, setContent] = useState(
+    startEditing && initialDraft ? initialDraft.content : initialPost.content,
+  );
+  const [baseSha, setBaseSha] = useState(
+    startEditing && initialDraft ? (initialDraft.baseSha ?? "") : initialPost.sha,
+  );
+  const [pendingDraft, setPendingDraft] = useState<LocalDraft | undefined>(
+    startEditing ? undefined : initialDraft,
+  );
+  const [editing, setEditing] = useState(startEditing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(
+    startEditing && creating
+      ? "未保存の新規記事です。本文を書いてGitHubへ保存してください。"
+      : "",
+  );
+  const [draftStatus, setDraftStatus] = useState(
+    initialDraftStored
+      ? ""
+      : "端末下書きを保存できません。本文を別の場所にも退避してください。",
+  );
   const [error, setError] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const changed = content !== post.content;
+  const changed = creating || content !== post.content;
+
+  useEffect(() => {
+    if (!editing) return;
+    setDraftStatus("端末下書きを保存しています…");
+    const timer = window.setTimeout(() => {
+      const stored = writeDraft({
+        version: 1,
+        name: post.name,
+        content,
+        baseSha: creating ? null : baseSha,
+        isNew: creating,
+        savedAt: new Date().toISOString(),
+      });
+      setDraftStatus(
+        stored
+          ? "下書きをこの端末に保存しました。共有端末では保存後に破棄してください。"
+          : "端末下書きを保存できません。本文を別の場所にも退避してください。",
+      );
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [baseSha, content, creating, editing, post.name]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -40,14 +99,48 @@ export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
 
   const beginEditing = () => {
     setError(false);
+    setBaseSha(post.sha);
     setStatus("編集中です。保存するとGitHubのmainブランチへ反映されます。");
     setEditing(true);
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const discardPendingDraft = () => {
+    if (!pendingDraft) return;
+    removeDraft(pendingDraft.name);
+    setPendingDraft(undefined);
+    setDraftStatus("");
+    if (pendingDraft.isNew) onDiscardNew?.();
+    else setStatus("端末の下書きを破棄しました。GitHub版を表示しています。");
+  };
+
+  const restorePendingDraft = () => {
+    if (!pendingDraft) return;
+    setContent(pendingDraft.content);
+    setBaseSha(pendingDraft.baseSha ?? "");
+    setCreating(pendingDraft.isNew);
+    setPendingDraft(undefined);
+    setEditing(true);
+    setError(false);
+    setDraftStatus("端末の下書きを復元しました。");
+    setStatus(
+      pendingDraft.isNew
+        ? "未保存の新規記事です。本文を確認してGitHubへ保存してください。"
+        : "端末の下書きを編集中です。",
+    );
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
   const cancelEditing = () => {
-    if (changed && !window.confirm("変更を破棄しますか？")) return;
+    if (changed && !window.confirm("変更と、この端末に保存した下書きを破棄しますか？")) return;
+    removeDraft(post.name);
+    setDraftStatus("");
+    if (creating) {
+      onDiscardNew?.();
+      return;
+    }
     setContent(post.content);
+    setBaseSha(post.sha);
     setEditing(false);
     setError(false);
     setStatus(changed ? "変更を破棄しました。" : "");
@@ -58,15 +151,31 @@ export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
     setError(false);
     setStatus("GitHubへ保存しています…");
     try {
-      const update = await updatePost(post.name, content, post.sha);
-      setPost({
-        ...post,
-        content,
-        sha: update.sha,
-        githubUrl: update.githubUrl,
-      });
-      setEditing(false);
-      setStatus("GitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
+      if (creating) {
+        const created = await createPost(post.name, content);
+        removeDraft(post.name);
+        setDraftStatus("");
+        setPost({
+          ...post,
+          content,
+          sha: created.sha,
+          githubUrl: created.githubUrl,
+          publicUrl: created.publicUrl,
+        });
+        setBaseSha(created.sha);
+        setCreating(false);
+        setEditing(false);
+        setStatus("新規記事をGitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
+        onCreated?.(created.name);
+      } else {
+        const update = await updatePost(post.name, content, baseSha);
+        removeDraft(post.name);
+        setDraftStatus("");
+        setPost({ ...post, content, sha: update.sha, githubUrl: update.githubUrl });
+        setBaseSha(update.sha);
+        setEditing(false);
+        setStatus("GitHubへ保存しました。公開処理はGitHub Actionsで進みます。");
+      }
     } catch (cause) {
       setError(true);
       setStatus(cause instanceof Error ? cause.message : "記事を保存できませんでした。");
@@ -130,13 +239,36 @@ export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
     await insertUploadedImage(files[0]);
   };
 
+  const draftConflict = Boolean(
+    pendingDraft && !pendingDraft.isNew && pendingDraft.baseSha !== post.sha,
+  );
+
   return (
     <>
+      {pendingDraft && (
+        <aside className="draft-notice">
+          <p>
+            この端末に未保存の下書きがあります（
+            {new Date(pendingDraft.savedAt).toLocaleString("ja-JP")}）。
+            {draftConflict && " GitHub版が更新されているため、復元後の保存では競合確認が必要です。"}
+          </p>
+          <div>
+            <button className="primary" type="button" onClick={restorePendingDraft}>
+              下書きを復元
+            </button>
+            <button type="button" onClick={discardPendingDraft}>
+              下書きを破棄
+            </button>
+          </div>
+        </aside>
+      )}
+
       {status && (
         <p className={error ? "error-message" : "workspace-status"} role={error ? "alert" : "status"}>
           {status}
         </p>
       )}
+      {draftStatus && <p className="draft-state" role="status">{draftStatus}</p>}
 
       {editing ? (
         <div className="editor-grid">
@@ -169,7 +301,7 @@ export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
         {editing ? (
           <>
             <button className="primary" type="button" disabled={saving || uploading} onClick={save}>
-              {saving ? "保存中…" : "GitHubへ保存"}
+              {saving ? "保存中…" : creating ? "新規記事を保存" : "GitHubへ保存"}
             </button>
             <button type="button" disabled={saving || uploading} onClick={cancelEditing}>
               キャンセル
@@ -187,18 +319,20 @@ export function ArticleWorkspace({ initialPost }: ArticleWorkspaceProps) {
             />
           </>
         ) : (
-          <button type="button" onClick={beginEditing}>
+          <button type="button" disabled={Boolean(pendingDraft)} onClick={beginEditing}>
             編集
           </button>
         )}
-        <nav className="detail-links" aria-label="記事リンク">
-          <a href={post.publicUrl} target="_blank" rel="noreferrer">
-            公開ページを開く
-          </a>
-          <a href={post.githubUrl} target="_blank" rel="noreferrer">
-            GitHubで元ファイルを開く
-          </a>
-        </nav>
+        {!creating && (
+          <nav className="detail-links" aria-label="記事リンク">
+            <a href={post.publicUrl} target="_blank" rel="noreferrer">
+              公開ページを開く
+            </a>
+            <a href={post.githubUrl} target="_blank" rel="noreferrer">
+              GitHubで元ファイルを開く
+            </a>
+          </nav>
+        )}
       </div>
     </>
   );

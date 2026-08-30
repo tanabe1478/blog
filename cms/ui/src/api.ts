@@ -22,6 +22,11 @@ export interface PostUpdate {
   githubUrl: string;
 }
 
+export interface PostCreation extends PostUpdate {
+  name: string;
+  publicUrl: string;
+}
+
 export interface UploadedImage {
   imageUrl: string;
   permalinkUrl: string;
@@ -56,6 +61,17 @@ export async function fetchPost(
 ): Promise<PostDocument> {
   const data = await responseJson<{ post: PostDocument }>(
     await fetch(`/api/posts/${encodeURIComponent(name)}`, { signal }),
+  );
+  return data.post;
+}
+
+export async function createPost(name: string, content: string): Promise<PostCreation> {
+  const data = await responseJson<{ post: PostCreation }>(
+    await fetch("/api/posts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, content }),
+    }),
   );
   return data.post;
 }

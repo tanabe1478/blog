@@ -86,7 +86,7 @@ Blog: https://tanabe1478.github.io/
 
 `page.ts`はReact移行完了まで、HTML全体をtemplate literalとして持ちます。inline script内の正規表現やbackslashを編集すると、TypeScript側のtemplate literalでescapeが消える可能性があります。`npm run check`のscript構文testを必ず通してください。
 
-React移行は`cms-roadmap.md`のCMS-R001〜R006を正本とします。R001〜R003が完了し、`/react-preview`で記事一覧・detail・既存記事編集・live preview・Gyazo uploadを利用できます。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は要求しません。`wrangler.jsonc`のAssetsは`run_worker_first: true`にしてあり、assetもAccess JWT検証を迂回しません。`npm run dev`、`npm run check`、`npm run deploy`はReact UIを先にbuildします。
+React移行は`cms-roadmap.md`のCMS-R001〜R006を正本とします。R001〜R004が完了し、`/react-preview`で記事一覧・detail・編集・Gyazo upload・local draft・新規記事作成を利用できます。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は要求しません。`wrangler.jsonc`のAssetsは`run_worker_first: true`にしてあり、assetもAccess JWT検証を迂回しません。`npm run dev`、`npm run check`、`npm run deploy`はReact UIを先にbuildします。
 
 ## Wranglerとは何か
 
@@ -600,8 +600,8 @@ Secretの問題はcode rollbackでは戻りません。Secret storage側で正�
 
 優先順と完了条件は`cms-roadmap.md`を正本とします。まずReact移行を完了し、その後に機能backlogへ戻ります。
 
-1. CMS-R004: draft・新規作成のReact化
-2. CMS-R005〜R006を順に実装
+1. CMS-R005: deploy status・rename・deleteのReact化
+2. CMS-R006で`/`をReactへ切り替えて旧inline UIを削除
 3. CMS-005以降をroadmap順に実装
 
 各user-facing taskは関連するPlaywright E2EがlocalとCIで成功するまで`done`にしません。

@@ -35,7 +35,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-R001 | React 19 / Vite / Cloudflare Assets基盤 | `done` |
 | CMS-R002 | 記事一覧・detail閲覧のReact化 | `done` |
 | CMS-R003 | 編集・preview・GyazoのReact化 | `done` |
-| CMS-R004 | draft・新規作成のReact化 | `planned` |
+| CMS-R004 | draft・新規作成のReact化 | `done` |
 | CMS-R005 | deploy status・rename・deleteのReact化 | `planned` |
 | CMS-R006 | 旧inline UI削除、CSP強化、移行完了 | `planned` |
 
@@ -54,6 +54,24 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - `/react-preview`で移行基盤を確認
 - Wrangler 4.127.1へ更新し`npm audit` 0件
 - 40 Vitestと16 Playwright E2Eで確認
+
+### CMS-R004 draft・新規作成のReact化
+
+状態: `done`
+
+実装:
+
+- version付きlocalStorage draft schemaとvalidation
+- 400ms debounceによる既存/新規記事draft autosave
+- reload後のdraft通知・復元・明示破棄
+- 既存draft作成時Blob SHAを維持した安全な保存
+- GitHub版更新時の競合警告
+- storage unavailable時も編集を継続しwarning表示
+- slug/title/date/description/tagsから安全なfrontmatterを生成
+- `?draft=`による未保存新規記事のreload復旧
+- POST `/api/posts`による初回保存と成功後のdraft削除
+- 作成競合/API error時の新規本文維持
+- React専用Playwright E2Eでdraft・新規作成・storage failureを確認
 
 ### CMS-R003 編集・preview・GyazoのReact化
 

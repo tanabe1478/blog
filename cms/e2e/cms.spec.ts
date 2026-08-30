@@ -253,6 +253,17 @@ async function openNewPostEditor(page: Page) {
   await page.getByRole("button", { name: "本文を編集" }).click();
 }
 
+async function openReactNewPostEditor(page: Page) {
+  await page.goto("/react-preview");
+  await page.getByRole("button", { name: "新規記事", exact: true }).click();
+  await page.getByLabel("slug").fill("new-post");
+  await page.getByLabel("タイトル").fill("New title");
+  await page.getByLabel("公開日時").fill("2026-07-21T09:30");
+  await page.getByLabel("説明").fill("Created from React E2E");
+  await page.getByLabel("タグ（comma区切り）").fill("技術, 日記");
+  await page.getByRole("button", { name: "記事を書き始める" }).click();
+}
+
 test("lists articles in the React CMS", async ({ page }) => {
   await mockCmsApi(page);
   await page.goto("/react-preview");
@@ -408,6 +419,108 @@ test("keeps React content when Gyazo upload fails", async ({ page }) => {
 
   await expect(page.getByText(/画像をGyazoへアップロードできませんでした/)).toBeVisible();
   await expect(textarea).toHaveValue(before);
+});
+
+test("recovers and discards an existing React draft", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const draftContent = "# React draft\n\nReload後も残る本文。";
+  await page.getByLabel("Markdown本文").fill(draftContent);
+  await expect(page.getByText(/下書きをこの端末に保存しました/)).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText(/この端末に未保存の下書きがあります/)).toBeVisible();
+  await page.getByRole("button", { name: "下書きを復元" }).click();
+  await expect(page.getByLabel("Markdown本文")).toHaveValue(draftContent);
+  await expect(page.getByText("端末の下書きを復元しました。")).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("button", { name: "下書きを破棄" }).click();
+  await expect(page.getByText(/この端末に未保存の下書きがあります/)).toBeHidden();
+  await expect(page.getByRole("button", { name: "編集", exact: true })).toBeEnabled();
+  expect(
+    await page.evaluate(() => Object.keys(localStorage).filter((key) => key.includes(":draft:v1:"))),
+  ).toEqual([]);
+});
+
+test("uses the original SHA when saving a restored React draft", async ({ page }) => {
+  let updatePayload: unknown;
+  await mockCmsApi(page, {
+    updateConflict: true,
+    onUpdate: (payload) => {
+      updatePayload = payload;
+    },
+  });
+  await page.goto("/react-preview");
+  const draftSha = "d".repeat(40);
+  await page.evaluate(
+    ({ name, sha }) => {
+      localStorage.setItem(
+        `blog-cms:draft:v1:${location.host}:${name}`,
+        JSON.stringify({
+          version: 1,
+          name,
+          content: "# Stale React draft\n",
+          baseSha: sha,
+          isNew: false,
+          savedAt: new Date().toISOString(),
+        }),
+      );
+    },
+    { name: EXISTING_NAME, sha: draftSha },
+  );
+  await page.goto(`/react-preview?post=${EXISTING_NAME}`);
+  await expect(page.getByText(/GitHub版が更新されている/)).toBeVisible();
+  await page.getByRole("button", { name: "下書きを復元" }).click();
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  expect(updatePayload).toEqual({ content: "# Stale React draft\n", sha: draftSha });
+  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
+  await expect(page.getByLabel("Markdown本文")).toHaveValue("# Stale React draft\n");
+});
+
+test("recovers and saves a new React article draft", async ({ page }) => {
+  let createPayload: unknown;
+  await mockCmsApi(page, {
+    onCreate: (payload) => {
+      createPayload = payload;
+    },
+  });
+  await openReactNewPostEditor(page);
+  await expect(page).toHaveURL(/\?draft=new-post\.md$/);
+  const textarea = page.getByLabel("Markdown本文");
+  await textarea.fill(`${await textarea.inputValue()}React draft body.\n`);
+  await expect(page.getByText(/下書きをこの端末に保存しました/)).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText(/この端末に未保存の下書きがあります/)).toBeVisible();
+  await page.getByRole("button", { name: "下書きを復元" }).click();
+  await expect(page.getByLabel("Markdown本文")).toHaveValue(/React draft body/);
+  await page.getByRole("button", { name: "新規記事を保存" }).click();
+
+  expect(createPayload).toMatchObject({ name: "new-post.md" });
+  expect((createPayload as { content: string }).content).toContain("# New title");
+  expect((createPayload as { content: string }).content).toContain("React draft body.");
+  await expect(page).toHaveURL(/\?post=new-post\.md$/);
+  expect(
+    await page.evaluate(() => Object.keys(localStorage).filter((key) => key.includes(":draft:v1:"))),
+  ).toEqual([]);
+});
+
+test("keeps the React new article editor usable without localStorage", async ({ page }) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("Storage unavailable", "QuotaExceededError");
+    };
+  });
+  await mockCmsApi(page);
+  await openReactNewPostEditor(page);
+
+  const textarea = page.getByLabel("Markdown本文");
+  await textarea.fill(`${await textarea.inputValue()}Still editable.\n`);
+  await expect(page.getByText(/端末下書きを保存できません/)).toBeVisible();
+  await expect(textarea).toHaveValue(/Still editable/);
 });
 
 test("opens an article, edits it in two panes, and cancels", async ({ page }) => {

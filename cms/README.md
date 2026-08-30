@@ -16,7 +16,7 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 
 ## React migration
 
-CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。React/Vite/Assets基盤、記事一覧・detail、既存記事編集・live preview・Gyazo uploadまで実装済みです。現行の`/`は主要flow完成まで利用できます。
+CMS UIはReact 19で作り直しています。旧DOM/CSS/Vanilla JavaScriptとの後方互換性は維持せず、Markdown/API/認証と安全なuser flowを維持します。記事一覧・detail・編集・Gyazo upload・local draft・新規記事作成までReactで実装済みです。現行の`/`は主要flow完成まで利用できます。
 
 認証後のReact版:
 
@@ -54,7 +54,7 @@ file pickerとdrag-and-dropの両方でGyazoへuploadし、現在のcursor/selec
 
 ## Local draft
 
-編集中のMarkdownは400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。
+React版と従来版では、編集中のMarkdownを400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。
 
 下書きには保存時のGitHub SHAを記録します。GitHub版がその後更新された場合、復元後も古いSHAを使って保存するため`409`となり、最新記事を無意識に上書きしません。
 
