@@ -4,9 +4,9 @@
 This script is the main authoring workflow:
 
 1. Upload local images in posts to Gyazo and rewrite Markdown.
-2. Build and check Output.
+2. Build the Swift reference and byte-verify the MoonBit candidate.
 3. Commit and push source repository changes when needed.
-4. Deploy Output to the public GitHub Pages repository.
+4. Deploy the verified MoonBit output to the public GitHub Pages repository.
 """
 
 from __future__ import annotations

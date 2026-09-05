@@ -27,7 +27,7 @@ workdir="$(mktemp -d)"
 repo_root="$(pwd)"
 
 cleanup() {
-  rm -rf "$workdir"
+  rm -rf "$workdir" "$repo_root/Output.moonbit"
 }
 trap cleanup EXIT
 
@@ -35,8 +35,10 @@ if [[ "$run_prepare" == true ]]; then
   scripts/prepare_for_deploy.py
 fi
 
+scripts/verify_moonbit_ssg.py --skip-swift-build --keep-candidate
+
 git clone --depth 1 --branch "$branch" "$remote" "$workdir/site"
-rsync -a --delete --exclude .git Output/ "$workdir/site/"
+rsync -a --delete --exclude .git Output.moonbit/ "$workdir/site/"
 
 cd "$workdir/site"
 if git diff --quiet --cached && git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
