@@ -12,12 +12,13 @@ scripts/publish_blog.py
 
 この script は次を行います。
 
-1. `scripts/prepare_for_deploy.py` で local image の Gyazo 化と `Output/` 生成を行う。
-2. source repository の変更を commit / push する。
-3. `tanabe1478/tanabe1478.github.io` の `master` branch を一時 directory に clone する。
-4. `Output/` の中身を directory 構造を保ったまま rsync する。
-5. 変更があれば `Publish site` commit を作って push する。
-6. `scripts/check_public_site.py` を retry 付きで実行する。
+1. `scripts/prepare_for_deploy.py`でlocal imageのGyazo化とSwift referenceの`Output/`生成を行う。
+2. source repositoryの変更をcommit / pushする。
+3. MoonBit candidateを`Output.moonbit/`へ生成し、`Output/`とのbyte parityを検証する。
+4. `tanabe1478/tanabe1478.github.io`の`master` branchを一時directoryにcloneする。
+5. 検証済み`Output.moonbit/`の中身をdirectory構造を保ったままrsyncする。
+6. 変更があれば`Publish site` commitを作ってpushする。
+7. `scripts/check_public_site.py`をretry付きで実行する。
 
 低レベルな deploy だけを実行したい場合は次を使います。
 
@@ -32,11 +33,13 @@ scripts/deploy_site.sh --check
 workflowは次を実行します。
 
 1. Python script testを実行する。
-2. `scripts/prepare_for_deploy.py --skip-images`でsiteを生成・検査する。
-3. 公開repositoryを一時directoryへcheckoutする。
-4. `Output/`を`rsync --delete`で同期する。
-5. 差分があれば`github-actions[bot]`としてcommit・pushする。
-6. GitHub Pages反映を待ちながらpublic smoke checkをretryする。
+2. `scripts/prepare_for_deploy.py --skip-images`でSwift reference siteを生成・検査する。
+3. commit SHAで固定したMoonBit SSGとtoolchainを用意する。
+4. MoonBit candidateを生成し、Swift referenceとのbyte parityを検証する。
+5. 公開repositoryを一時directoryへcheckoutする。
+6. 検証済み`Output.moonbit/`を`rsync --delete`で同期する。
+7. 差分があれば`github-actions[bot]`としてcommit・pushする。
+8. GitHub Pages反映を待ちながらpublic smoke checkをretryする。
 
 公開repositoryへの認証にはGitHub Actions Secret `BLOG_DEPLOY_TOKEN`を使います。このfine-grained tokenは`tanabe1478/tanabe1478.github.io`だけに`Contents: Read and write`を持たせ、source repositoryや他の権限を含めません。
 
@@ -48,7 +51,7 @@ CIでは外部副作用を避けるため、local画像のGyazo uploadを行い�
 
 これにより、local image を Gyazo URL に置換してから site を生成します。
 
-local image がなく、置換が不要な場合はそのまま `swift run` 相当の build だけが行われます。
+local imageがなく、置換が不要な場合もSwift referenceをbuildした後、MoonBit candidateとのbyte parityを確認してからdeployします。
 
 ## なぜ Publish built-in deploy を使わないか
 

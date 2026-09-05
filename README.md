@@ -2,17 +2,23 @@
 
 https://tanabe1478.github.io の source repository です。
 
-Swift Publish で静的 site を生成しています。旧 `diary` repository の GitHub Issues 記事は `Content/posts/diary-*.md` として取り込み済みです。
+MoonBit SSGで本番の静的siteを生成しています。移行期間中はSwift Publishもreferenceとして生成し、deploy前に全fileのbyte一致を検証します。旧 `diary` repository の GitHub Issues 記事は `Content/posts/diary-*.md` として取り込み済みです。
 
 ## 開発
 
-site を生成します。
+Swift reference siteを生成します。
 
 ```bash
 swift run
 ```
 
-生成結果は `Output/` に出力されます。
+生成結果は`Output/`に出力されます。本番と同じMoonBit candidateまで生成・検証する場合は次を実行します。
+
+```bash
+scripts/verify_moonbit_ssg.py --skip-swift-build --keep-candidate
+```
+
+検証済みcandidateは`Output.moonbit/`に残ります。
 
 MoonBit SSGの候補出力と全生成ファイルをbyte単位で比較する場合:
 
@@ -94,7 +100,7 @@ GitHub Actions の `Check` workflowでは、script testと`swift run`に加え�
 scripts/publish_blog.py
 ```
 
-この script は local image の Gyazo 化、`swift run`、source repository の commit / push、`Output/` の deploy、公開後 smoke check まで実行します。
+このscriptはlocal imageのGyazo化、Swift reference build、MoonBit candidateとのbyte比較、source repositoryのcommit / push、検証済み`Output.moonbit/`のdeploy、公開後smoke checkまで実行します。
 
 低レベルな deploy だけを実行したい場合は `scripts/deploy_site.sh --check` を使えます。
 

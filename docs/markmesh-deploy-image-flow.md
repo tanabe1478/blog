@@ -15,10 +15,11 @@ scripts/prepare_for_deploy.py
   5. scripts/check_output_site.py
 
 scripts/deploy_site.sh
-  1. prepare_for_deploy.py
-  2. Output/ 全体を deploy repository へ rsync
-  3. git commit / push
-  4. optional: scripts/check_public_site.py
+  1. prepare_for_deploy.pyでSwift referenceを生成
+  2. MoonBit candidateを生成してbyte parityを検証
+  3. Output.moonbit/全体をdeploy repositoryへrsync
+  4. git commit / push
+  5. optional: scripts/check_public_site.py
 ```
 
 ## なぜ deploy 前にまとめて upload するか

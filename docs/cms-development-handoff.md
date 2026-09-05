@@ -45,8 +45,12 @@ tanabe1478/blog main
   └─ Content/posts/*.mdが記事の正本
            │ Content等の変更でGitHub Actions起動
            ▼
-Swift Publish build
-  └─ Output/をrsync --delete
+Swift reference build
+  └─ MoonBit candidateとのbyte parityを検証
+           │
+           ▼
+MoonBit SSG build
+  └─ Output.moonbit/をrsync --delete
            ▼
 tanabe1478/tanabe1478.github.io master
   └─ GitHub Pagesで公開
@@ -341,10 +345,11 @@ main更新、old SHA変更、新slug既存は`409`として旧記事を維持し
 
 1. CMSが`tanabe1478/blog`の`main`へ記事commitを作る。
 2. `.github/workflows/deploy-blog.yml`が`Content/**`変更で起動する。
-3. macOS runnerでscript testとSwift Publish buildを行う。
-4. `Output/`を公開repositoryへ`rsync --delete`する。
-5. `tanabe1478/tanabe1478.github.io/master`へcommit/pushする。
-6. public smoke checkをretryする。
+3. macOS runnerでscript testとSwift reference buildを行う。
+4. 固定SHAのMoonBit SSGでcandidateを生成し、全fileのbyte parityを検証する。
+5. 検証済み`Output.moonbit/`を公開repositoryへ`rsync --delete`する。
+6. `tanabe1478/tanabe1478.github.io/master`へcommit/pushする。
+7. public smoke checkをretryする。
 
 CMSは保存responseのsource commit SHAで`deploy-blog.yml`のworkflow runを検索し、保存済み・build待ち、実行中、公開済み、失敗を表示します。10秒間隔で最大約5分pollingし、完了/失敗時に停止します。手動再確認とActions詳細linkも提供します。
 

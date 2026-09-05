@@ -17,11 +17,12 @@ scripts/publish_blog.py
 1. `Content/posts/*.md` を走査する。
 2. local image を Gyazo に upload する。
 3. Markdown の画像 URL を Gyazo URL に置換する。
-4. `swift run` で記事一覧、feed、sitemap、`Output/` 全体を再生成する。
-5. `scripts/check_output_site.py` で生成結果を確認する。
-6. source repository の変更を commit / push する。
-7. `Output/` 全体を `tanabe1478/tanabe1478.github.io` に deploy する。
-8. 公開後 smoke check を実行する。
+4. `swift run`でreferenceの`Output/`全体を再生成する。
+5. `scripts/check_output_site.py`でreferenceを確認する。
+6. source repositoryの変更をcommit / pushする。
+7. MoonBitで`Output.moonbit/`を生成し、referenceとのbyte parityを検証する。
+8. 検証済み`Output.moonbit/`全体を`tanabe1478/tanabe1478.github.io`へdeployする。
+9. 公開後smoke checkを実行する。
 
 画像置換対象だけ確認する場合:
 
@@ -38,7 +39,7 @@ scripts/publish_blog.py --message "post: add recent notes"
 ## Markmesh に依存させない理由
 
 - 公開処理は現在開いている note ではなく、`Content/posts/` 全体を対象にする必要がある。
-- 記事一覧、feed、sitemap は `swift run` で site 全体を再生成して初めて更新される。
+- 記事一覧、feed、sitemapはsite全体のbuildで初めて更新されるため、MoonBit candidateも記事単位ではなく全体を生成する。
 - 画像 upload も active file / active image ではなく、Markdown 全体の local image を検出して処理したい。
 - terminal や CI から同じ workflow を再実行できる方が安全。
 - 将来 editor を変えても publish workflow を維持できる。

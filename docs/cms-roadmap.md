@@ -669,6 +669,6 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - Gyazo画像uploadとdrag-and-drop
 - 2ペインlive preview
 - 記事detailからGitHub source / 公開ページへのlink
-- GitHub保存後の自動Swift Publish build / GitHub Pages deploy
+- GitHub保存後のSwift reference / MoonBit parity検証とGitHub Pages deploy
 
 詳細な構成と開発手順は`cms-development-handoff.md`を参照してください。

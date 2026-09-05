@@ -14,7 +14,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 
 ### deploy
 
-- `scripts/deploy_site.sh` で `Output/` を directory 構造を保ったまま `tanabe1478/tanabe1478.github.io` に deploy する運用に変更済み。
+- `scripts/deploy_site.sh`で検証済み`Output.moonbit/`をdirectory構造を保ったまま`tanabe1478/tanabe1478.github.io`へdeployする運用に変更済み。
 - Publish built-in deploy は path flatten 問題があったため使わない。
 - 公開後確認用の `scripts/check_public_site.py` を追加済み。
 
@@ -27,7 +27,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
 - Gyazo画像のfile picker / drag-and-drop uploadに対応済み。
 - 編集時の2ペインlive Markdown previewに対応済み。
-- CMS保存後はGitHub ActionsがSwift Publish buildとGitHub Pages deployを自動実行する。
+- CMS保存後はGitHub ActionsがSwift referenceとMoonBit candidateのparityを検証し、MoonBit出力をGitHub Pagesへ自動deployする。
 - Playwright E2EをlocalとCIへ導入し、今後のuser-facing機能の完了条件に設定済み。
 - localStorage自動下書き、reload復元、保存後削除、SHA変更時の競合維持に対応済み。
 - 保存commitを基準にbuild待ち・実行中・公開済み・失敗statusをCMSへ表示済み。
@@ -60,7 +60,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - `Check` workflowでMoonBit SSGのcommit SHAを固定し、Swift/MoonBit parity checkを継続実行する。
 - GitHub ActionsのUTC環境でもRSS timezone offsetを引き継ぎ、全生成fileがbyte一致することを確認済み。
 - agent-browserでトップ・最新記事・tag一覧・既存記事をdesktop/mobile表示し、pixel差分が0であることを確認済み。
-- 本番deployはまだSwift Publishを使用し、parity checkを残したまま切り替える。
+- 本番deployとlocal手動deployをMoonBit生成へ切り替え済み。Swift Publishはreference buildとして残し、deploy前のbyte parity checkを継続する。
 
 ## 現在の公開 URL
 
@@ -119,8 +119,8 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### MoonBit SSG migration
 
-- 本番buildをMoonBitへ切り替える際も、当面はSwift reference buildとのbyte parity checkをdeploy前に残す。
-- 切り替え後に安定運用を確認してから、Swift dependencyの撤去を別taskとして検討する。
+- 本番・手動deployでSwift referenceとのbyte parity checkを当面継続する。
+- 安定運用を確認してから、Swift dependencyとreference buildの撤去を別taskとして検討する。
 
 ### script workflow
 
