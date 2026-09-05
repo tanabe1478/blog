@@ -11,6 +11,19 @@ from replace_local_images_with_gyazo import is_target_local_image
 from gyazo_upload_core import has_supported_image_signature
 
 
+class MoonBitSSGRevisionTests(unittest.TestCase):
+    def test_workflows_use_the_repository_revision(self):
+        revision = (ROOT / ".moonbit-ssg-revision").read_text(encoding="utf-8").strip()
+
+        self.assertRegex(revision, r"^[0-9a-f]{40}$")
+        for relative_path in (
+            ".github/workflows/check.yml",
+            ".github/workflows/deploy-blog.yml",
+        ):
+            workflow = (ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertIn(f"ref: {revision}", workflow)
+
+
 class LocalImageDetectionTests(unittest.TestCase):
     def test_only_drafting_local_images_are_targets(self):
         prefixes = ("attachments/", ".markmesh/blog-assets/")
