@@ -1,6 +1,6 @@
 # diary migration rules
 
-`diary` の GitHub Issues 記事を、この `blog` repository の Swift Publish 記事へ移すための変換ルールです。
+`diary`のGitHub Issues記事を、この`blog` repositoryのMarkdown記事へ移した際の変換ruleです。
 
 ## Source
 
@@ -27,7 +27,7 @@ GitHub API の issues endpoint には Pull Request も混ざるため、`pull_re
 
 ## Markdown file の保存先
 
-移行後の記事は Swift Publish の既存構造に合わせて保存します。
+移行後の記事はmoonbit-ssgが読む既存のContent構造へ保存します。
 
 ```text
 Content/posts/diary-{issueNumber}.md
@@ -41,7 +41,7 @@ Content/posts/diary-34.md
 
 ## Markdown format
 
-Publish が記事 title を認識しやすいように、本文先頭に H1 を追加します。
+SSGが記事titleを認識できるように、本文先頭へH1を追加します。
 
 ```markdown
 ---
@@ -124,7 +124,7 @@ description: ""
 
 ## URL 方針
 
-移行後の記事本体は Swift Publish 標準の path になります。
+移行後の記事本体はblogの標準pathになります。
 
 ```text
 /posts/diary-34/

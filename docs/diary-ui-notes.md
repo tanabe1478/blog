@@ -9,7 +9,7 @@
 
 ## 現在の diary UI の印象
 
-`diary` は、現在の Swift Publish 側の blog UI よりかなりミニマルです。
+`diary`は、移行当時のSwift Publish版blog UIよりかなりミニマルでした。
 
 大きな特徴:
 
@@ -62,7 +62,7 @@ body
 
 ## 現在の blog UI との差分
 
-現在の Swift Publish 側は、`Resources/MyHtmlTheme/styles.css` により次の特徴があります。
+移行当時のSwift Publish側は、現在も使っている`Resources/MyHtmlTheme/styles.css`により次の特徴がありました。
 
 - header に gray background がある。
 - `.wrapper` の最大幅が `900px` で diary より広い。

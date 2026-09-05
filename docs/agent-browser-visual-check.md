@@ -12,19 +12,19 @@ Playwright のような自動 screenshot test は、必要になった段階で�
 
 ## 基本手順
 
-1. Swift referenceとMoonBit candidateを生成し、byte parityを確認する。
+1. 本番と同じ固定revisionのMoonBit SSGで`Output/`を生成し、local assetを確認する。
 
 ```bash
-scripts/verify_moonbit_ssg.py --keep-candidate
+scripts/prepare_for_deploy.py --skip-images
 ```
 
-2. 本番生成経路と同じ`Output.moonbit/`をlocal serverで配信する。
+2. `Output/`をlocal serverで配信する。
 
 ```bash
-python3 -m http.server 4173 --directory Output.moonbit
+python3 -m http.server 4173 --directory Output
 ```
 
-3. agent-browser で次を開く。
+3. agent-browserで次を開く。
 
 ```text
 http://127.0.0.1:4173/

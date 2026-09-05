@@ -1,6 +1,6 @@
 # blog 統合計画
 
-> Note: この文書は blog / diary 統合時の履歴メモです。Markmesh extension CMS 方針は 2026-05-12 に撤回し、現在の publish workflow は `docs/script-based-publish-workflow.md` を正とします。
+> Note: この文書はblog / diary統合時の履歴メモです。以下のSwift commandとMarkmesh extension案は現在の構成では使いません。Markmesh extension CMS方針は2026-05-12に撤回し、現在のpublish workflowは`docs/script-based-publish-workflow.md`を正とします。
 
 この文書は、現在分かれている `blog` と `diary` を統合するための計画です。
 
@@ -13,7 +13,7 @@
 - 見た目の確認は agent-browser を主に使い、必要になった段階で自動 screenshot test を検討する。
 - 実装は学習しやすい小さなコミットに分ける。
 
-## 現在の前提
+## 統合当時の前提
 
 ### blog repository
 

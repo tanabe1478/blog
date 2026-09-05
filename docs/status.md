@@ -14,7 +14,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 
 ### deploy
 
-- `scripts/deploy_site.sh`で検証済み`Output.moonbit/`をdirectory構造を保ったまま`tanabe1478/tanabe1478.github.io`へdeployする運用に変更済み。
+- `scripts/deploy_site.sh`でMoonBit生成の`Output/`をdirectory構造を保ったまま`tanabe1478/tanabe1478.github.io`へdeployする運用に変更済み。
 - Publish built-in deploy は path flatten 問題があったため使わない。
 - 公開後確認用の `scripts/check_public_site.py` を追加済み。
 
@@ -27,7 +27,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
 - Gyazo画像のfile picker / drag-and-drop uploadに対応済み。
 - 編集時の2ペインlive Markdown previewに対応済み。
-- CMS保存後はGitHub ActionsがSwift referenceとMoonBit candidateのparityを検証し、MoonBit出力をGitHub Pagesへ自動deployする。
+- CMS保存後はGitHub Actionsが固定revisionのMoonBit SSGで生成・asset checkし、GitHub Pagesへ自動deployする。
 - Playwright E2EをlocalとCIへ導入し、今後のuser-facing機能の完了条件に設定済み。
 - localStorage自動下書き、reload復元、保存後削除、SHA変更時の競合維持に対応済み。
 - 保存commitを基準にbuild待ち・実行中・公開済み・失敗statusをCMSへ表示済み。
@@ -46,7 +46,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 ### script-based publish workflow
 
 - blog の記事作成、画像 upload、build、deploy は Markmesh に依存させず、repository 内 script を正本にする方針へ変更済み。
-- `scripts/publish_blog.py` で `Content/posts/*.md` 全体の local image 置換、`swift run`、source repository の commit / push、deploy、公開後 smoke check をまとめて実行できる。
+- `scripts/publish_blog.py`で`Content/posts/*.md`全体のlocal image置換、MoonBit build、source repositoryのcommit / push、deploy、公開後smoke checkをまとめて実行できる。
 - 下位 script として `scripts/prepare_for_deploy.py` と `scripts/deploy_site.sh` も残している。
 - blog 側の Markmesh plugin / extension 設定は撤退済み。
 
@@ -54,13 +54,12 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 
 - Publish互換SSGを`tanabe1478/moonbit-ssg`に実装済み。
 - frontmatter、Markdown、YouTube、syntax highlight、theme、Resources、RSS、sitemapを再現済み。
-- `scripts/compare_site_outputs.py`で2つの生成directoryをbyte単位で比較できる。
-- `scripts/verify_moonbit_ssg.py`でSwift build、MoonBit build、全file比較を一括実行できる。
-- 固定build日時を使い、現行`Output/`とMoonBit候補の全生成fileがbyte一致することを確認済み（最新44記事・88file）。
-- `Check` workflowでMoonBit SSGのcommit SHAを固定し、Swift/MoonBit parity checkを継続実行する。
-- GitHub ActionsのUTC環境でもRSS timezone offsetを引き継ぎ、全生成fileがbyte一致することを確認済み。
-- agent-browserでトップ・最新記事・tag一覧・既存記事をdesktop/mobile表示し、pixel差分が0であることを確認済み。
-- 本番deployとlocal手動deployをMoonBit生成へ切り替え済み。Swift Publishはreference buildとして残し、deploy前のbyte parity checkを継続する。
+- 移行前の固定build日時でSwift PublishとMoonBitの全88生成fileがbyte一致することを確認済み。
+- GitHub ActionsのUTC環境でもRSS timezone offsetを含めて一致することを確認済み。
+- agent-browserでトップ・最新記事・tag一覧・既存記事をdesktop/mobile表示し、pixel差分0を確認済み。
+- `.moonbit-ssg-revision`でgenerator revisionを固定し、`scripts/build_site.sh`で正規の`Output/`を生成する。
+- Check、production deploy、local deployをMoonBit単独buildへ切り替え済み。
+- Swift Package、Swift source、reference build、継続parity checkを撤去済み。
 
 ## 現在の公開 URL
 
@@ -78,13 +77,13 @@ https://tanabe1478.github.io/diary/articles/34
 local build:
 
 ```bash
-swift run
+scripts/build_site.sh
 ```
 
-MoonBit parity check:
+buildとlocal asset check:
 
 ```bash
-scripts/verify_moonbit_ssg.py
+scripts/prepare_for_deploy.py --skip-images
 ```
 
 local preview:
@@ -119,8 +118,7 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### MoonBit SSG migration
 
-- 本番・手動deployでSwift referenceとのbyte parity checkを当面継続する。
-- 安定運用を確認してから、Swift dependencyとreference buildの撤去を別taskとして検討する。
+- 移行完了。今後SSG revisionを更新するときは、MoonBit側test、blog build、asset check、agent-browserによる主要page確認を行う。
 
 ### script workflow
 

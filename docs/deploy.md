@@ -1,85 +1,108 @@
 # Deploy
 
-この repository の生成結果は `tanabe1478/tanabe1478.github.io` repository へ push して公開します。
+このrepositoryの生成結果は`tanabe1478/tanabe1478.github.io` repositoryへpushして公開します。site generatorは固定revisionのMoonBit SSGです。
 
-## 通常の deploy
+## 通常のdeploy
 
-普段は次の 1 コマンドを使います。
+普段は次の1 commandを使います。
 
 ```bash
 scripts/publish_blog.py
 ```
 
-この script は次を行います。
+このscriptは次を行います。
 
-1. `scripts/prepare_for_deploy.py`でlocal imageのGyazo化とSwift referenceの`Output/`生成を行う。
-2. source repositoryの変更をcommit / pushする。
-3. MoonBit candidateを`Output.moonbit/`へ生成し、`Output/`とのbyte parityを検証する。
-4. `tanabe1478/tanabe1478.github.io`の`master` branchを一時directoryにcloneする。
-5. 検証済み`Output.moonbit/`の中身をdirectory構造を保ったままrsyncする。
-6. 変更があれば`Publish site` commitを作ってpushする。
-7. `scripts/check_public_site.py`をretry付きで実行する。
+1. `scripts/prepare_for_deploy.py`でlocal imageをGyazo化する。
+2. `scripts/build_site.sh`で`Output/`全体を生成する。
+3. `scripts/check_output_site.py`で生成HTMLが参照するlocal assetを検査する。
+4. source repositoryの変更をcommit / pushする。
+5. `tanabe1478/tanabe1478.github.io`の`master` branchを一時directoryへcloneする。
+6. `Output/`をdirectory構造を維持して`rsync --delete`する。
+7. 変更があれば`Publish site` commitを作ってpushする。
+8. `scripts/check_public_site.py`をretry付きで実行する。
 
-低レベルな deploy だけを実行したい場合は次を使います。
+低levelのdeployだけを実行する場合:
 
 ```bash
 scripts/deploy_site.sh --check
 ```
 
+`--skip-prepare`を指定する場合は、先に`Output/`を生成してください。
+
+```bash
+scripts/build_site.sh
+scripts/deploy_site.sh --skip-prepare --check
+```
+
+## MoonBit SSGの固定
+
+利用するrevisionは`.moonbit-ssg-revision`に保存します。localでは既定でsibling checkout `../moonbit-ssg`を利用します。
+
+```bash
+git clone https://github.com/tanabe1478/moonbit-ssg ../moonbit-ssg
+git -C ../moonbit-ssg checkout "$(cat .moonbit-ssg-revision)"
+scripts/build_site.sh
+```
+
+別のcheckout:
+
+```bash
+MOONBIT_SSG_DIR=/path/to/moonbit-ssg scripts/build_site.sh
+```
+
+固定revisionとcheckoutのHEADが異なる場合、buildは停止します。SSG自体の開発中だけ、明示的に次を指定できます。
+
+```bash
+MOONBIT_SSG_ALLOW_UNPINNED=true scripts/build_site.sh
+```
+
 ## GitHub Actions deploy
 
-`main`のblog sourceが更新されると、`.github/workflows/deploy-blog.yml`が自動的にsiteを生成し、`tanabe1478/tanabe1478.github.io`の`master`へ同期します。CMSから`Content/posts/*.md`を保存した場合も対象です。
+`main`のblog sourceが更新されると、`.github/workflows/deploy-blog.yml`が自動的にsiteを生成し、`tanabe1478/tanabe1478.github.io/master`へ同期します。CMSから`Content/posts/*.md`を保存した場合も対象です。
 
-workflowは次を実行します。
+workflow:
 
 1. Python script testを実行する。
-2. `scripts/prepare_for_deploy.py --skip-images`でSwift reference siteを生成・検査する。
-3. commit SHAで固定したMoonBit SSGとtoolchainを用意する。
-4. MoonBit candidateを生成し、Swift referenceとのbyte parityを検証する。
-5. 公開repositoryを一時directoryへcheckoutする。
-6. 検証済み`Output.moonbit/`を`rsync --delete`で同期する。
-7. 差分があれば`github-actions[bot]`としてcommit・pushする。
-8. GitHub Pages反映を待ちながらpublic smoke checkをretryする。
+2. commit SHA固定のMoonBit SSGをcheckoutする。
+3. miseで固定MoonBit toolchainをinstallする。
+4. MoonBit SSGで`Output/`を生成する。
+5. local asset checkを実行する。
+6. 公開repositoryをcheckoutする。
+7. `Output/`を`rsync --delete`で同期する。
+8. 差分があれば`github-actions[bot]`としてcommit / pushする。
+9. GitHub Pages反映を待ちながらpublic smoke checkをretryする。
 
 公開repositoryへの認証にはGitHub Actions Secret `BLOG_DEPLOY_TOKEN`を使います。このfine-grained tokenは`tanabe1478/tanabe1478.github.io`だけに`Contents: Read and write`を持たせ、source repositoryや他の権限を含めません。
 
-CIでは外部副作用を避けるため、local画像のGyazo uploadを行いません。CMSから追加する画像は保存前にGyazo URLへ変換済みであることを前提にします。
+CIでは外部副作用を避けるためlocal画像をGyazoへuploadしません。CMSから追加する画像は保存前にGyazo URLへ変換済みであることを前提にします。
 
-## deploy 前の prepare
+## deploy前のprepare
 
-`publish_blog.py` は最初に `scripts/prepare_for_deploy.py` を実行します。
+`publish_blog.py`は最初に`scripts/prepare_for_deploy.py`を実行します。local imageをGyazo URLへ置換し、MoonBit SSGでsiteを生成してasset checkを行います。
 
-これにより、local image を Gyazo URL に置換してから site を生成します。
+画像置換をせずbuildだけ確認する場合:
 
-local imageがなく、置換が不要な場合もSwift referenceをbuildした後、MoonBit candidateとのbyte parityを確認してからdeployします。
+```bash
+scripts/prepare_for_deploy.py --skip-images
+```
 
-## なぜ Publish built-in deploy を使わないか
+## なぜ独自deploy scriptを使うか
 
-この repository では Publish の built-in Git deploy step を使うと、環境によって `posts/diary-34` のような directory が `postsdiary-34` のように flatten された path として deploy されることがありました。
+過去にSwift Publishのbuilt-in Git deployで、`posts/diary-34`のようなdirectoryがflattenされる問題がありました。現在はgeneratorに依存せず、正規出力`Output/`をそのまま`rsync`する単純な経路を維持しています。
 
-その状態では GitHub Pages 上で次の URL が 404 になります。
+この方法では次のURLに必要なdirectory構造をそのまま保存できます。
 
 ```text
 /posts/diary-34/
 ```
 
-そのため、deploy は `Output/` をそのまま rsync する script に寄せます。
+## diary path
 
-## diary path について
-
-`/diary/` は `tanabe1478/diary` repository の GitHub Pages project site として配信されています。
-
-blog 統合後は、diary repository 側を redirect site に変更しています。
+`/diary/`は`tanabe1478/diary` repositoryのGitHub Pages project siteとして配信されています。blog統合後はdiary repository側をredirect siteに変更しています。
 
 ```text
 /diary/             -> /
 /diary/articles/34  -> /posts/diary-34/
 ```
 
-user site 側にも `Output/diary/...` の redirect page を生成していますが、project site が有効な間は diary repository 側の redirect が優先されます。
-
-移行後の記事本体は次で表示できます。
-
-```text
-/posts/diary-34/
-```
+user site側にも`Output/diary/...`のredirect pageを生成しますが、project siteが有効な間はdiary repository側のredirectが優先されます。

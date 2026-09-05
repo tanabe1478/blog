@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate tanabe1478/diary GitHub Issues into Swift Publish posts.
+"""Migrate tanabe1478/diary GitHub Issues into blog Markdown posts.
 
 This script intentionally does one small job: fetch normal GitHub Issues
 (excluding Pull Requests) and create Content/posts/diary-{number}.md files.

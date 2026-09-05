@@ -2,31 +2,25 @@
 
 https://tanabe1478.github.io の source repository です。
 
-MoonBit SSGで本番の静的siteを生成しています。移行期間中はSwift Publishもreferenceとして生成し、deploy前に全fileのbyte一致を検証します。旧 `diary` repository の GitHub Issues 記事は `Content/posts/diary-*.md` として取り込み済みです。
+[moonbit-ssg](https://github.com/tanabe1478/moonbit-ssg)で静的siteを生成しています。旧`diary` repositoryのGitHub Issues記事は`Content/posts/diary-*.md`として取り込み済みです。
 
 ## 開発
 
-Swift reference siteを生成します。
+固定revisionのMoonBit SSGでsiteを生成します。
 
 ```bash
-swift run
+git clone https://github.com/tanabe1478/moonbit-ssg ../moonbit-ssg
+git -C ../moonbit-ssg checkout "$(cat .moonbit-ssg-revision)"
+scripts/build_site.sh
 ```
 
-生成結果は`Output/`に出力されます。本番と同じMoonBit candidateまで生成・検証する場合は次を実行します。
+生成結果は`Output/`に出力されます。別のcheckoutを使う場合は`MOONBIT_SSG_DIR`で指定できます。
 
 ```bash
-scripts/verify_moonbit_ssg.py --skip-swift-build --keep-candidate
+MOONBIT_SSG_DIR=/path/to/moonbit-ssg scripts/build_site.sh
 ```
 
-検証済みcandidateは`Output.moonbit/`に残ります。
-
-MoonBit SSGの候補出力と全生成ファイルをbyte単位で比較する場合:
-
-```bash
-scripts/verify_moonbit_ssg.py
-```
-
-既定ではsibling directoryの`../moonbit-ssg`を使います。別のcheckoutは`--ssg-dir`または`MOONBIT_SSG_DIR`で指定できます。Swift build済みの`Output/`を再利用する場合は`--skip-swift-build`を付けます。
+SSG自体を開発中で固定revisionの検査だけを明示的に外す場合は、`MOONBIT_SSG_ALLOW_UNPINNED=true`を指定します。
 
 新しい記事の雛形を作る場合:
 
@@ -90,7 +84,7 @@ http://127.0.0.1:4173/
 
 ## CI
 
-GitHub Actions の `Check` workflowでは、script testと`swift run`に加え、commit SHAで固定したMoonBit SSGでもsiteを生成します。SwiftとMoonBitの全生成ファイルがbyte一致しない場合はcheckが失敗します。
+GitHub Actionsの`Check` workflowでは、script testを実行し、commit SHAで固定したMoonBit SSGで`Output/`を生成してlocal assetを検査します。
 
 ## deploy
 
@@ -100,7 +94,7 @@ GitHub Actions の `Check` workflowでは、script testと`swift run`に加え�
 scripts/publish_blog.py
 ```
 
-このscriptはlocal imageのGyazo化、Swift reference build、MoonBit candidateとのbyte比較、source repositoryのcommit / push、検証済み`Output.moonbit/`のdeploy、公開後smoke checkまで実行します。
+このscriptはlocal imageのGyazo化、MoonBit buildとasset check、source repositoryのcommit / push、`Output/`のdeploy、公開後smoke checkまで実行します。
 
 低レベルな deploy だけを実行したい場合は `scripts/deploy_site.sh --check` を使えます。
 

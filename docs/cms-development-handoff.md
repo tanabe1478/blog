@@ -45,12 +45,10 @@ tanabe1478/blog main
   └─ Content/posts/*.mdが記事の正本
            │ Content等の変更でGitHub Actions起動
            ▼
-Swift reference build
-  └─ MoonBit candidateとのbyte parityを検証
-           │
-           ▼
-MoonBit SSG build
-  └─ Output.moonbit/をrsync --delete
+固定revisionのMoonBit SSG build
+  ├─ Output/を生成
+  ├─ local assetを検査
+  └─ Output/をrsync --delete
            ▼
 tanabe1478/tanabe1478.github.io master
   └─ GitHub Pagesで公開
@@ -345,9 +343,9 @@ main更新、old SHA変更、新slug既存は`409`として旧記事を維持し
 
 1. CMSが`tanabe1478/blog`の`main`へ記事commitを作る。
 2. `.github/workflows/deploy-blog.yml`が`Content/**`変更で起動する。
-3. macOS runnerでscript testとSwift reference buildを行う。
-4. 固定SHAのMoonBit SSGでcandidateを生成し、全fileのbyte parityを検証する。
-5. 検証済み`Output.moonbit/`を公開repositoryへ`rsync --delete`する。
+3. macOS runnerでscript testを行う。
+4. 固定SHAのMoonBit SSGで`Output/`を生成し、local assetを検査する。
+5. `Output/`を公開repositoryへ`rsync --delete`する。
 6. `tanabe1478/tanabe1478.github.io/master`へcommit/pushする。
 7. public smoke checkをretryする。
 
@@ -399,7 +397,7 @@ rendererは`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を
 - link
 - 通常画像、Gyazo形式のリンク付き画像
 
-完全なCommonMark/Swift Publish rendererではないため、公開結果とのpixel-level一致を保証するPreviewではありません。複雑なnested list、table、Markdown extension等を追加する場合は、先にtestを追加し、sanitizeされていないHTMLを導入しないでください。
+完全なCommonMark/moonbit-ssg rendererではないため、公開結果とのpixel-level一致を保証するPreviewではありません。複雑なnested list、table、Markdown extension等を追加する場合は、先にtestを追加し、sanitizeされていないHTMLを導入しないでください。
 
 CSPは`cms/src/index.ts`で設定します。画像sourceを増やすために`script-src`や`default-src`を緩めないでください。
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a new Swift Publish blog post."""
+"""Create a new moonbit-ssg blog post."""
 
 from __future__ import annotations
 
