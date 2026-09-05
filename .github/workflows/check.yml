@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tanabe1478/moonbit-ssg
-          ref: 3ac2db69bb0140b3fd2a5e3e2b652d68fe2448bd
+          ref: 6e313ec31ee8a7b50af86e9bc838bcd9c935cb1f
           path: .build/moonbit-ssg
       - name: Install mise
         uses: jdx/mise-action@v2
