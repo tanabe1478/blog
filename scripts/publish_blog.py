@@ -4,9 +4,9 @@
 This script is the main authoring workflow:
 
 1. Upload local images in posts to Gyazo and rewrite Markdown.
-2. Build the Swift reference and byte-verify the MoonBit candidate.
+2. Build and validate the MoonBit-generated site.
 3. Commit and push source repository changes when needed.
-4. Deploy the verified MoonBit output to the public GitHub Pages repository.
+4. Deploy the generated output to the public GitHub Pages repository.
 """
 
 from __future__ import annotations
@@ -35,7 +35,12 @@ def current_branch() -> str:
 
 
 def ensure_repo_root() -> None:
-    required = [Path("Package.swift"), Path("Content/posts"), Path("scripts/prepare_for_deploy.py")]
+    required = [
+        Path(".moonbit-ssg-revision"),
+        Path("Content/posts"),
+        Path("scripts/build_site.sh"),
+        Path("scripts/prepare_for_deploy.py"),
+    ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:
         raise RuntimeError(f"run this script from the blog repository root. missing: {', '.join(missing)}")

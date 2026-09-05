@@ -12,8 +12,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run checks
-        run: scripts/run_tests.sh
+      - name: Run script tests
+        run: python3 -m unittest discover -s tests/scripts -p 'test_*.py'
       - name: Check out pinned MoonBit SSG
         uses: actions/checkout@v4
         with:
@@ -30,8 +30,10 @@ jobs:
         run: |
           mise trust
           mise install
-      - name: Compare Swift and MoonBit outputs
-        run: scripts/verify_moonbit_ssg.py --skip-swift-build --ssg-dir .build/moonbit-ssg
+      - name: Build and check MoonBit site
+        env:
+          MOONBIT_SSG_DIR: .build/moonbit-ssg
+        run: scripts/prepare_for_deploy.py --skip-images
 
   cms:
     name: CMS

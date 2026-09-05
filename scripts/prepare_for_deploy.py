@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare the blog for deploy.
-
-Replace local drafting images with Gyazo URLs, then build and check the site.
-"""
+"""Replace local drafting images, then build and check the MoonBit site."""
 
 from __future__ import annotations
 
@@ -29,7 +26,7 @@ def main() -> int:
     parser.add_argument("--posts-dir", type=Path, default=Path("Content/posts"))
     parser.add_argument("--dry-run", action="store_true", help="show image replacements without uploading or writing")
     parser.add_argument("--skip-images", action="store_true", help="skip local image replacement")
-    parser.add_argument("--skip-build", action="store_true", help="skip swift run")
+    parser.add_argument("--skip-build", action="store_true", help="skip MoonBit site build")
     parser.add_argument("--skip-output-check", action="store_true", help="skip generated Output asset check")
     parser.add_argument(
         "--prefix",
@@ -54,7 +51,7 @@ def main() -> int:
         return 0
 
     if not args.skip_build:
-        run(["swift", "run"])
+        run(["scripts/build_site.sh"])
         if not args.skip_output_check:
             run(["scripts/check_output_site.py"])
 
