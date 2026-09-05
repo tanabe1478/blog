@@ -23,7 +23,7 @@ def reference_build_date(feed_path: Path) -> str:
     if match is None:
         raise ValueError(f"lastBuildDate not found in {feed_path}")
     date = parsedate_to_datetime(match.group(1))
-    return date.strftime("%Y-%m-%dT%H:%M:%S")
+    return date.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
 def run(command: list[str], *, cwd: Path | None = None) -> None:
@@ -74,6 +74,7 @@ def main() -> int:
             raise ValueError(f"reference output directory not found: {reference}")
 
         build_date = reference_build_date(reference / "feed.rss")
+        run(["mise", "exec", "--", "moon", "update"], cwd=ssg_dir)
         run(
             [
                 "mise",

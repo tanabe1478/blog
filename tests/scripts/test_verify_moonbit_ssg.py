@@ -18,7 +18,7 @@ class ReferenceBuildDateTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            self.assertEqual(reference_build_date(feed), "2026-09-05T13:44:37")
+            self.assertEqual(reference_build_date(feed), "2026-09-05T13:44:37+0900")
 
     def test_rejects_feed_without_build_date(self):
         with tempfile.TemporaryDirectory() as directory:
