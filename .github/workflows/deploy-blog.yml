@@ -43,8 +43,30 @@ jobs:
       - name: Run script tests
         run: python3 -m unittest discover -s tests/scripts -p 'test_*.py'
 
-      - name: Build and check site
+      - name: Build and check Swift reference site
         run: scripts/prepare_for_deploy.py --skip-images
+
+      - name: Check out pinned MoonBit SSG
+        uses: actions/checkout@v4
+        with:
+          repository: tanabe1478/moonbit-ssg
+          ref: 83e02635648525b806e7a166c547d4d804228155
+          path: .build/moonbit-ssg
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+        with:
+          install: false
+          cache: true
+
+      - name: Install pinned MoonBit toolchain
+        working-directory: .build/moonbit-ssg
+        run: |
+          mise trust
+          mise install
+
+      - name: Build and verify MoonBit candidate site
+        run: scripts/verify_moonbit_ssg.py --skip-swift-build --keep-candidate --ssg-dir .build/moonbit-ssg
 
       - name: Check out public site
         uses: actions/checkout@v4
@@ -54,8 +76,8 @@ jobs:
           token: ${{ secrets.BLOG_DEPLOY_TOKEN }}
           path: .deploy/public-site
 
-      - name: Sync generated site
-        run: rsync -a --delete --exclude .git Output/ .deploy/public-site/
+      - name: Sync MoonBit-generated site
+        run: rsync -a --delete --exclude .git Output.moonbit/ .deploy/public-site/
 
       - name: Commit and push public site
         working-directory: .deploy/public-site
