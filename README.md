@@ -14,7 +14,7 @@ swift run
 
 生成結果は `Output/` に出力されます。
 
-MoonBit SSGの候補出力と87ファイルをbyte単位で比較する場合:
+MoonBit SSGの候補出力と全生成ファイルをbyte単位で比較する場合:
 
 ```bash
 scripts/verify_moonbit_ssg.py
@@ -84,7 +84,7 @@ http://127.0.0.1:4173/
 
 ## CI
 
-GitHub Actions の `Check` workflowでは、script testと`swift run`に加え、commit SHAで固定したMoonBit SSGでもsiteを生成します。SwiftとMoonBitの全87ファイルがbyte一致しない場合はcheckが失敗します。
+GitHub Actions の `Check` workflowでは、script testと`swift run`に加え、commit SHAで固定したMoonBit SSGでもsiteを生成します。SwiftとMoonBitの全生成ファイルがbyte一致しない場合はcheckが失敗します。
 
 ## deploy
 
