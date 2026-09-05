@@ -57,6 +57,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - `scripts/compare_site_outputs.py`で2つの生成directoryをbyte単位で比較できる。
 - `scripts/verify_moonbit_ssg.py`でSwift build、MoonBit build、全file比較を一括実行できる。
 - 固定build日時を使い、現行`Output/`とMoonBit候補の全87fileがbyte一致することを確認済み。
+- `Check` workflowでMoonBit SSGのcommit SHAを固定し、Swift/MoonBit parity checkを継続実行する。
 - 本番deployはまだSwift Publishを使用し、検証なしに切り替えない。
 
 ## 現在の公開 URL
@@ -116,7 +117,6 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### MoonBit SSG migration
 
-- GitHub ActionsでSwift/MoonBitの並列生成とbyte比較を継続実行する。
 - browser表示と主要導線をcandidate outputでも確認する。
 - 上記の検証が安定してから本番buildをMoonBitへ切り替える。
 

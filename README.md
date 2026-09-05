@@ -84,7 +84,7 @@ http://127.0.0.1:4173/
 
 ## CI
 
-GitHub Actions の `Check` workflow で `swift run` を実行し、site が生成できることを確認します。
+GitHub Actions の `Check` workflowでは、script testと`swift run`に加え、commit SHAで固定したMoonBit SSGでもsiteを生成します。SwiftとMoonBitの全87ファイルがbyte一致しない場合はcheckが失敗します。
 
 ## deploy
 
