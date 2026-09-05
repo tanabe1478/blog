@@ -14,6 +14,14 @@ swift run
 
 生成結果は `Output/` に出力されます。
 
+MoonBit SSGの候補出力と87ファイルをbyte単位で比較する場合:
+
+```bash
+scripts/verify_moonbit_ssg.py
+```
+
+既定ではsibling directoryの`../moonbit-ssg`を使います。別のcheckoutは`--ssg-dir`または`MOONBIT_SSG_DIR`で指定できます。Swift build済みの`Output/`を再利用する場合は`--skip-swift-build`を付けます。
+
 新しい記事の雛形を作る場合:
 
 ```bash

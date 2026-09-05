@@ -50,6 +50,15 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 下位 script として `scripts/prepare_for_deploy.py` と `scripts/deploy_site.sh` も残している。
 - blog 側の Markmesh plugin / extension 設定は撤退済み。
 
+### MoonBit SSG migration
+
+- Publish互換SSGを`tanabe1478/moonbit-ssg`に実装済み。
+- frontmatter、Markdown、YouTube、syntax highlight、theme、Resources、RSS、sitemapを再現済み。
+- `scripts/compare_site_outputs.py`で2つの生成directoryをbyte単位で比較できる。
+- `scripts/verify_moonbit_ssg.py`でSwift build、MoonBit build、全file比較を一括実行できる。
+- 固定build日時を使い、現行`Output/`とMoonBit候補の全87fileがbyte一致することを確認済み。
+- 本番deployはまだSwift Publishを使用し、検証なしに切り替えない。
+
 ## 現在の公開 URL
 
 ```text
@@ -67,6 +76,12 @@ local build:
 
 ```bash
 swift run
+```
+
+MoonBit parity check:
+
+```bash
+scripts/verify_moonbit_ssg.py
 ```
 
 local preview:
@@ -98,6 +113,12 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 - React移行は完了。次はroadmapの機能backlogを順に実装する。
 - 一覧のsearch/filter。
 - fine-grained tokenの期限・rotation手順の定期確認。
+
+### MoonBit SSG migration
+
+- GitHub ActionsでSwift/MoonBitの並列生成とbyte比較を継続実行する。
+- browser表示と主要導線をcandidate outputでも確認する。
+- 上記の検証が安定してから本番buildをMoonBitへ切り替える。
 
 ### script workflow
 
