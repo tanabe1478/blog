@@ -8,7 +8,7 @@ tags: diary
 
 友人と、またはソロでRaftというゲームをやり始めた。
 
-![Raft-main-1024x576](https://user-images.githubusercontent.com/18596776/180896601-ef3d5999-c5af-4f5b-8d35-020b580ae011.jpeg)
+![Raft-main-1024x576](/images/diary-4/1dad09f42fea4826.jpg)
 
 
 この手のゲームでは本当に困った時やマンネリ感を覚えた時以外はWikiを見ないようにしているので非効率な面は多々あると思うが非常に楽しい。

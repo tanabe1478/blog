@@ -12,7 +12,7 @@ tags: diary
 
 iPhoneからの移行に伴いAirPods Proを友人にあげたのでワイヤレスイヤホンが欲しかったのだが、Primeセールで割引になっていたEcho Budsが目に付いて試しに買ってみた。
 
-![Echo Buds](https://user-images.githubusercontent.com/18596776/179640312-07423f6b-f7be-4903-9669-6bf914c8af92.jpg)
+![Echo Buds](/images/diary-2/dc61c406260f73d6.jpg)
 
 AirPods Proと比べるとノイキャン、音質ともにやや劣るなという感じ。とはいえ、ウォーキング中と集中したいとき用に買ったこともあり今のところ不満はない。
 

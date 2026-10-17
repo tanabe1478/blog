@@ -27,10 +27,10 @@ DiskStation ManagerというのがこのSynology NASのOS。
 
 インストール後は設定画面が開ける
 
-![f2c4cb181edfe179410e2de3c3950fbb](https://user-images.githubusercontent.com/18596776/204119055-306974b0-cf28-4b5d-a384-c9b3c7867c47.png)
+![f2c4cb181edfe179410e2de3c3950fbb](/images/diary-11/088c09393e0b65ea.png)
 
 インストール後の画面
-![9855cc8d4de3e00291dcffde6e6884e2](https://user-images.githubusercontent.com/18596776/204119470-4134330b-3cd9-40b3-8fd4-732d380586c1.jpg)
+![9855cc8d4de3e00291dcffde6e6884e2](/images/diary-11/1474238713637b2f.jpg)
 
 NASの共有フォルダの作成をするためにボリュームを作る。そのためにはストレージプールを作る必要があるので作成する
 
@@ -39,7 +39,7 @@ NASの共有フォルダの作成をするためにボリュームを作る。�
 
 確認画面のスクショを撮っておいた
 
-![03773038902c17ec473854ee63a29609](https://user-images.githubusercontent.com/18596776/204119653-c49e15e1-cd41-48e9-8c14-fff2f92eb2e8.png)
+![03773038902c17ec473854ee63a29609](/images/diary-11/34bce6fc7b6a6fec.png)
 
 その後は管理アカウントや2段階認証の設定などを行う。
 

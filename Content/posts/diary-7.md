@@ -9,13 +9,13 @@ tags: diary
 サマータイムオデッセイという原神のイベントがもうすぐ終わる。
 
 
-![0d42d3e89b6949be5f39e6e07c020c8d](https://user-images.githubusercontent.com/18596776/185824424-9cd55cc3-6561-4ddb-9992-174218bf069d.jpeg)
+![0d42d3e89b6949be5f39e6e07c020c8d](/images/diary-7/de73806b7086477a.jpg)
 
 金リンゴ群島のイベントのメインイベントが終わったのでサブクエストや宝箱を空けたりしている。
 
 敵のファデュイの仲間たちを引き合わせられた記念写真がこれ
 
-![20220821164315](https://user-images.githubusercontent.com/18596776/185781074-52a8481a-68f7-471c-8339-7d3ee441095e.png)
+![20220821164315](/images/diary-7/b08ab2483d65ebd7.png)
 
 
 

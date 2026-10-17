@@ -8,7 +8,7 @@ tags: diary
 
 GRID650を始め、積みキーボードが溜まっていたがその内の一つPolarisを組み立てた。
 
-![IMG20220720235507](https://user-images.githubusercontent.com/18596776/180014558-eb7e288f-0a3d-41d3-9f79-84e447a2e6e7.jpg)
+![IMG20220720235507](/images/diary-3/2b16b1b35825abf4.jpg)
 
 スイッチは[C³Equalz X TKC Tangerine Switches](https://thekey.company/products/tangerine-switches)を使った。Matrix ableに続いてこのスイッチのキーボードは2つ目だ。
 

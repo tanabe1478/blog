@@ -13,7 +13,7 @@ tags: diary
 もっとインプットのハードルを下げないと体調悪い時や気が乗らない時に本をよむきっかけが作れないと思って簡易な手段を2つ作って今のところうまく回っている。
 
 1つ目がiPadをsplit viewで分割して片方にScrapboxを表示して音声入力とタッチでメモしていくやり方。
-![529689b23f61fe03e7b48055941d8bac](https://user-images.githubusercontent.com/18596776/181857707-fbd1968f-c730-420c-8558-bfd3309badbf.png)
+![529689b23f61fe03e7b48055941d8bac](/images/diary-6/5bea4c5cedc19984.png)
 
 最初はキーボードをいちいち表示していたのだが、PCと比べたときの入力のストレスに耐えられず断念。
 
