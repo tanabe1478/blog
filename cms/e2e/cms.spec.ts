@@ -73,17 +73,23 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
       if (options.imageError) {
         await route.fulfill({
           status: 502,
-          json: { error: "画像をGyazoへアップロードできませんでした" },
+          json: { error: "画像をGitHubへ保存できませんでした" },
+        });
+        return;
+      }
+      const form = request.postDataBuffer()?.toString() ?? "";
+      if (!form.includes('name="post"') || !form.includes(EXISTING_NAME)) {
+        await route.fulfill({
+          status: 400,
+          json: { error: "画像を追加する記事のfilenameが不正です" },
         });
         return;
       }
       await route.fulfill({
         json: {
           image: {
-            imageUrl: "https://i.gyazo.com/example.png",
-            permalinkUrl: "https://gyazo.com/example",
-            markdown:
-              "[![screen](https://i.gyazo.com/example.png)](https://gyazo.com/example)",
+            imageUrl: "/images/hello/0123456789abcdef.png",
+            markdown: "![screen](/images/hello/0123456789abcdef.png)",
           },
         },
       });
@@ -441,7 +447,7 @@ test("keeps React editor content when saving conflicts", async ({ page }) => {
   await expect(textarea).toBeVisible();
 });
 
-test("uploads a dropped image and inserts Gyazo Markdown in React", async ({
+test("uploads a dropped image and inserts repository image Markdown in React", async ({
   page,
 }) => {
   await mockCmsApi(page);
@@ -457,12 +463,12 @@ test("uploads a dropped image and inserts Gyazo Markdown in React", async ({
     );
   });
 
-  await expect(textarea).toHaveValue(/https:\/\/i\.gyazo\.com\/example\.png/);
+  await expect(textarea).toHaveValue(/\/images\/hello\/0123456789abcdef\.png/);
   await expect(page.locator(".markdown-article img")).toHaveAttribute(
     "src",
-    "https://i.gyazo.com/example.png",
+    "https://raw.githubusercontent.com/tanabe1478/blog/main/Resources/images/hello/0123456789abcdef.png",
   );
-  await expect(page.getByText(/Gyazo画像を挿入しました/)).toBeVisible();
+  await expect(page.getByText(/画像を挿入しました/)).toBeVisible();
 });
 
 test("uploads a selected image from the React file picker", async ({ page }) => {
@@ -476,10 +482,10 @@ test("uploads a selected image from the React file picker", async ({ page }) => 
     buffer: Buffer.from([1, 2, 3]),
   });
 
-  await expect(page.getByLabel("Markdown本文")).toHaveValue(/gyazo\.com\/example/);
+  await expect(page.getByLabel("Markdown本文")).toHaveValue(/\/images\/hello\/0123456789abcdef\.png/);
 });
 
-test("keeps React content when Gyazo upload fails", async ({ page }) => {
+test("keeps React content when image upload fails", async ({ page }) => {
   await mockCmsApi(page, { imageError: true });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
@@ -492,7 +498,7 @@ test("keeps React content when Gyazo upload fails", async ({ page }) => {
     buffer: Buffer.from([1, 2, 3]),
   });
 
-  await expect(page.getByText(/画像をGyazoへアップロードできませんでした/)).toBeVisible();
+  await expect(page.getByText(/画像をGitHubへ保存できませんでした/)).toBeVisible();
   await expect(textarea).toHaveValue(before);
 });
 

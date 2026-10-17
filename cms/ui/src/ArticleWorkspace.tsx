@@ -306,9 +306,9 @@ export function ArticleWorkspace({
     const end = textarea?.selectionEnd ?? start;
     setUploading(true);
     setError(false);
-    setStatus("Gyazoへアップロードしています…");
+    setStatus("画像をGitHubへ保存しています…");
     try {
-      const image = await uploadImage(file);
+      const image = await uploadImage(file, post.name);
       const before = content.slice(0, start);
       const after = content.slice(end);
       const leadingNewline = before && !before.endsWith("\n") ? "\n" : "";
@@ -317,7 +317,7 @@ export function ArticleWorkspace({
       const nextContent = before + inserted + after;
       const nextCursor = before.length + inserted.length;
       setContent(nextContent);
-      setStatus("Gyazo画像を挿入しました。GitHubへ保存してください。");
+      setStatus("画像を挿入しました。記事もGitHubへ保存してください。");
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
         textareaRef.current?.setSelectionRange(nextCursor, nextCursor);

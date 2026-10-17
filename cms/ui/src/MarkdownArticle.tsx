@@ -14,6 +14,15 @@ function safeUrl(value: string): string {
   }
 }
 
+// /images/... lives in Resources/images. Reading it from the main branch shows
+// images uploaded from the CMS before the blog deploy has finished.
+function previewImageUrl(src: string): string {
+  if (src.startsWith("/images/")) {
+    return `https://raw.githubusercontent.com/tanabe1478/blog/main/Resources${src}`;
+  }
+  return src.startsWith("/") ? `https://tanabe1478.github.io${src}` : src;
+}
+
 function markdownBody(content: string): string {
   return content.replace(/^(?:\uFEFF)?\s*---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
 }
@@ -36,9 +45,7 @@ export function MarkdownArticle({ content }: MarkdownArticleProps) {
           ),
           img: ({ alt, src }) => {
             if (!src) return null;
-            const imageUrl = src.startsWith("/")
-              ? `https://tanabe1478.github.io${src}`
-              : src;
+            const imageUrl = previewImageUrl(src);
             if (!imageUrl.startsWith("https://")) return null;
             return <img src={imageUrl} alt={alt ?? ""} loading="lazy" />;
           },

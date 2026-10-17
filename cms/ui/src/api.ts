@@ -29,7 +29,6 @@ export interface PostCreation extends PostUpdate {
 
 export interface UploadedImage {
   imageUrl: string;
-  permalinkUrl: string;
   markdown: string;
 }
 
@@ -145,9 +144,10 @@ export async function fetchDeployment(commitSha: string): Promise<BlogDeployment
   return data.deployment;
 }
 
-export async function uploadImage(file: File): Promise<UploadedImage> {
+export async function uploadImage(file: File, postName: string): Promise<UploadedImage> {
   const form = new FormData();
   form.append("image", file);
+  form.append("post", postName);
   const data = await responseJson<{ image: UploadedImage }>(
     await fetch("/api/images", { method: "POST", body: form }),
   );
