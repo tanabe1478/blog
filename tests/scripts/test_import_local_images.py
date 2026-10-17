@@ -72,6 +72,18 @@ class ImportImagesTests(unittest.TestCase):
             f"before\n![desk](/images/my-post/{self.digest}.png)\n![](/images/keep.png)\n",
         )
 
+    def test_preserves_mixed_line_endings(self):
+        (self.posts / "attachments/desk.png").write_bytes(PNG)
+        post = self.posts / "my-post.md"
+        post.write_bytes(b"crlf line\r\n![desk](attachments/desk.png)\r\nlf line\n")
+
+        import_images(post, PREFIXES, dry_run=False, images_dir=self.resources)
+
+        self.assertEqual(
+            post.read_bytes(),
+            f"crlf line\r\n![desk](/images/my-post/{self.digest}.png)\r\nlf line\n".encode(),
+        )
+
     def test_dry_run_does_not_write(self):
         (self.posts / "attachments/desk.png").write_bytes(PNG)
         post = self.write_post("![desk](attachments/desk.png)\n")
