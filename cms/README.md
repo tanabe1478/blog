@@ -16,7 +16,7 @@ GET https://tanabe-blog-cms-api.enterprise2580.workers.dev/api/health
 
 ## React CMS
 
-CMS UIはReact 19です。旧inline HTML/CSS/Vanilla JavaScriptは削除し、Markdown/API/認証と安全なuser flowを維持しています。記事一覧・detail・編集・Gyazo・draft・新規作成・deploy status・rename・deleteをReactで提供します。
+CMS UIはReact 19です。旧inline HTML/CSS/Vanilla JavaScriptは削除し、Markdown/API/認証と安全なuser flowを維持しています。記事一覧・detail・編集・画像upload・draft・新規作成・deploy status・rename・deleteをReactで提供します。
 
 認証後のCMS:
 
@@ -48,13 +48,13 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事選択は`startTransition`で行い、取得中も一覧を残して`isPending`を即時表示します。detailはSuspense境界とerror boundaryを持ち、hover/focus時に記事dataとeditor chunkをpreloadします。`ArticleWorkspace`とMarkdown rendererはlazy chunkへ分離しています。
 
-React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense fallbackだけに依存させません。保存・Gyazo・rename・delete・deploy pollingはSuspense化せず、明示的な進捗/error stateを維持します。
+React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense fallbackだけに依存させません。保存・画像upload・rename・delete・deploy pollingはSuspense化せず、明示的な進捗/error stateを維持します。
 
 ## React editing
 
 既存記事の編集時はcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
 
-file pickerとdrag-and-dropの両方でGyazoへuploadし、現在のcursor/selection位置へlinked-image Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
+file pickerとdrag-and-dropの両方で画像をrepositoryへ保存し、現在のcursor/selection位置へ画像Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
 
 ## Local draft
 
@@ -74,7 +74,7 @@ slugは英小文字・数字・単一hyphenだけを許可し、Section予約名
 
 記事detailの閲覧時はMarkdown sourceではなく描画済みpreviewを表示します。各記事detailにはGitHub sourceと公開ページへのlinkを表示します。編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
 
-previewはheading、paragraph、list、blockquote、code block、link、Gyazoを含むMarkdown画像に対応します。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
+previewはheading、paragraph、list、blockquote、code block、link、Markdown画像に対応します。`/images/...`は`raw.githubusercontent.com`の`main`から表示するため、deploy前の画像も確認できます。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 
 ## Slug rename
 
@@ -94,7 +94,7 @@ renameは現在SHA・本文・old filename確認を含むatomic requestを送り
 
 既存記事detailの**削除**から、対象filenameを完全入力すると記事を削除できます。WorkerはProduction Origin、`GITHUB_TOKEN`、現在のBlob SHA、confirmation一致を再検証します。Section用`index.md`は削除できません。
 
-GitHub Contents APIがSHA競合を返した場合は`409`として記事を残します。削除成功後は削除commitの`Deploy Blog`を追跡し、公開サイトからの削除反映を表示します。記事内で使っていたGyazo画像は自動削除しません。
+GitHub Contents APIがSHA競合を返した場合は`409`として記事を残します。削除成功後は削除commitの`Deploy Blog`を追跡し、公開サイトからの削除反映を表示します。記事内で使っていた`Resources/images/`の画像は自動削除しません。
 
 端末draftがある間は、復元または破棄を選ぶまで削除buttonを無効化します。Preview hostnameからの削除は`403`です。
 
@@ -118,19 +118,15 @@ npx wrangler secret put GITHUB_TOKEN
 
 CMSの保存は`Content/posts/*.md`をGitHubの`main`へcommitします。この時点では既存の`publish_blog.py`によるGitHub Pages公開処理までは実行しません。
 
-## Gyazo image upload
+## Image upload
 
-画像はWorkerからGyazoへ直接uploadします。access tokenはCloudflare Worker Secret `GYAZO_ACCESS_TOKEN`として保存し、repositoryやブラウザへ渡しません。
-
-```bash
-npx wrangler secret put GYAZO_ACCESS_TOKEN
-```
+画像はWorkerがGitHub Contents APIで`Resources/images/<記事slug>/<sha256先頭16桁>.<ext>`へcommitし、GitHub Pagesから`/images/...`で配信します。外部画像hostingは使わず、tokenは記事保存と同じ`GITHUB_TOKEN`です。方針は`docs/image-hosting.md`を正本とします。
 
 Production CMSからの同一Origin requestだけを受け付け、Previewからのuploadは`403`で拒否します。PNG・JPEG・GIF・WebPのfile signatureを検証し、sizeは10MB以下に制限します。
 
 記事を編集状態にすると、file pickerに加えてMarkdown textareaへのdrag-and-dropで画像を1枚ずつuploadできます。挿入先は現在のcursor位置です。
 
-Gyazo uploadは即時に外部へ画像を作成する副作用があります。textareaへ挿入した後にキャンセルしてもGyazo画像は自動削除されません。記事へ反映するには、続けて**GitHubへ保存**を実行します。
+画像uploadは即時に`main`へcommitし、Deploy Blogも起動する副作用があります。同じ内容の画像は同じpathになり、既存fileは上書きしません。textareaへ挿入した後にキャンセルしても画像commitは残ります。記事へ反映するには、続けて**GitHubへ保存**を実行します。
 
 ## local development
 
@@ -160,7 +156,7 @@ npx playwright install chromium
 npm run check
 ```
 
-これはTypeScript、Vitest、Playwright E2Eを順に実行します。E2Eはlocal Wranglerを起動し、browserからのAPI requestをmockするため、実GitHubやGyazoへwriteしません。
+これはTypeScript、Vitest、Playwright E2Eを順に実行します。E2Eはlocal Wranglerを起動し、browserからのAPI requestをmockするため、実GitHubへwriteしません。
 
 ## deploy
 

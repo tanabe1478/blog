@@ -92,8 +92,8 @@ agent-browser で確認するページと観点を docs に整理した。
 
 - ブログ固有の機能は Markmesh 本体へ直接入れず、extension として設計する。
 - Markmesh 本体へ追加する場合は、一般ユーザーにも有用な extension API / capability / task runner として抽象化する。
-- 画像アップロードは Gyazo API を前提にする。
-- Gyazo token などの secret は repository に保存しない。安全な secret storage を使う設計にする。
+- 画像は repository の `Resources/images/` に置き、GitHub Pages から `/images/...` で配信する。外部画像 hosting は使わない。詳細は `docs/image-hosting.md`。
+- token などの secret は repository に保存しない。安全な secret storage を使う設計にする。
 - 見た目の確認は agent-browser を主に使う。自動 screenshot test は必要になった段階で、小さく再導入を検討する。
 
 ## 注意

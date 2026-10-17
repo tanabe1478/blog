@@ -1,6 +1,6 @@
 # Blog CMS development handoff
 
-この文書は、別sessionの人またはAI agentがBlog CMSの開発を安全に引き継ぐための入口です。機能の概要だけでなく、Cloudflare Workers、Wrangler、Cloudflare Access、GitHub API、Gyazo、GitHub Actionsのつながりと、変更時の確認手順をまとめます。
+この文書は、別sessionの人またはAI agentがBlog CMSの開発を安全に引き継ぐための入口です。機能の概要だけでなく、Cloudflare Workers、Wrangler、Cloudflare Access、GitHub API、GitHub Actionsのつながりと、変更時の確認手順をまとめます。
 
 実際の設定値は変わる可能性があるため、次を正本とします。
 
@@ -38,11 +38,12 @@ Cloudflare Worker: tanabe-blog-cms-api
   ├─ Access JWTをWorker内でも検証
   ├─ GitHub GraphQL APIから記事一覧を取得
   ├─ GitHub Contents APIから記事を取得・更新
-  └─ Gyazo APIへ画像をupload
+  └─ GitHub Contents APIで画像をResources/images/へcommit
            │
            ▼
 tanabe1478/blog main
-  └─ Content/posts/*.mdが記事の正本
+  ├─ Content/posts/*.mdが記事の正本
+  └─ Resources/images/が画像の正本
            │ Content等の変更でGitHub Actions起動
            ▼
 固定revisionのMoonBit SSG build
@@ -64,9 +65,9 @@ Blog: https://tanabe1478.github.io/
 重要な境界:
 
 - 記事の正本はD1ではなく`tanabe1478/blog`の`Content/posts/*.md`。
-- 画像の新規保存先はGyazo。
+- 画像の新規保存先は`Resources/images/<slug>/`（`docs/image-hosting.md`）。
 - CMSのWorker deployとBlogの静的site deployは別workflow。
-- CMSが記事を保存するとGitHubへcommitされ、その`Content/**`変更がBlog deployを起動する。
+- CMSが記事を保存するとGitHubへcommitされ、その`Content/**`・`Resources/**`変更がBlog deployを起動する。
 - `yurubo`とはCloudflare Account、Worker、API token、Secret、binding、D1、KV、R2を共有しない。
 
 ## Directoryとファイルの役割
@@ -76,14 +77,14 @@ Blog: https://tanabe1478.github.io/
 | `cms/src/index.ts` | Workerのrouter、認証適用、HTTP response、write request制限 |
 | `cms/src/access.ts` | Cloudflare Access JWTの署名・issuer・audience・email検証 |
 | `cms/src/github.ts` | GitHub GraphQL/Contents API、metadata解析、SHA競合制御 |
-| `cms/src/gyazo.ts` | 画像signature/size検証とGyazo upload |
+| `cms/src/images.ts` | 画像signature/size検証、slug/hash filename決定 |
 | `cms/ui/` | React 19 CMS source。Viteで`cms/dist/`へbuild |
 | `cms/ui/src/postResource.ts` | Suspense用の記事Promise cacheとmutation後のcache整合性 |
 | `cms/ui/src/RouteErrorBoundary.tsx` | detail取得・render失敗からの再試行/一覧復帰 |
 | `cms/vite.config.ts` | React build設定 |
 | `cms/playwright.config.ts` | Browser E2Eとlocal Wrangler起動設定 |
 | `cms/tests/access.test.ts` | Access JWT検証のunit test |
-| `cms/tests/index.test.ts` | route、GitHub/Gyazo連携、asset security headerのtest |
+| `cms/tests/index.test.ts` | route、GitHub連携、画像保存、asset security headerのtest |
 | `cms/wrangler.jsonc` | Worker名、Account、entry point、通常変数 |
 | `cms/README.md` | 機能別の短い運用説明 |
 
@@ -122,7 +123,7 @@ npm run deploy
 | --- | --- |
 | `TEAM_DOMAIN` | Access JWT issuerとJWKS取得元 |
 | `POLICY_AUD` | Production/Preview Access Applicationの許可Audience。カンマ区切り |
-| `WRITE_HOST` | GitHub保存とGyazo uploadを許可するProduction hostname |
+| `WRITE_HOST` | GitHub保存と画像uploadを許可するProduction hostname |
 
 Account IDとAudienceはcredentialそのものではありませんが、重複記載による設定ずれを避けるため`cms/wrangler.jsonc`を正本にします。`account_id`を変更すると別Accountへdeployし得るため、明示的な指示なしに変更しません。
 
@@ -170,7 +171,7 @@ WRITE_HOST=127.0.0.1
 
 これによりlocalではCloudflare Accessを迂回できます。`ACCESS_BYPASS`を`wrangler.jsonc`やProductionへ設定してはいけません。
 
-Production Secretをlocalへコピーしないのが基本です。`cms/.dev.vars`はgitignoreされていますが、そこへ`GITHUB_TOKEN`を置くとlocal CMSから本物のrepositoryへ書き込めます。`GYAZO_ACCESS_TOKEN`を置くと実画像が即時uploadされます。通常の開発ではmock testを使い、実副作用が必要な確認だけ明示的に行います。
+Production Secretをlocalへコピーしないのが基本です。`cms/.dev.vars`はgitignoreされていますが、そこへ`GITHUB_TOKEN`を置くとlocal CMSから本物のrepositoryへ書き込めます。画像uploadも同じtokenで本物のrepositoryへcommitされます。通常の開発ではmock testを使い、実副作用が必要な確認だけ明示的に行います。
 
 GITHUB tokenがないlocal環境では記事一覧がpublic Contents APIへfallbackするため、title/dateではなくfilename中心の表示になります。記事detailはpublic repositoryから確認できます。
 
@@ -184,7 +185,6 @@ Production Worker Secret名:
 
 ```text
 GITHUB_TOKEN
-GYAZO_ACCESS_TOKEN
 ```
 
 一覧確認（値は表示されない）:
@@ -198,7 +198,6 @@ npx wrangler secret list
 
 ```bash
 npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put GYAZO_ACCESS_TOKEN
 ```
 
 入力値をcommand line argument、chat、log、repository fileへ書きません。Secret更新もProductionへ影響する操作なので、先に`npx wrangler whoami`を確認します。
@@ -224,7 +223,7 @@ cd cms
 npx wrangler tail
 ```
 
-別terminalまたはbrowserから対象操作を再現します。request body、Access JWT、GitHub token、Gyazo tokenを追加でlog出力しないでください。利用中のWranglerでcommandが変わった場合は次を正本にします。
+別terminalまたはbrowserから対象操作を再現します。request body、Access JWT、GitHub tokenを追加でlog出力しないでください。利用中のWranglerでcommandが変わった場合は次を正本にします。
 
 ```bash
 npx wrangler tail --help
@@ -260,18 +259,16 @@ Access dashboard側だけ、またはWorker側だけを無効化しません。�
 ### Browserへ渡さないもの
 
 - GitHub token
-- Gyazo token
 - Cloudflare API token
 - Access JWTの手動copy
 
-GitHub/Gyazo APIは常にWorkerから呼びます。
+GitHub APIは常にWorkerから呼びます。
 
 ## Secretとtokenの分離
 
 | 名前 | 保存場所 | 最小scope / 用途 |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | Cloudflare Worker Secret | `tanabe1478/blog`だけのContents read/write。記事一覧GraphQL、detail取得、保存 |
-| `GYAZO_ACCESS_TOKEN` | Cloudflare Worker Secret | CMSからの画像upload |
+| `GITHUB_TOKEN` | Cloudflare Worker Secret | `tanabe1478/blog`だけのContents read/write。記事一覧GraphQL、detail取得、保存、画像commit |
 | `CLOUDFLARE_API_TOKEN` | GitHub Actions Secret | ブログCMS専用Cloudflare AccountのWorker deployだけ |
 | `BLOG_DEPLOY_TOKEN` | GitHub Actions Secret | `tanabe1478/tanabe1478.github.io`だけのContents read/write |
 
@@ -292,7 +289,7 @@ GitHub tokenを1個にまとめません。特にCMSの記事更新tokenと公�
 | `PUT /api/posts/:name` | 既存記事保存 | Production Origin、token、SHA必須 |
 | `PATCH /api/posts/:name` | slug変更 | Production Origin、SHA、filename確認、atomic commit |
 | `DELETE /api/posts/:name` | 既存記事削除 | Production Origin、SHA、filename確認、`index.md`禁止 |
-| `POST /api/images` | Gyazo upload | Production Origin、signature検証、10MB以下 |
+| `POST /api/images` | 画像を`Resources/images/`へcommit | Production Origin、記事filename、signature検証、10MB以下 |
 
 記事名は`Content/posts`直下の`.md`だけを許可し、slash、backslash、dot始まり等を拒否します。
 
@@ -337,7 +334,7 @@ main更新、old SHA変更、新slug既存は`409`として旧記事を維持し
 
 既存記事detailでfilenameを完全入力した場合だけ、現在のBlob SHA付きでGitHub Contents DELETEを実行します。Production Originだけを許可し、Previewは`403`、`index.md`は`400`です。SHAが古ければ`409`として記事を残します。
 
-削除成功後は削除commitのDeploy Blogを追跡し、公開サイトからの削除反映を表示します。Gyazo画像は記事から参照されなくなっても自動削除しません。local draftがある間は復元/破棄を選ぶまで削除操作を無効化します。
+削除成功後は削除commitのDeploy Blogを追跡し、公開サイトからの削除反映を表示します。`Resources/images/`の画像は記事から参照されなくなっても自動削除しません。local draftがある間は復元/破棄を選ぶまで削除操作を無効化します。
 
 ### 保存から公開まで
 
@@ -353,16 +350,17 @@ CMSは保存responseのsource commit SHAで`deploy-blog.yml`のworkflow runを�
 
 `Deploy Blog`はpublic smoke check成功までworkflow内で確認するため、workflowの`completed/success`を公開済みとして扱います。GitHub Actions API errorやrate limitはstatus取得失敗として表示し、成功済みの記事保存を取り消しません。public repositoryのworkflowを最初は既存`GITHUB_TOKEN`で読み、Actions read権限がなく`401/403`の場合だけ認証なしでfallbackします。新しいSecret/scopeは追加していません。
 
-## Gyazo画像処理
+## 画像処理
 
-- browserは`multipart/form-data`でWorkerへ送る。
+- browserは画像と記事filename（`post`）を`multipart/form-data`でWorkerへ送る。
 - WorkerはPNG、JPEG、GIF、WebPのfile signatureを確認する。
 - 上限は10MB。
-- WorkerがGyazoへtoken付きでuploadする。
-- responseの画像URLとpermalinkからlinked-image Markdownを作る。
-- file pickerまたはtextareaへのdrop位置へMarkdownを挿入する。
+- 記事filenameからslugを決め、1 segmentの安全な文字だけ許可する。
+- 内容のsha256先頭16桁をfilenameにし、`Resources/images/<slug>/`へGitHub Contents APIでcommitする（shaを渡さないので上書きしない。既存pathの`422`は同一内容として成功扱い）。
+- `![alt](/images/<slug>/<file>)`を作り、file pickerまたはtextareaへのdrop位置へ挿入する。
+- previewは`/images/...`を`raw.githubusercontent.com`の`main`から表示する。
 
-uploadは選択/drop直後に外部副作用を発生させます。記事編集をキャンセルしてもGyazo画像は削除されません。E2E確認では不要な実uploadを避けます。
+uploadは選択/drop直後に`main`へcommitし、Deploy Blogも起動します。記事編集をキャンセルしても画像commitは残ります。E2E確認では不要な実uploadを避けます。
 
 ## Local draft
 
@@ -378,7 +376,7 @@ GitHub保存成功または確認付きcancelでdraftを削除します。`local
 
 記事Promiseは`postResource.ts`で記事名単位に安定してcacheします。保存/create/renameではcacheを最新本文へ更新し、deleteでは無効化します。hover/focus時には記事dataと`ArticleWorkspace` chunkをpreloadします。
 
-Suspenseの対象はread遷移とcode splittingだけです。保存、Gyazo、rename、delete、draft autosave、deploy pollingはprogress/errorを明示するmutationなのでSuspense化しません。
+Suspenseの対象はread遷移とcode splittingだけです。保存、画像upload、rename、delete、draft autosave、deploy pollingはprogress/errorを明示するmutationなのでSuspense化しません。
 
 ## Live preview
 
@@ -395,7 +393,7 @@ rendererは`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を
 - unordered / ordered list
 - blockquote
 - link
-- 通常画像、Gyazo形式のリンク付き画像
+- 通常画像、リンク付き画像
 
 完全なCommonMark/moonbit-ssg rendererではないため、公開結果とのpixel-level一致を保証するPreviewではありません。複雑なnested list、table、Markdown extension等を追加する場合は、先にtestを追加し、sanitizeされていないHTMLを導入しないでください。
 
@@ -426,7 +424,7 @@ Vitest: Worker route / integration test
 Playwright: Chromium E2E
 ```
 
-VitestはAccess認証、route、GitHub/Gyazo request、入力検証、競合、HTML内script構文等を確認します。Playwrightはlocal Wranglerで実際のCMS HTML/JavaScriptを配信し、browserからの`/api/*`をmockしてclick、入力、navigation、成功・競合・失敗表示を確認します。どちらも実repositoryやGyazoへ副作用を起こしません。
+VitestはAccess認証、route、GitHub request、入力検証、競合、HTML内script構文等を確認します。Playwrightはlocal Wranglerで実際のCMS HTML/JavaScriptを配信し、browserからの`/api/*`をmockしてclick、入力、navigation、成功・競合・失敗表示を確認します。どちらも実repositoryへ副作用を起こしません。
 
 ### Browser E2E
 
@@ -447,7 +445,7 @@ cms/e2e/*.spec.ts
 | --- | --- |
 | `access.ts` | issuer/audience/email/署名失敗test |
 | `github.ts` | request URL/header/body、metadata、SHA、error mapping |
-| `gyazo.ts` | MIMEだけでなくsignature、size、response検証 |
+| `images.ts` | MIMEだけでなくsignature、size、slug、hash filename |
 | `index.ts` | method/path/status、Origin/host、security header |
 | `cms/ui/` | 関連Playwright E2E、必要に応じてagent-browser目視確認 |
 | workflow/config | YAML/JSONC差分、scope、trigger path、CI run |
@@ -458,7 +456,7 @@ cms/e2e/*.spec.ts
 2. detail URLを直接開く。
 3. 編集ボタンを押す。
 4. textarea入力、2ペイン、画像、キャンセルを確認する。
-5. GitHub保存とGyazo uploadは、実副作用を意図した場合だけ行う。
+5. GitHub保存と画像uploadは、実副作用を意図した場合だけ行う。
 
 確認観点:
 
@@ -549,7 +547,7 @@ file signature不一致、未対応形式、または10MB超過です。Content-
 
 ### 画像uploadが`502`
 
-Gyazo token、Gyazo API response、network errorを確認します。upload済みだがresponse処理だけ失敗した可能性もあるため、同じ画像を何度も再送する前にGyazo側を確認します。
+`GITHUB_TOKEN`の期限・scope、GitHub Contents API response、network errorを確認します。同じ画像は同じpathになり上書きしないため、再送しても画像が重複することはありません。
 
 ### CMS deployは成功したが画面が古い
 
@@ -581,7 +579,7 @@ CMS HTML/APIは`Cache-Control: no-store`です。最新commitの`Deploy CMS` run
 - Previewをwrite可能にしない。
 - GitHubのSHA競合制御を外さない。
 - `yurubo`のAccount/token/resourceを使わない。
-- UI確認のためだけに実Gyazo uploadや記事保存をしない。
+- UI確認のためだけに実画像uploadや記事保存をしない。
 
 ## Rollbackの考え方
 
@@ -601,8 +599,8 @@ Secretの問題はcode rollbackでは戻りません。Secret storage側で正�
 - 既存記事のMarkdown編集
 - SHAによる競合検知付きGitHub保存
 - 各記事detailからGitHub sourceと公開ページへのlink
-- file picker / drag-and-dropによるGyazo upload
-- cursor位置へのlinked-image Markdown挿入
+- file picker / drag-and-dropによる画像upload（`Resources/images/`へcommit）
+- cursor位置への画像Markdown挿入
 - 編集時の2ペインlive preview
 - 保存commitを起点にしたBlog自動build/deploy
 

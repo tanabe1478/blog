@@ -12,7 +12,7 @@ scripts/publish_blog.py
 
 このscriptは次を行います。
 
-1. `scripts/prepare_for_deploy.py`でlocal imageをGyazo化する。
+1. `scripts/prepare_for_deploy.py`でlocal imageを`Resources/images/`へ取り込む。
 2. `scripts/build_site.sh`で`Output/`全体を生成する。
 3. `scripts/check_output_site.py`で生成HTMLが参照するlocal assetを検査する。
 4. source repositoryの変更をcommit / pushする。
@@ -74,11 +74,11 @@ workflow:
 
 公開repositoryへの認証にはGitHub Actions Secret `BLOG_DEPLOY_TOKEN`を使います。このfine-grained tokenは`tanabe1478/tanabe1478.github.io`だけに`Contents: Read and write`を持たせ、source repositoryや他の権限を含めません。
 
-CIでは外部副作用を避けるためlocal画像をGyazoへuploadしません。CMSから追加する画像は保存前にGyazo URLへ変換済みであることを前提にします。
+CIではsource repositoryを書き換えないため、local画像の取り込みを行いません（`--skip-images`）。CMSから追加する画像はWorkerが`Resources/images/`へcommit済みです。
 
 ## deploy前のprepare
 
-`publish_blog.py`は最初に`scripts/prepare_for_deploy.py`を実行します。local imageをGyazo URLへ置換し、MoonBit SSGでsiteを生成してasset checkを行います。
+`publish_blog.py`は最初に`scripts/prepare_for_deploy.py`を実行します。local imageを`Resources/images/`へ取り込んでMarkdownを書き換え、MoonBit SSGでsiteを生成してasset checkを行います。
 
 画像置換をせずbuildだけ確認する場合:
 

@@ -28,9 +28,9 @@
 ## publish workflow
 
 - `script-based-publish-workflow.md` — repository script を正本にする方針
-- `markmesh-deploy-image-flow.md` — deploy 前に local image を Gyazo URL へ置換する方針
+- `image-hosting.md` — 画像を repository に置いて配信する方針と Gyazo からの移行記録
+- `markmesh-deploy-image-flow.md` — deploy 前に local image を `Resources/images/` へ取り込む流れ
 - `new-post-workflow.md` — 新規記事作成手順
-- `gyazo-auth.md` — Gyazo API の token / OAuth 認証メモ
 
 ## 見た目確認
 

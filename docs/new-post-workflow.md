@@ -47,39 +47,27 @@ scripts/new_post.py "記事タイトル" \
   --description "説明"
 ```
 
-## 画像を Gyazo に upload する
+## 画像を追加する
 
-画像 upload は repository script で行います。
+画像は repository の `Resources/images/` に置き、GitHub Pages から配信します。外部サービスや token は不要です。
 
-Gyazo API は `Authorization: Bearer <token>` header と `imagedata` form field で upload します。
-
-```bash
-GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png
-```
-
-または、commit されない `.env` に token を置いて実行できます。
-
-```bash
-cp .env.example .env
-# .env の GYAZO_ACCESS_TOKEN を設定
-scripts/upload_image_to_gyazo.py path/to/image.png
-```
-
-出力例:
+執筆中は記事の近くに置いた画像を参照します。
 
 ```markdown
-[![image](https://i.gyazo.com/example.png)](https://gyazo.com/example)
+![desk](attachments/desk.png)
 ```
 
-直接画像だけを挿入したい場合:
+公開時に `scripts/publish_blog.py` が `Resources/images/<slug>/<hash>.png` へ取り込み、参照を `/images/<slug>/<hash>.png` に書き換えます。先に取り込みだけ行う場合:
 
 ```bash
-GYAZO_ACCESS_TOKEN=... scripts/upload_image_to_gyazo.py path/to/image.png --direct
+scripts/import_local_images.py Content/posts/article-slug.md
 ```
+
+詳しくは `docs/image-hosting.md` を参照してください。
 
 ## 公開
 
-記事を書き終えたら、次の 1 コマンドで画像 upload、build、source repository の commit / push、deploy、公開後確認まで行います。
+記事を書き終えたら、次の 1 コマンドで画像の取り込み、build、source repository の commit / push、deploy、公開後確認まで行います。
 
 ```bash
 scripts/publish_blog.py

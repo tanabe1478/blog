@@ -25,7 +25,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - GitHub上の記事一覧・描画済みdetail・新規作成・SHA競合検知付き保存に対応済み。
 - 記事detailからGitHub sourceと公開ページを開ける。
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
-- Gyazo画像のfile picker / drag-and-drop uploadに対応済み。
+- 画像のfile picker / drag-and-drop uploadに対応済み（`Resources/images/`へcommit）。
 - 編集時の2ペインlive Markdown previewに対応済み。
 - CMS保存後はGitHub Actionsが固定revisionのMoonBit SSGで生成・asset checkし、GitHub Pagesへ自動deployする。
 - Playwright E2EをlocalとCIへ導入し、今後のuser-facing機能の完了条件に設定済み。
@@ -138,14 +138,15 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### 画像
 
-- 既存記事に残っている `user-images.githubusercontent.com` などの外部画像をそのまま許容するか、将来 Gyazo / blog asset に寄せるか決める。
-- 新規画像は Gyazo 前提。
+- 既存記事に残っている `user-images.githubusercontent.com` などの外部画像をそのまま許容するか、`Resources/images/` に寄せるか決める。
+- `diary-15.md` の Gyazo 画像が未移行（`docs/image-hosting.md`）。
+- 画像は `Resources/images/` に置く。
 
 ## 判断済みの方針
 
 - Desktop Writer / standalone Mac app は作らない。
 - blog workflow は Markmesh に依存させず、repository script を正本にする。
 - Markmesh は Markdown editor / previewer の一候補として扱う。
-- 画像の新規 upload は Gyazo 前提。
+- 画像は repository の `Resources/images/` に置き、外部画像 hosting は使わない（2026-10 に Gyazo から移行）。
 - 見た目確認は agent-browser を主に使う。
 - 自動 screenshot test は必要になった段階で小さく再導入する。

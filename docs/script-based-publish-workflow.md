@@ -15,8 +15,8 @@ scripts/publish_blog.py
 この script が次をまとめて行います。
 
 1. `Content/posts/*.md` を走査する。
-2. local image を Gyazo に upload する。
-3. Markdown の画像 URL を Gyazo URL に置換する。
+2. local image を `Resources/images/<slug>/` へ copy する。
+3. Markdown の画像 URL を `/images/<slug>/...` に置換する。
 4. 固定revisionのMoonBit SSGで`Output/`全体を生成する。
 5. `scripts/check_output_site.py`でlocal assetを確認する。
 6. source repositoryの変更をcommit / pushする。
@@ -77,7 +77,7 @@ scripts/deploy_site.sh --check
 
 ## 画像
 
-新規画像は Gyazo を前提にします。
+画像は repository の `Resources/images/` に置きます。詳細は `docs/image-hosting.md` を参照してください。
 
 執筆中は Markdown で local image を参照してよいです。
 
@@ -86,12 +86,11 @@ scripts/deploy_site.sh --check
 ![desk](.markmesh/blog-assets/desk.png)
 ```
 
-`publish_blog.py` 実行時に Gyazo URL へ置換されます。
+`publish_blog.py` 実行時に `Resources/images/<slug>/` へ取り込まれ、`/images/<slug>/...` へ置換されます。
 
 既存の public URL は置換対象外です。
 
 ```markdown
-![already gyazo](https://i.gyazo.com/example.png)
 ![github image](https://user-images.githubusercontent.com/example.png)
 ![blog asset](/images/example.png)
 ```

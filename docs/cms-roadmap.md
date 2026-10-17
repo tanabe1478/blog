@@ -162,7 +162,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-009 | Markdown toolbar | E | `planned` |
 | CMS-010 | 画像alt text編集 | E | `planned` |
 | CMS-011 | Preview互換性の改善 | E | `planned` |
-| CMS-012 | Gyazo orphan画像の管理 | E | `planned` |
+| CMS-012 | orphan画像の管理 | E | `planned` |
 | CMS-013 | 公開予約 | F | `planned` |
 | CMS-014 | tag管理 | F | `planned` |
 | CMS-015 | 複数端末で共有できるprivate draft | F | `planned` |
@@ -182,12 +182,12 @@ E2Eの責務:
 - local Wranglerから実際のCMS HTML/JavaScriptを配信する。
 - Chromiumでclick、入力、navigation、reload、表示状態を確認する。
 - browserからの`/api/*` requestをPlaywrightでmockし、成功・競合・失敗を再現する。
-- Production GitHub、Gyazo、Cloudflare resourceへwriteしない。
+- Production GitHub、Cloudflare resourceへwriteしない。
 - screenshot比較は必須にせず、失敗時のtrace/screenshotをartifactとして利用する。
 
 Vitestの責務:
 
-- Worker route、Access、Origin/host制限、validation、GitHub/Gyazo request形式を検証する。
+- Worker route、Access、Origin/host制限、validation、GitHub request形式を検証する。
 - 外部APIをmockし、HTTP statusとerror mappingを高速に確認する。
 
 各taskのDefinition of Done:
@@ -519,7 +519,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 依存: 実記事調査。
 
-### CMS-012 Gyazo orphan画像の管理
+### CMS-012 orphan画像の管理
 
 状態: `planned`
 
@@ -529,12 +529,11 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 完了条件:
 
-- Gyazo APIが安全な削除または一覧取得を提供するか調査する。
-- upload responseで削除に必要な情報がある場合も、browserへ危険なcredentialを渡さない。
+- 画像は2026-10にGyazoから`Resources/images/`へ移行済み（`docs/image-hosting.md`）。どの記事からも参照されない`Resources/images/`配下のfileを一覧できる。
 - 自動削除、手動削除候補表示、現状維持を比較して方針を決める。
 - 記事中で使用中の画像を誤削除しない。
 
-依存: Gyazo API仕様の確認。調査結果により`blocked`になり得る。
+依存: なし。
 
 ---
 
@@ -620,7 +619,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 完了条件:
 
-- `GITHUB_TOKEN`、`GYAZO_ACCESS_TOKEN`、`CLOUDFLARE_API_TOKEN`、`BLOG_DEPLOY_TOKEN`の保存場所とscopeを確認するchecklistを作る。
+- `GITHUB_TOKEN`、`CLOUDFLARE_API_TOKEN`、`BLOG_DEPLOY_TOKEN`の保存場所とscopeを確認するchecklistを作る。
 - 値を取得・表示せず、期限や最終rotation日を安全に記録する方法を決める。
 - 期限切れ時の症状と更新手順をdocument化する。
 - tokenを1つへ統合しない。
@@ -639,7 +638,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 - test記事を作る場合のslug、内容、削除手順を定義する。
 - Access、GitHub create commit、Deploy Blog、public URLを確認する。
-- Gyazo uploadは別testとし、不要な画像を増やさない。
+- 画像uploadは別testとし、不要な画像commitを増やさない。
 - CMS-003実装後はtest記事削除と公開site反映まで確認する。
 
 依存: 安全なcleanupにはCMS-003が望ましい。
