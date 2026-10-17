@@ -254,7 +254,12 @@ function encodeBase64Utf8(value: string): string {
   return encodeBase64(new TextEncoder().encode(value));
 }
 
+// Workers CPU time is limited. The native encoder handles a 10MB image in a few
+// ms, while the String.fromCharCode loop below takes hundreds of ms. Node used
+// by Vitest does not have toBase64 yet, so keep the loop as a fallback.
 function encodeBase64(bytes: Uint8Array): string {
+  const native = (bytes as Uint8Array & { toBase64?: () => string }).toBase64;
+  if (typeof native === "function") return native.call(bytes);
   let binary = "";
   for (let index = 0; index < bytes.length; index += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
