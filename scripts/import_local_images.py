@@ -44,7 +44,9 @@ def has_supported_image_signature(path: Path) -> bool:
 
 
 def import_images(markdown_path: Path, prefixes: tuple[str, ...], dry_run: bool, images_dir: Path) -> int:
-    content = markdown_path.read_text(encoding="utf-8")
+    # newline="" keeps CRLF/LF as-is so only image references change in the diff.
+    with markdown_path.open(encoding="utf-8", newline="") as file:
+        content = file.read()
     slug = markdown_path.stem
     # (original markdown, replacement markdown, source file, destination file)
     replacements: list[tuple[str, str, Path, Path]] = []
@@ -76,7 +78,8 @@ def import_images(markdown_path: Path, prefixes: tuple[str, ...], dry_run: bool,
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
         updated = updated.replace(original, replacement, 1)
-    markdown_path.write_text(updated, encoding="utf-8")
+    with markdown_path.open("w", encoding="utf-8", newline="") as file:
+        file.write(updated)
 
     return len(replacements)
 
