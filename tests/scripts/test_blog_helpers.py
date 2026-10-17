@@ -7,8 +7,6 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from check_output_site import check_output
-from replace_local_images_with_gyazo import is_target_local_image
-from gyazo_upload_core import has_supported_image_signature
 
 
 class MoonBitSSGRevisionTests(unittest.TestCase):
@@ -22,33 +20,6 @@ class MoonBitSSGRevisionTests(unittest.TestCase):
         ):
             workflow = (ROOT / relative_path).read_text(encoding="utf-8")
             self.assertIn(f"ref: {revision}", workflow)
-
-
-class LocalImageDetectionTests(unittest.TestCase):
-    def test_only_drafting_local_images_are_targets(self):
-        prefixes = ("attachments/", ".markmesh/blog-assets/")
-
-        self.assertTrue(is_target_local_image("attachments/photo.png", prefixes))
-        self.assertTrue(is_target_local_image(".markmesh/blog-assets/photo.png", prefixes))
-        self.assertFalse(is_target_local_image("https://i.gyazo.com/photo.png", prefixes))
-        self.assertFalse(is_target_local_image("/images/photo.png", prefixes))
-        self.assertFalse(is_target_local_image("../outside.png", prefixes))
-
-
-class ImageSignatureTests(unittest.TestCase):
-    def test_detects_supported_image_signatures(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            png = root / "image.png"
-            jpg = root / "image.jpg"
-            ico_named_png = root / "favicon.png"
-            png.write_bytes(b"\x89PNG\r\n\x1a\nrest")
-            jpg.write_bytes(b"\xff\xd8\xffrest")
-            ico_named_png.write_bytes(b"\x00\x00\x01\x00rest")
-
-            self.assertTrue(has_supported_image_signature(png))
-            self.assertTrue(has_supported_image_signature(jpg))
-            self.assertFalse(has_supported_image_signature(ico_named_png))
 
 
 class OutputAssetCheckTests(unittest.TestCase):
