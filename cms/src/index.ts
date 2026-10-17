@@ -16,9 +16,10 @@ import {
 } from "./github";
 import {
   InvalidImageError,
+  InvalidImagePostError,
   MAX_IMAGE_BYTES,
-  uploadToGyazo,
-} from "./gyazo";
+  storeImageInRepository,
+} from "./images";
 
 function json(data: unknown, status = 200, cacheControl = "no-store"): Response {
   return Response.json(data, {
@@ -107,7 +108,7 @@ export default {
       ) {
         return json({ error: "画像は10MB以下にしてください" }, 413);
       }
-      if (!env.GYAZO_ACCESS_TOKEN) {
+      if (!env.GITHUB_TOKEN) {
         return json({ error: "画像アップロードが設定されていません" }, 503);
       }
 
@@ -121,12 +122,20 @@ export default {
       if (!(image instanceof File)) {
         return json({ error: "画像ファイルを選択してください" }, 400);
       }
+      const post = form.get("post");
 
       try {
         return json({
-          image: await uploadToGyazo(image, env.GYAZO_ACCESS_TOKEN),
+          image: await storeImageInRepository(
+            image,
+            typeof post === "string" ? post : "",
+            env.GITHUB_TOKEN,
+          ),
         });
       } catch (error) {
+        if (error instanceof InvalidImagePostError) {
+          return json({ error: "画像を追加する記事のfilenameが不正です" }, 400);
+        }
         if (error instanceof InvalidImageError) {
           return json(
             { error: "PNG・JPEG・GIF・WebPの10MB以下の画像を選択してください" },
@@ -134,7 +143,7 @@ export default {
           );
         }
         console.error("Failed to upload image", error);
-        return json({ error: "画像をGyazoへアップロードできませんでした" }, 502);
+        return json({ error: "画像をGitHubへ保存できませんでした" }, 502);
       }
     }
 

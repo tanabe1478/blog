@@ -1,5 +1,5 @@
-const POSTS_API_URL =
-  "https://api.github.com/repos/tanabe1478/blog/contents/Content/posts";
+const CONTENTS_API_URL = "https://api.github.com/repos/tanabe1478/blog/contents";
+const POSTS_API_URL = `${CONTENTS_API_URL}/Content/posts`;
 const REPOSITORY_URL = "https://github.com/tanabe1478/blog";
 const PUBLIC_BLOG_URL = "https://tanabe1478.github.io";
 const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
@@ -251,7 +251,10 @@ function decodeBase64Utf8(value: string): string {
 }
 
 function encodeBase64Utf8(value: string): string {
-  const bytes = new TextEncoder().encode(value);
+  return encodeBase64(new TextEncoder().encode(value));
+}
+
+function encodeBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let index = 0; index < bytes.length; index += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
@@ -661,4 +664,31 @@ export async function updatePost(
     commitSha: result.commit.sha,
     githubUrl: githubFileUrl(path),
   };
+}
+
+// Adds a binary file without a sha, so an existing file is never overwritten.
+// GitHub answers 422 when the path already exists; callers use content-hash
+// paths, so an existing file already holds the same bytes.
+export async function putRepositoryImage(
+  path: string,
+  bytes: Uint8Array,
+  message: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<void> {
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const response = await request(`${CONTENTS_API_URL}/${encodedPath}`, {
+    method: "PUT",
+    headers: githubHeaders(token, true),
+    body: JSON.stringify({
+      message,
+      content: encodeBase64(bytes),
+      branch: "main",
+    }),
+  });
+
+  if (response.status === 422) return;
+  if (!response.ok) {
+    throw new Error(`GitHub image API returned ${response.status}`);
+  }
 }
