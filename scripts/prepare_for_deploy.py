@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replace local drafting images, then build and check the MoonBit site."""
+"""Import local drafting images into Resources/images, then build and check the MoonBit site."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 
 # Import sibling helper without making scripts a package.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from replace_local_images_with_gyazo import DEFAULT_TARGET_PREFIXES, replace_images  # noqa: E402
+from import_local_images import DEFAULT_IMAGES_DIR, DEFAULT_TARGET_PREFIXES, import_images  # noqa: E402
 
 
 def markdown_files(posts_dir: Path) -> list[Path]:
@@ -24,7 +24,7 @@ def run(command: list[str]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Prepare blog content for deploy")
     parser.add_argument("--posts-dir", type=Path, default=Path("Content/posts"))
-    parser.add_argument("--dry-run", action="store_true", help="show image replacements without uploading or writing")
+    parser.add_argument("--dry-run", action="store_true", help="show image replacements without copying or writing")
     parser.add_argument("--skip-images", action="store_true", help="skip local image replacement")
     parser.add_argument("--skip-build", action="store_true", help="skip MoonBit site build")
     parser.add_argument("--skip-output-check", action="store_true", help="skip generated Output asset check")
@@ -32,7 +32,7 @@ def main() -> int:
         "--prefix",
         action="append",
         dest="prefixes",
-        help="local image path prefix to upload. Can be passed multiple times",
+        help="local image path prefix to import. Can be passed multiple times",
     )
     args = parser.parse_args()
 
@@ -44,7 +44,7 @@ def main() -> int:
     if not args.skip_images:
         prefixes = tuple(args.prefixes or DEFAULT_TARGET_PREFIXES)
         for path in markdown_files(args.posts_dir):
-            total_replacements += replace_images(path, prefixes, args.dry_run)
+            total_replacements += import_images(path, prefixes, args.dry_run, DEFAULT_IMAGES_DIR)
 
     if args.dry_run:
         print(f"prepare dry-run replacements={total_replacements}")

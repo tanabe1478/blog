@@ -3,7 +3,7 @@
 
 This script is the main authoring workflow:
 
-1. Upload local images in posts to Gyazo and rewrite Markdown.
+1. Copy local images in posts into Resources/images and rewrite Markdown.
 2. Build and validate the MoonBit-generated site.
 3. Commit and push source repository changes when needed.
 4. Deploy the generated output to the public GitHub Pages repository.
@@ -58,7 +58,7 @@ def commit_and_push(message: str, skip_push: bool) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Upload images, build, commit, push, and deploy the blog")
+    parser = argparse.ArgumentParser(description="Import images, build, commit, push, and deploy the blog")
     parser.add_argument(
         "--message",
         default="post: sync blog content",
