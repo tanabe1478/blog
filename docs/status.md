@@ -138,7 +138,7 @@ CMSの正式な優先順、完了条件、E2E方針は`cms-roadmap.md`を正本�
 
 ### 画像
 
-- 既存記事に残っている `user-images.githubusercontent.com` などの外部画像をそのまま許容するか、`Resources/images/` に寄せるか決める。
+- `user-images.githubusercontent.com` の画像は `Resources/images/` へ移行済み。外部画像は Amazon の商品画像 1 件だけ残している。
 - `diary-15.md` の Gyazo 画像が未移行（`docs/image-hosting.md`）。
 - 画像は `Resources/images/` に置く。
 

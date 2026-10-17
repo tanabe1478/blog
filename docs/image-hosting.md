@@ -49,6 +49,7 @@ Gyazoのincident対応で信用できなくなったため、外部画像hosting
 | --- | --- |
 | `one-command-blog-publish-workflow.md` | 移行済み。元画像`Content/posts/attachments/blog-publish-workflow-home.png`から取り込み |
 | `diary-15.md` | **未移行**。元画像が無く、移行作業時はi.gyazo.comが503でWayback Machineにも保存が無かった |
+| `diary-2`〜`diary-12`の12枚 | 移行済み。旧diary Issueの`user-images.githubusercontent.com`画像もGitHub側の管理で外部依存のため、取得できるうちに取り込んだ |
 
 `diary-15.md`は、画像を取得できるようになったら次の手順で移行します。
 
@@ -67,11 +68,13 @@ grep -rn 'gyazo\.com' Content
 
 記事本文で当時のGyazo運用に触れている文章は記録として残しています。
 
+`m.media-amazon.com`の商品画像は権利がAmazon側にあるため、repositoryへcopyせず外部参照のままにしています。
+
 ## Gyazoの後片付け（手作業）
 
 repositoryの外にある設定は手で片付けます。
 
-- Cloudflare WorkerのSecretを削除する: `cd cms && npx wrangler secret delete GYAZO_ACCESS_TOKEN`
+- Cloudflare WorkerのSecret `GYAZO_ACCESS_TOKEN`を削除する（2026-10-18 削除済み）
 - GyazoのOAuth application / access tokenをGyazo側で無効化する
 - localの`.env`に`GYAZO_*`が残っていれば削除する
 - Gyazo上の画像を消すかは、全記事の移行が終わってから判断する
