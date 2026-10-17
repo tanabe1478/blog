@@ -9,7 +9,6 @@ function fetch(path: string, init?: RequestInit): Promise<Response> {
     TEAM_DOMAIN: "https://test.cloudflareaccess.com",
     ACCESS_BYPASS: "true",
     GITHUB_TOKEN: "test-token",
-    GYAZO_ACCESS_TOKEN: "test-gyazo-token",
     WRITE_HOST: "127.0.0.1",
   });
 }
@@ -348,64 +347,107 @@ describe("CMS Worker", () => {
     );
   });
 
-  it("uploads a validated image to Gyazo", async () => {
+  const PNG_BYTES = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  async function pngDigest(): Promise<string> {
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", PNG_BYTES));
+    return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 16);
+  }
+
+  function imageForm(post: string, bytes: BlobPart = PNG_BYTES, name = "screen.png"): FormData {
+    const form = new FormData();
+    form.append("image", new Blob([bytes], { type: "image/png" }), name);
+    form.append("post", post);
+    return form;
+  }
+
+  it("stores a validated image in the repository", async () => {
     const upstream = vi.fn().mockResolvedValue(
       Response.json({
-        url: "https://i.gyazo.com/image.png",
-        permalink_url: "https://gyazo.com/example",
+        content: { sha: "b".repeat(40) },
+        commit: { sha: "c".repeat(40) },
       }),
     );
     vi.stubGlobal("fetch", upstream);
-    const form = new FormData();
-    form.append(
-      "image",
-      new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], {
-        type: "image/png",
-      }),
-      "screen.png",
-    );
+    const digest = await pngDigest();
 
     const response = await fetch("/api/images", {
       method: "POST",
       headers: { origin: "http://127.0.0.1" },
-      body: form,
+      body: imageForm("hello.md"),
     });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       image: {
-        imageUrl: "https://i.gyazo.com/image.png",
-        permalinkUrl: "https://gyazo.com/example",
-        markdown:
-          "[![screen](https://i.gyazo.com/image.png)](https://gyazo.com/example)",
+        imageUrl: `/images/hello/${digest}.png`,
+        markdown: `![screen](/images/hello/${digest}.png)`,
       },
     });
     expect(upstream).toHaveBeenCalledWith(
-      "https://upload.gyazo.com/api/upload",
+      `https://api.github.com/repos/tanabe1478/blog/contents/Resources/images/hello/${digest}.png`,
       expect.objectContaining({
-        method: "POST",
+        method: "PUT",
         headers: expect.objectContaining({
-          authorization: "Bearer test-gyazo-token",
+          authorization: "Bearer test-token",
         }),
-        body: expect.any(FormData),
       }),
     );
+    const body = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(body).toEqual({
+      message: `image: add hello/${digest}.png via CMS`,
+      content: btoa(String.fromCharCode(...PNG_BYTES)),
+      branch: "main",
+    });
+  });
+
+  it("treats an image that already exists in the repository as stored", async () => {
+    const upstream = vi.fn().mockResolvedValue(
+      Response.json({ message: "sha wasn't supplied" }, { status: 422 }),
+    );
+    vi.stubGlobal("fetch", upstream);
+    const digest = await pngDigest();
+
+    const response = await fetch("/api/images", {
+      method: "POST",
+      headers: { origin: "http://127.0.0.1" },
+      body: imageForm("hello.md"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      image: {
+        imageUrl: `/images/hello/${digest}.png`,
+        markdown: `![screen](/images/hello/${digest}.png)`,
+      },
+    });
+  });
+
+  it("rejects an image upload without a safe post name", async () => {
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+
+    for (const post of ["", "../escape.md", ".hidden.md", "no-extension"]) {
+      const response = await fetch("/api/images", {
+        method: "POST",
+        headers: { origin: "http://127.0.0.1" },
+        body: imageForm(post),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(upstream).not.toHaveBeenCalled();
   });
 
   it("rejects a file whose signature is not an image", async () => {
     const upstream = vi.fn();
     vi.stubGlobal("fetch", upstream);
-    const form = new FormData();
-    form.append(
-      "image",
-      new Blob(["not an image"], { type: "image/png" }),
-      "fake.png",
-    );
 
     const response = await fetch("/api/images", {
       method: "POST",
       headers: { origin: "http://127.0.0.1" },
-      body: form,
+      body: imageForm("hello.md", "not an image", "fake.png"),
     });
 
     expect(response.status).toBe(400);
