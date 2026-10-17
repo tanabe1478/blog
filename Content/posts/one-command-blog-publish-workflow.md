@@ -32,7 +32,7 @@ scripts/publish_blog.py
 
 この記事のスクリーンショットもそのテスト用に置いている。
 
-[![publish workflow home screenshot](https://i.gyazo.com/14c96b474c78a9ec0f40e2eb70521e9b.png)](https://gyazo.com/14c96b474c78a9ec0f40e2eb70521e9b)
+![publish workflow home screenshot](/images/one-command-blog-publish-workflow/05d91f290c598bc3.png)
 
 `publish_blog.py --dry-run` を実行すると、こういう local image が upload 対象として検出される。実際の公開時には Gyazo に upload され、Markdown の URL が差し替わる。
 
