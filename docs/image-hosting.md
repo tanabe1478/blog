@@ -43,38 +43,19 @@ file pickerまたはdrag-and-dropで画像を選ぶと、Worker（`cms/src/image
 
 ## Gyazoからの移行（2026-10）
 
-Gyazoのincident対応で信用できなくなったため、外部画像hostingをやめてrepository配信へ移しました。
+Gyazoのincident対応で信用できなくなったため、外部画像hostingをやめてrepository配信へ移しました。移行は完了しており、記事からGyazoへの画像参照は残っていません。
 
-| 記事 | 状態 |
+| 記事 | 結果 |
 | --- | --- |
-| `one-command-blog-publish-workflow.md` | 移行済み。元画像`Content/posts/attachments/blog-publish-workflow-home.png`から取り込み |
-| `diary-15.md` | **未移行**。元画像が無く、移行作業時はi.gyazo.comが503でWayback Machineにも保存が無かった |
-| `diary-2`〜`diary-12`の12枚 | 移行済み。旧diary Issueの`user-images.githubusercontent.com`画像もGitHub側の管理で外部依存のため、取得できるうちに取り込んだ |
-
-`diary-15.md`は、画像を取得できるようになったら次の手順で移行します。
-
-```bash
-curl -fsSL -o /tmp/diary-15.jpg https://i.gyazo.com/6247216ff31664fbe5697119621a7a10.jpg
-mkdir -p Content/posts/attachments && cp /tmp/diary-15.jpg Content/posts/attachments/diary-15.jpg
-# 記事の ![](https://i.gyazo.com/...) を ![](attachments/diary-15.jpg) に書き換えてから
-scripts/import_local_images.py Content/posts/diary-15.md
-```
-
-残っているGyazo参照は次で確認できます。
-
-```bash
-grep -rn 'gyazo\.com' Content
-```
+| `one-command-blog-publish-workflow.md` | 取り込み済み。Gyazo化する前の元画像から取り込んだ |
+| `diary-2`〜`diary-12`の12枚 | 取り込み済み。旧diary Issueの`user-images.githubusercontent.com`画像もGitHub側の管理で外部依存のため、取得できるうちに取り込んだ |
+| `diary-15.md` | 画像参照を削除。元画像が無く、i.gyazo.comは503、Wayback Machineにも保存が無かったため復旧しない |
 
 記事本文で当時のGyazo運用に触れている文章は記録として残しています。
 
 `m.media-amazon.com`の商品画像は権利がAmazon側にあるため、repositoryへcopyせず外部参照のままにしています。
 
-## Gyazoの後片付け（手作業）
+## Gyazoの後片付け（完了）
 
-repositoryの外にある設定は手で片付けます。
-
-- Cloudflare WorkerのSecret `GYAZO_ACCESS_TOKEN`を削除する（2026-10-18 削除済み）
-- GyazoのOAuth application / access tokenをGyazo側で無効化する
-- localの`.env`に`GYAZO_*`が残っていれば削除する
-- Gyazo上の画像を消すかは、全記事の移行が終わってから判断する
+- Cloudflare WorkerのSecret `GYAZO_ACCESS_TOKEN`を削除した（2026-10-18）
+- GyazoのOAuth application / access tokenをGyazo側で無効化した（2026-10-18）

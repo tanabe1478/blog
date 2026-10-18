@@ -105,4 +105,4 @@ scripts/prepare_for_deploy.py --skip-images
 /diary/articles/34  -> /posts/diary-34/
 ```
 
-user site側にも`Output/diary/...`のredirect pageを生成しますが、project siteが有効な間はdiary repository側のredirectが優先されます。
+redirectはdiary repository側だけで実装し、このrepositoryは`Output/diary/`を生成しません。理由は`docs/diary-redirects.md`を参照してください。
