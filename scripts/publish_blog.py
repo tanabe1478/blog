@@ -36,7 +36,7 @@ def current_branch() -> str:
 
 def ensure_repo_root() -> None:
     required = [
-        Path(".moonbit-ssg-revision"),
+        Path("moon.work"),
         Path("Content/posts"),
         Path("scripts/build_site.sh"),
         Path("scripts/prepare_for_deploy.py"),

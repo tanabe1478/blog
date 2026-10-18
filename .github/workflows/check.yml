@@ -12,27 +12,25 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Run script tests
         run: python3 -m unittest discover -s tests/scripts -p 'test_*.py'
-      - name: Check out pinned MoonBit SSG
-        uses: actions/checkout@v4
-        with:
-          repository: tanabe1478/moonbit-ssg
-          ref: 3a78c15d1326d5b35099f013aee89cb4ca4a147b
-          path: .build/moonbit-ssg
       - name: Install mise
         uses: jdx/mise-action@v2
         with:
           install: false
           cache: true
       - name: Install pinned MoonBit toolchain
-        working-directory: .build/moonbit-ssg
         run: |
           mise trust
           mise install
+      - name: Check and test the site generator
+        run: |
+          mise exec -- moon update
+          mise exec -- moon fmt --check
+          mise exec -- moon test
       - name: Build and check MoonBit site
-        env:
-          MOONBIT_SSG_DIR: .build/moonbit-ssg
         run: scripts/prepare_for_deploy.py --skip-images
 
   cms:
