@@ -57,7 +57,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 移行前の固定build日時でSwift PublishとMoonBitの全88生成fileがbyte一致することを確認済み。
 - GitHub ActionsのUTC環境でもRSS timezone offsetを含めて一致することを確認済み。
 - agent-browserでトップ・最新記事・tag一覧・既存記事をdesktop/mobile表示し、pixel差分0を確認済み。
-- `.moonbit-ssg-revision`でgenerator revisionを固定し、`scripts/build_site.sh`で正規の`Output/`を生成する。
+- 2026-10に設定とthemeをこのrepositoryの`site/`へ移し、moonbit-ssgを汎用libraryとしてsubmodule `vendor/moonbit-ssg`で使う構成にした。moonbit-ssg側のblog専用adapterは削除済み（`docs/site-generator.md`）。
 - Check、production deploy、local deployをMoonBit単独buildへ切り替え済み。
 - Swift Package、Swift source、reference build、継続parity checkを撤去済み。
 

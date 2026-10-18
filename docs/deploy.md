@@ -1,6 +1,6 @@
 # Deploy
 
-このrepositoryの生成結果は`tanabe1478/tanabe1478.github.io` repositoryへpushして公開します。site generatorは固定revisionのMoonBit SSGです。
+このrepositoryの生成結果は`tanabe1478/tanabe1478.github.io` repositoryへpushして公開します。site generatorはこのrepositoryの`site/`で、submodule `vendor/moonbit-ssg`を使います（`docs/site-generator.md`）。
 
 ## 通常のdeploy
 
@@ -36,25 +36,7 @@ scripts/deploy_site.sh --skip-prepare --check
 
 ## MoonBit SSGの固定
 
-利用するrevisionは`.moonbit-ssg-revision`に保存します。localでは既定でsibling checkout `../moonbit-ssg`を利用します。
-
-```bash
-git clone https://github.com/tanabe1478/moonbit-ssg ../moonbit-ssg
-git -C ../moonbit-ssg checkout "$(cat .moonbit-ssg-revision)"
-scripts/build_site.sh
-```
-
-別のcheckout:
-
-```bash
-MOONBIT_SSG_DIR=/path/to/moonbit-ssg scripts/build_site.sh
-```
-
-固定revisionとcheckoutのHEADが異なる場合、buildは停止します。SSG自体の開発中だけ、明示的に次を指定できます。
-
-```bash
-MOONBIT_SSG_ALLOW_UNPINNED=true scripts/build_site.sh
-```
+moonbit-ssgのcommitはsubmodule `vendor/moonbit-ssg`が固定します。更新手順は`docs/site-generator.md`を参照してください。
 
 ## GitHub Actions deploy
 
@@ -62,10 +44,10 @@ MOONBIT_SSG_ALLOW_UNPINNED=true scripts/build_site.sh
 
 workflow:
 
-1. Python script testを実行する。
-2. commit SHA固定のMoonBit SSGをcheckoutする。
+1. submoduleごとsourceをcheckoutする。
+2. Python script testを実行する。
 3. miseで固定MoonBit toolchainをinstallする。
-4. MoonBit SSGで`Output/`を生成する。
+4. `site/`の生成programで`Output/`を生成する。
 5. local asset checkを実行する。
 6. 公開repositoryをcheckoutする。
 7. `Output/`を`rsync --delete`で同期する。
@@ -78,7 +60,7 @@ CIではsource repositoryを書き換えないため、local画像の取り込�
 
 ## deploy前のprepare
 
-`publish_blog.py`は最初に`scripts/prepare_for_deploy.py`を実行します。local imageを`Resources/images/`へ取り込んでMarkdownを書き換え、MoonBit SSGでsiteを生成してasset checkを行います。
+`publish_blog.py`は最初に`scripts/prepare_for_deploy.py`を実行します。local imageを`Resources/images/`へ取り込んでMarkdownを書き換え、`site/`でsiteを生成してasset checkを行います。
 
 画像置換をせずbuildだけ確認する場合:
 

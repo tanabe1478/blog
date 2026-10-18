@@ -7,6 +7,7 @@
 - `status.md` — 現在の状態、完了済み作業、残タスク
 - `cms-development-handoff.md` — CMSの構成、Wrangler、認証、Secret、開発・deploy・troubleshoot手順
 - `cms-roadmap.md` — CMSの実装予定task、優先順、E2Eを含む完了条件
+- `site-generator.md` — `site/`による生成の構成、layoutの変更場所、moonbit-ssgの更新手順
 - `deploy.md` — build / deploy 手順
 - `script-based-publish-workflow.md` — Markmesh に依存しない記事作成・画像 upload・publish 方針
 - `post-migration-check.md` — 公開後の確認結果と smoke check

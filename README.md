@@ -2,25 +2,19 @@
 
 https://tanabe1478.github.io の source repository です。
 
-[moonbit-ssg](https://github.com/tanabe1478/moonbit-ssg)で静的siteを生成しています。旧`diary` repositoryのGitHub Issues記事は`Content/posts/diary-*.md`として取り込み済みです。
+このrepositoryのMoonBit module `site/`が、[moonbit-ssg](https://github.com/tanabe1478/moonbit-ssg)を汎用libraryとして使って静的siteを生成します。構成とlayoutの変更場所は`docs/site-generator.md`を参照してください。旧`diary` repositoryのGitHub Issues記事は`Content/posts/diary-*.md`として取り込み済みです。
 
 ## 開発
 
-固定revisionのMoonBit SSGでsiteを生成します。
+moonbit-ssgはsubmodule `vendor/moonbit-ssg`として固定しています。
 
 ```bash
-git clone https://github.com/tanabe1478/moonbit-ssg ../moonbit-ssg
-git -C ../moonbit-ssg checkout "$(cat .moonbit-ssg-revision)"
+git submodule update --init
+mise trust && mise install
 scripts/build_site.sh
 ```
 
-生成結果は`Output/`に出力されます。別のcheckoutを使う場合は`MOONBIT_SSG_DIR`で指定できます。
-
-```bash
-MOONBIT_SSG_DIR=/path/to/moonbit-ssg scripts/build_site.sh
-```
-
-SSG自体を開発中で固定revisionの検査だけを明示的に外す場合は、`MOONBIT_SSG_ALLOW_UNPINNED=true`を指定します。
+生成結果は`Output/`に出力されます。生成programのtestは`mise exec -- moon test`です。
 
 新しい記事の雛形を作る場合:
 
