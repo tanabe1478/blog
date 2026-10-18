@@ -109,6 +109,25 @@ fn items_tagged_with(
 }
 
 ///|
+/// Content/index.md body for the home page. Its leading `# ` heading is the
+/// page title, so it is dropped; an empty body adds nothing.
+fn render_home_intro(body_html : String) -> String {
+  let body = if body_html.has_prefix("<h1>") {
+    match body_html.find("</h1>") {
+      Some(end) => body_html[end + "</h1>".length():].to_owned()
+      None => body_html
+    }
+  } else {
+    body_html
+  }
+  if body.trim().is_empty() {
+    ""
+  } else {
+    "<div class=\"content\">\{body}</div>"
+  }
+}
+
+///|
 /// The blog theme as moonbit-ssg HTML callbacks.
 pub fn blog_html_factory(config : BlogConfig) -> @ssg.PublishHTMLFactory {
   {
@@ -119,7 +138,7 @@ pub fn blog_html_factory(config : BlogConfig) -> @ssg.PublishHTMLFactory {
         path="/",
         title=index.title,
         description=config.site.description,
-        body="<div class=\"wrapper\">\{render_profile_links(config)}<h2>Articles</h2>\{render_item_list(items)}</div>",
+        body="<div class=\"wrapper\">\{render_profile_links(config)}\{render_home_intro(index.body_html)}<h2>Articles</h2>\{render_item_list(items)}</div>",
       )
     },
     make_section: fn(section, _) {
