@@ -1,0 +1,36 @@
+# MoonBit toolchain used to build this site with site/ and vendor/moonbit-ssg.
+# Keep it in sync with vendor/moonbit-ssg/mise.toml when bumping the submodule.
+
+[tools."http:moonbit"]
+version = "0.10.11+6ff76a5f9"
+bin_path = "bin"
+postinstall = '''
+set -eu
+root="$MISE_TOOL_INSTALL_PATH"
+core_archive="$root/lib/core.tar.gz"
+
+chmod +x "$root"/bin/* "$root/bin/internal/tcc"
+ln -sfn moon "$root/bin/moonx"
+
+curl -fsSLo "$core_archive" \
+  "https://cli.moonbitlang.com/cores/core-0.10.11%2B6ff76a5f9.tar.gz"
+printf '%s  %s\n' \
+  "661425df9bb8ff7cb1497dd3cb28a873b5a476fb3b07c587a225453ffd0aa9b4" \
+  "$core_archive" | shasum -a 256 -c -
+rm -rf "$root/lib/core"
+tar -xzf "$core_archive" -C "$root/lib"
+rm "$core_archive"
+
+MOON_HOME="$root" PATH="$root/bin:$PATH" \
+  "$root/bin/moon" -C "$root/lib/core" bundle --warn-list -a --all
+MOON_HOME="$root" PATH="$root/bin:$PATH" \
+  "$root/bin/moon" -C "$root/lib/core" bundle --warn-list -a --target wasm-gc --quiet
+'''
+
+[tools."http:moonbit".platforms]
+macos-arm64 = { url = "https://cli.moonbitlang.com/binaries/0.10.11%2B6ff76a5f9/moonbit-darwin-aarch64.tar.gz", checksum = "sha256:9f617c9ae78b08e19354e70a4203c2157ff5373c78c340aebe722883441ae5b5" }
+linux-x64 = { url = "https://cli.moonbitlang.com/binaries/0.10.11%2B6ff76a5f9/moonbit-linux-x86_64.tar.gz", checksum = "sha256:9573f4df56ff7fe99aa200ddeabc379919e80203c37986642d8e74add1a7e7be" }
+linux-arm64 = { url = "https://cli.moonbitlang.com/binaries/0.10.11%2B6ff76a5f9/moonbit-linux-aarch64.tar.gz", checksum = "sha256:16566d99a1f512256e24cc21e9c404279004d80255302b58d94b23f5e5439587" }
+
+[env]
+MOON_HOME = { value = '{{ tools["http:moonbit"].path }}', tools = true }

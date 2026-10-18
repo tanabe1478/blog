@@ -1,0 +1,3 @@
+[submodule "vendor/moonbit-ssg"]
+	path = vendor/moonbit-ssg
+	url = https://github.com/tanabe1478/moonbit-ssg
