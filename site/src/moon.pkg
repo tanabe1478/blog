@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/time",
+  "tanabe1478/moonbit-ssg/src" @ssg,
+}

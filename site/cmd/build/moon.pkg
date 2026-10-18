@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+  "tanabe1478/blog/src" @site,
+  "tanabe1478/moonbit-ssg/src" @ssg,
+}
+
+pkgtype(kind: "executable")
