@@ -92,7 +92,9 @@ fn items_by_descending_date(
   items : Array[@ssg.PublishItem],
 ) -> Array[@ssg.PublishItem] {
   let sorted = items.copy()
-  sorted.sort_by(fn(left, right) { right.content.date.compare(left.content.date) })
+  sorted.sort_by(fn(left, right) {
+    right.content.date.compare(left.content.date)
+  })
   sorted
 }
 

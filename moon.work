@@ -1,0 +1,4 @@
+members = [
+  "./site",
+  "./vendor/moonbit-ssg",
+]

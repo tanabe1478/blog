@@ -15,3 +15,5 @@
 /cms/test-results/
 __pycache__/
 *.pyc
+/_build/
+/.mooncakes/
