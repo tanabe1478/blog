@@ -35,6 +35,7 @@ Resources/MyHtmlTheme/  CSS。styles.css は /styles.css にもcopyされる
 | 変えたいもの | 場所 |
 | --- | --- |
 | 色・余白・font | `Resources/MyHtmlTheme/styles.css` |
+| topに出す自己紹介などの文章 | `Content/index.md`の本文（先頭の`# `見出しは`<title>`用で表示しない） |
 | pageのHTML構造、並び順、表示項目 | `site/src/theme.mbt` |
 | site名・説明・SNS link・Analytics ID | `site/src/config.mbt` |
 | sectionやfeed、出力file | `site/src/build.mbt` |
