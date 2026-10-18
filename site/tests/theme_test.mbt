@@ -1,7 +1,7 @@
 ///|
-fn test_content() -> @ssg.PublishedContent {
+fn test_content(index_source? : String = "# ") -> @ssg.PublishedContent {
   @ssg.build_published_content(
-    "# ",
+    index_source,
     [
       {
         id: "posts",
@@ -98,4 +98,24 @@ test "tag details list only tagged posts" {
   let html = (factory.make_tag_details)("diary", [], content).unwrap()
   assert_true(html.contains("Newer title"))
   assert_false(html.contains("Older title"))
+}
+
+///|
+test "index shows the Content/index.md body between profile links and articles" {
+  let content = test_content(index_source="# \n\nHello **there**.")
+  let html = (@site.blog_html_factory(@site.blog_config()).make_index)(
+    content.index,
+    content,
+  )
+  let profile = html.find("profile-links").unwrap()
+  let intro = html
+    .find("<div class=\"content\"><p>Hello <strong>there</strong>.</p></div>")
+    .unwrap()
+  let articles = html.find("<h2>Articles</h2>").unwrap()
+  assert_true(profile < intro && intro < articles)
+}
+
+///|
+test "index without a body adds no intro element" {
+  assert_false(index_html().contains("<div class=\"content\">"))
 }
