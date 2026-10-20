@@ -32,9 +32,11 @@ fi
   cd "$repo_root"
   mise exec -- moon update
   "${command[@]}"
-  # Highlight code and prepare mermaid blocks (scripts/highlight).
+  # Highlight code and draw mermaid diagrams to SVG (scripts/highlight).
   if [[ ! -d scripts/highlight/node_modules ]]; then
     mise exec -- npm ci --prefix scripts/highlight --no-audit --no-fund
   fi
+  # Chromium draws the diagrams; this is quick when it is already installed.
+  mise exec -- npm exec --prefix scripts/highlight -- playwright install chromium
   mise exec -- node scripts/highlight/build.mjs "$output_dir"
 )
