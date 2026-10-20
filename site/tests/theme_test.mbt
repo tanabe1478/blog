@@ -123,6 +123,21 @@ test "home shows profile, pinned, recent, rss and tags in order" {
 }
 
 ///|
+test "home groups pinned and recent as the main column beside profile and rss" {
+  let html = index_html()
+  assert_true(
+    html.contains(
+      "<div class=\"home-layout\"><section class=\"section profile\">",
+    ),
+  )
+  assert_true(
+    html.contains("<div class=\"home-main\"><section class=\"section pinned\">"),
+  )
+  assert_true(html.contains("</section></div><section class=\"section rss\">"))
+  assert_true(html.contains("</section></div></main>"))
+}
+
+///|
 test "pinned cards and recent rows show date, title, excerpt and tags" {
   let html = index_html()
   assert_true(html.contains("<a href=\"/posts/newer\">Newer title</a>"))
