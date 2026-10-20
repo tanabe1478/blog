@@ -59,6 +59,17 @@ jobs:
           mise trust
           mise install
 
+      - name: Restore drawn Mermaid diagrams and Chromium
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/mermaid
+            ~/Library/Caches/ms-playwright
+          key: mermaid-${{ runner.os }}-${{ hashFiles('scripts/highlight/package-lock.json', 'scripts/highlight/mermaid.mjs') }}-${{ hashFiles('Content/**/*.md') }}
+          restore-keys: |
+            mermaid-${{ runner.os }}-${{ hashFiles('scripts/highlight/package-lock.json', 'scripts/highlight/mermaid.mjs') }}-
+            mermaid-${{ runner.os }}-
+
       - name: Build and check MoonBit site
         run: scripts/prepare_for_deploy.py --skip-images
 

@@ -30,9 +30,20 @@ jobs:
           mise exec -- moon update
           mise exec -- moon fmt --check
           mise exec -- moon test
+      - name: Restore drawn Mermaid diagrams and Chromium
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/mermaid
+            ~/Library/Caches/ms-playwright
+          key: mermaid-${{ runner.os }}-${{ hashFiles('scripts/highlight/package-lock.json', 'scripts/highlight/mermaid.mjs') }}-${{ hashFiles('Content/**/*.md') }}
+          restore-keys: |
+            mermaid-${{ runner.os }}-${{ hashFiles('scripts/highlight/package-lock.json', 'scripts/highlight/mermaid.mjs') }}-
+            mermaid-${{ runner.os }}-
       - name: Test the highlight scripts
         run: |
           mise exec -- npm ci --prefix scripts/highlight --no-audit --no-fund
+          mise exec -- npm exec --prefix scripts/highlight -- playwright install chromium
           mise exec -- npm test --prefix scripts/highlight
       - name: Build and check MoonBit site
         run: scripts/prepare_for_deploy.py --skip-images
