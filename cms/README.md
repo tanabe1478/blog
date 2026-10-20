@@ -60,6 +60,8 @@ file pickerとdrag-and-dropの両方で画像をrepositoryへ保存し、現在�
 
 既存記事・新規記事の編集中は**トップに固定表示（Pinned）**のcheckboxを表示します。checkすると本文のfrontmatterへ`pinned: true`を加え、外すと削除します。状態はtextareaの本文から読むため、手で書いた`pinned: true`とも食い違いません。保存は通常の**GitHubへ保存**です。
 
+記事一覧でも、件数の横にPinnedの件数を、ピン留め中の記事に**Pinned**の目印を表示します。各記事の**ピン留め** / **ピンを外す**を押すと、その記事の最新Markdownと現在のBlob SHAを取得し、`pinned: true`だけを足し引きしてすぐGitHubへ保存します（1回ごとに1 commitとDeploy Blogが走ります）。競合時は表示を変えずにerrorを出します。一覧の`pinned`は`GITHUB_TOKEN`がある場合だけfrontmatterから読みます。
+
 ## Site pages
 
 記事一覧の上の**サイトのページ**から、Home（`Content/index.md`、`?page=home`）とAbout（`Content/about.md`、`?page=about`）を編集できます。
