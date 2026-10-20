@@ -1,14 +1,16 @@
 // Usage: node scripts/highlight/build.mjs OUTPUT_DIR
 // Runs after the MoonBit build (scripts/build_site.sh) and rewrites code and
 // mermaid blocks in every HTML file of OUTPUT_DIR.
-import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { createDiagramRenderer } from "./mermaid.mjs";
 import { createRenderer } from "./render.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const MERMAID_DIST = join(here, "node_modules", "mermaid", "dist");
+// Drawn diagrams are kept between builds (and between CI runs via actions/cache).
+const DEFAULT_CACHE = join(here, "..", "..", ".cache", "mermaid");
 const SCRIPT = '<script type="module" src="/scripts/code-blocks.js"></script>';
 
 async function htmlFiles(dir) {
@@ -21,19 +23,16 @@ async function htmlFiles(dir) {
   return files;
 }
 
-// Only the minified ESM entry and its chunks; source maps are left out.
-async function copyMermaid(outputDir) {
-  const target = join(outputDir, "vendor", "mermaid");
-  await mkdir(target, { recursive: true });
-  await cp(join(MERMAID_DIST, "mermaid.esm.min.mjs"), join(target, "mermaid.esm.min.mjs"));
-  await cp(join(MERMAID_DIST, "chunks", "mermaid.esm.min"), join(target, "chunks", "mermaid.esm.min"), {
-    recursive: true,
-    filter: (source) => !source.endsWith(".map"),
+export async function processOutput(outputDir, { cacheDir = DEFAULT_CACHE } = {}) {
+  const diagrams = createDiagramRenderer({ cacheDir });
+  let failed = 0;
+  const render = await createRenderer({
+    renderDiagram: async (source) => {
+      const svg = await diagrams.render(source);
+      if (svg === null) failed++;
+      return svg;
+    },
   });
-}
-
-export async function processOutput(outputDir) {
-  const render = await createRenderer();
   let pages = 0;
   let mermaidPages = 0;
   for (const file of await htmlFiles(outputDir)) {
@@ -44,7 +43,11 @@ export async function processOutput(outputDir) {
     if (hasMermaid) mermaidPages++;
     await writeFile(file, html.replace("</body>", `${SCRIPT}</body>`));
   }
-  if (mermaidPages > 0) await copyMermaid(outputDir);
+  await diagrams.close();
+  if (mermaidPages > 0) {
+    const { drawn, cached } = diagrams.stats;
+    console.log(`mermaid: ${drawn} drawn, ${cached} from cache, ${failed} shown as source`);
+  }
   return { pages, mermaidPages };
 }
 
