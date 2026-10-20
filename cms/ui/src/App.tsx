@@ -12,7 +12,7 @@ import type {
   ArticleWorkspaceProps,
   InitialDeployment,
 } from "./ArticleWorkspace";
-import { fetchPosts, type PostSummary } from "./api";
+import { fetchPosts, type PageName, type PostSummary } from "./api";
 import { readDraft, writeDraft, type LocalDraft } from "./drafts";
 import { invalidatePost, preloadPost, readPost } from "./postResource";
 import { RouteErrorBoundary } from "./RouteErrorBoundary";
@@ -28,6 +28,11 @@ const loadArticleWorkspace = () => {
 };
 const ArticleWorkspace = lazy(loadArticleWorkspace);
 
+// The page editor also renders Markdown, so it shares the lazily loaded chunk size concern.
+const PageEditor = lazy(() =>
+  import("./PageEditor").then((module) => ({ default: module.PageEditor })),
+);
+
 function preloadArticleWorkspace(): void {
   void loadArticleWorkspace();
 }
@@ -39,6 +44,7 @@ type Loadable<T> =
 
 type CmsRoute =
   | { view: "list" }
+  | { view: "page"; name: PageName }
   | { view: "post"; name: string }
   | { view: "draft"; name: string };
 
@@ -53,6 +59,8 @@ function message(error: unknown, fallback: string): string {
 
 function currentRoute(): CmsRoute {
   const search = new URLSearchParams(window.location.search);
+  const page = search.get("page");
+  if (page === "home" || page === "about") return { view: "page", name: page };
   const post = search.get("post");
   if (post) return { view: "post", name: post };
   const draft = search.get("draft");
@@ -73,6 +81,8 @@ function useCmsRoute() {
     const url = new URL(window.location.href);
     url.searchParams.delete("post");
     url.searchParams.delete("draft");
+    url.searchParams.delete("page");
+    if (next.view === "page") url.searchParams.set("page", next.name);
     if (next.view === "post") url.searchParams.set("post", next.name);
     if (next.view === "draft") url.searchParams.set("draft", next.name);
     window.history[replace ? "replaceState" : "pushState"](null, "", url);
@@ -176,6 +186,20 @@ function NewPostForm({ onStart, onClose }: {
         <button type="button" onClick={onClose}>フォームを閉じる</button>
       </div>
     </form>
+  );
+}
+
+function SitePages({ onSelect }: { onSelect: (name: PageName) => void }) {
+  return (
+    <section className="panel" aria-labelledby="pages-heading">
+      <div className="section-heading">
+        <h2 id="pages-heading">サイトのページ</h2>
+        <div className="heading-actions">
+          <button type="button" onClick={() => onSelect("home")}>Homeを編集</button>
+          <button type="button" onClick={() => onSelect("about")}>Aboutを編集</button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -379,6 +403,12 @@ export function App() {
     });
   };
 
+  const showPage = (name: PageName) => {
+    setStartedDraft(undefined);
+    setInitialDeployment(undefined);
+    navigate({ view: "page", name });
+  };
+
   const showList = () => {
     setStartedDraft(undefined);
     setInitialDeployment(undefined);
@@ -425,6 +455,8 @@ export function App() {
               onDiscard={showList}
             />
           )}
+          {route.view === "page" && <PageEditor name={route.name} onBack={showList} />}
+          {route.view === "list" && <SitePages onSelect={showPage} />}
           {route.view === "list" && (
             <PostList
               onSelect={showPost}

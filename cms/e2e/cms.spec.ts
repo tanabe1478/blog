@@ -818,8 +818,8 @@ test("edits the About title and subtitle", async ({ page }) => {
   });
   await page.goto("/?page=about");
 
-  await expect(page.getByLabel("タイトル")).toHaveValue("tanabe1478");
-  await page.getByLabel("タイトル").fill("New name");
+  await expect(page.getByLabel("タイトル", { exact: true })).toHaveValue("tanabe1478");
+  await page.getByLabel("タイトル", { exact: true }).fill("New name");
   await page.getByLabel("サブタイトル").fill("Engineer");
   await page.getByRole("button", { name: "ページをGitHubへ保存" }).click();
 
