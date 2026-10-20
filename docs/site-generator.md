@@ -110,3 +110,12 @@ SSG自体を同時に直す場合は、`vendor/moonbit-ssg`の中でbranchを作
 
 tokenを追加したら`styles.css`から`var(--...)`で参照します。CSSに値を直接書くとPenpotとずれるので避けます。
 
+
+### Penpotとの同期
+
+Penpotのデザインファイルには`design/tokens.json`と同じtokenを取り込み、画面の文字・色・余白・幅・角丸にtokenを当てています。
+
+- Penpotでtokenを変えたら、TokensのexportでJSONを書き出し、`design/tokens.json`を置き換えてcommitする。
+- repository側で変えたら、PenpotのTokensのimportで取り込む。
+- light / darkはPenpotのtheme（group `mode`）で切り替える。themeはfile全体で1つだけ有効なので、light用とdark用の画面を別に作らず、themeを切り替えて確認する。
+- Penpotは`-apple-system`のように`-`で始まるfont名をtokenとして受け付けない。fallbackは`sans-serif`などの総称名にする。
