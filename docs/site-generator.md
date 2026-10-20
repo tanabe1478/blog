@@ -157,7 +157,7 @@ Hoverは、PenpotにSmart Animateのような補間がないため、Desktop / H
 
 pluginから作業するときの注意:
 
-- Penpotのtabが裏に回ると、browserがtabを止めてMCPが応答しなくなる。agent-browserの`--headed`で開いたtabを前面にしたまま使うと安定した。MCPの接続は、`/mcp`でReconnectした時点でつながっていたtabに結び付く。
+- Penpotのtabが裏に回ると、browserがtabを止めてMCPが応答しなくなる。agent-browserの`--headed`で開いたtabを前面にしたまま使うと安定した。MCPの接続は、`/mcp`でReconnectした時点でつながっていたtabに結び付く。止まったときは、Penpotのmenu「MCP server → Disconnect → Connect」でつなぎ直してから`/mcp`でReconnectする（この順番でないと古い接続を見続ける）。応答が止まったと表示されても、処理自体は実行されていることがあるので、やり直す前に結果を確かめる。
 - textの幅をlayout経由で変えても、表示上の折り返しは古い幅のまま残ることがある。boardを`viewport.zoomIntoView`で画面に出してから、line-heightを少し変えて戻すと計算し直される。
 - overlayの`manualPositionLocation`は、trigger元がboardならそのboard、textやgroupなら一番近い親boardからの位置になる。
 - tokenの名前を変えても、shape側の参照は古い名前のまま残る。shapeからtokenを外すAPIはなく、別の値を代入すると外れる（同じ値の代入では外れない）。
