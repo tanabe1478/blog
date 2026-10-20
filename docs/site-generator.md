@@ -20,8 +20,8 @@ site/
 vendor/moonbit-ssg      git submodule。使うcommitはsubmoduleが固定する
 design/tokens.json      色・文字・余白などのdesign token（Penpotと共有する正本）
 Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
-Resources/scripts/      code-blocks.js（コピーボタンとMermaidの描画）
-scripts/highlight/      Node。build後のOutput/のコードをShikiで色分けし、Mermaidの箱を作る
+Resources/scripts/      code-blocks.js（コピーボタンとMermaidの「図 / コード」切り替え）
+scripts/highlight/      Node。build後のOutput/のコードをShikiで色分けし、Mermaidの図をSVGにする
 ```
 
 `moon.mod`はlocal path依存を書けないため、`moon.work`のworkspaceで`tanabe1478/moonbit-ssg`をsubmoduleへ解決します。mooncakesへの公開は不要です。
@@ -43,12 +43,14 @@ moonbit-ssgはコードを`<pre data-language="…">`のまま出力し、その
 
 - 言語付きのブロックはShiki（ビルド時）で色分けし、言語名とコピーボタンのバーを付ける。ShikiはCSS変数のthemeを使い、色は`color.syntax.*`のtoken。lightとdarkはCSS変数で切り替わるので、色分けは1回だけ。
 - shellの引用符のない引数は文字列扱いにせず通常の文字色、`-d`のようなoptionはconstantの色にしている（`render.mjs`のtheme規則）。
-- ` ```mermaid `のブロックは「図 / コード」の箱になる。図は`/scripts/code-blocks.js`がブラウザで描き、色はtoken（`color.diagram.node`など）から渡す。darkへの切り替えでは描き直す。JavaScriptが動かないときや描けないときはソースを表示する。
-- mermaidはCDNを使わず、npmで入れたESM版を`Output/vendor/mermaid/`にコピーして配信する。図のあるページだけが読み込む。
+- ` ```mermaid `のブロックは「図 / コード」の箱になる。図はbuildのときに`mermaid.mjs`がPlaywrightのChromiumでSVGにして埋め込むので、ページはmermaidのJavaScriptを読み込まない。描けなかった図はソースを表示する。
+- 描くときは仮の色を使い、SVGの`<style>`の中でtokenのCSS変数（`--color-diagram-node`など）に置き換える。1つのSVGがlightとdarkの両方に合う。文字の幅はsiteと同じNoto Sans JPで測る。
+- 描いたSVGは「ソース・mermaidの版・描画の設定」のhashで`.cache/mermaid/`に保存し、同じ図はChromiumを起動せずに使い回す。CIでは`actions/cache`で引き継ぐので、描くのは新しい図か変わった図だけ。描画の設定を変えたら`mermaid.mjs`の`RENDER_VERSION`を上げる。
 - このsiteの見出しのclassは`section-label`。`label`のような一般的なclass名はMermaidなどのライブラリとぶつかるので使わない。
 
 ```bash
 npm ci --prefix scripts/highlight
+npm exec --prefix scripts/highlight -- playwright install chromium
 npm test --prefix scripts/highlight   # node --test
 ```
 
