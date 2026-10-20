@@ -2,7 +2,6 @@
 date: 2026-04-24 04:09
 description: ""
 tags: 技術, ブログ
-pinned: true
 ---
 
 # ブログを書くためのアプリを作った
