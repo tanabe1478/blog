@@ -27,6 +27,17 @@ export interface PostCreation extends PostUpdate {
   publicUrl: string;
 }
 
+export type PageName = "home" | "about";
+
+export interface PageDocument {
+  name: PageName;
+  path: string;
+  content: string;
+  sha: string;
+  githubUrl: string;
+  publicUrl: string;
+}
+
 export interface UploadedImage {
   imageUrl: string;
   markdown: string;
@@ -135,6 +146,31 @@ export async function deletePost(
     }),
   );
   return data.deletion;
+}
+
+export async function fetchPage(
+  name: PageName,
+  signal?: AbortSignal,
+): Promise<PageDocument> {
+  const data = await responseJson<{ page: PageDocument }>(
+    await fetch(`/api/pages/${name}`, { signal }),
+  );
+  return data.page;
+}
+
+export async function updatePage(
+  name: PageName,
+  content: string,
+  sha: string,
+): Promise<PostUpdate> {
+  const data = await responseJson<{ update: PostUpdate }>(
+    await fetch(`/api/pages/${name}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content, sha }),
+    }),
+  );
+  return data.update;
 }
 
 export async function fetchDeployment(commitSha: string): Promise<BlogDeployment> {
