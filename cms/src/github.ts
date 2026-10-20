@@ -419,39 +419,56 @@ export async function listPosts(
     .sort((left, right) => left.name.localeCompare(right.name, "en"));
 }
 
+// Reads one Markdown file through the Contents API. `apiUrl` is already encoded.
+async function getContentFile(
+  apiUrl: string,
+  notFound: string,
+  token: string | undefined,
+  request: typeof fetch,
+): Promise<{ content: string; sha: string }> {
+  const response = await request(apiUrl, {
+    headers: githubHeaders(token),
+  });
+
+  if (response.status === 404) {
+    throw new PostNotFoundError(notFound);
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub content API returned ${response.status}`);
+  }
+
+  const file: GitHubContent = await response.json();
+  if (
+    file.type !== "file" ||
+    typeof file.sha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(file.sha) ||
+    file.encoding !== "base64" ||
+    typeof file.content !== "string"
+  ) {
+    throw new Error("GitHub content API returned an unexpected response");
+  }
+
+  return { content: decodeBase64Utf8(file.content), sha: file.sha };
+}
+
 export async function getPost(
   name: string,
   token?: string,
   request: typeof fetch = fetch,
 ): Promise<PostDocument> {
   const path = `Content/posts/${name}`;
-  const response = await request(`${POSTS_API_URL}/${encodeURIComponent(name)}`, {
-    headers: githubHeaders(token),
-  });
-
-  if (response.status === 404) {
-    throw new PostNotFoundError(name);
-  }
-  if (!response.ok) {
-    throw new Error(`GitHub content API returned ${response.status}`);
-  }
-
-  const post: GitHubContent = await response.json();
-  if (
-    post.type !== "file" ||
-    typeof post.sha !== "string" ||
-    !/^[0-9a-f]{40}$/.test(post.sha) ||
-    post.encoding !== "base64" ||
-    typeof post.content !== "string"
-  ) {
-    throw new Error("GitHub content API returned an unexpected response");
-  }
+  const file = await getContentFile(
+    `${POSTS_API_URL}/${encodeURIComponent(name)}`,
+    name,
+    token,
+    request,
+  );
 
   return {
     name,
     path,
-    content: decodeBase64Utf8(post.content),
-    sha: post.sha,
+    content: file.content,
+    sha: file.sha,
     githubUrl: githubFileUrl(path),
     publicUrl: publicPostUrl(name),
   };
@@ -625,19 +642,21 @@ export async function deletePost(
   return { commitSha: result.commit.sha };
 }
 
-export async function updatePost(
-  name: string,
+// Overwrites one file only while its Blob SHA still matches `sha`.
+async function putContentFile(
+  apiUrl: string,
   content: string,
   sha: string,
+  message: string,
+  notFound: string,
   token: string,
-  request: typeof fetch = fetch,
-): Promise<PostUpdate> {
-  const path = `Content/posts/${name}`;
-  const response = await request(`${POSTS_API_URL}/${encodeURIComponent(name)}`, {
+  request: typeof fetch,
+): Promise<{ sha: string; commitSha: string }> {
+  const response = await request(apiUrl, {
     method: "PUT",
     headers: githubHeaders(token, true),
     body: JSON.stringify({
-      message: `post: update ${name} via CMS`,
+      message,
       content: encodeBase64Utf8(content),
       sha,
       branch: "main",
@@ -645,10 +664,10 @@ export async function updatePost(
   });
 
   if (response.status === 404) {
-    throw new PostNotFoundError(name);
+    throw new PostNotFoundError(notFound);
   }
   if (response.status === 409) {
-    throw new PostConflictError(name);
+    throw new PostConflictError(notFound);
   }
   if (!response.ok) {
     throw new Error(`GitHub update API returned ${response.status}`);
@@ -664,11 +683,28 @@ export async function updatePost(
     throw new Error("GitHub update API returned an unexpected response");
   }
 
-  return {
-    sha: result.content.sha,
-    commitSha: result.commit.sha,
-    githubUrl: githubFileUrl(path),
-  };
+  return { sha: result.content.sha, commitSha: result.commit.sha };
+}
+
+export async function updatePost(
+  name: string,
+  content: string,
+  sha: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<PostUpdate> {
+  const path = `Content/posts/${name}`;
+  const update = await putContentFile(
+    `${POSTS_API_URL}/${encodeURIComponent(name)}`,
+    content,
+    sha,
+    `post: update ${name} via CMS`,
+    name,
+    token,
+    request,
+  );
+
+  return { ...update, githubUrl: githubFileUrl(path) };
 }
 
 // Adds a binary file without a sha, so an existing file is never overwritten.
