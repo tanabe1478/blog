@@ -134,3 +134,34 @@ test "report invalid token files" {
     css("{ \"light\": {}, \"dark\": {} }").contains("missing token set: base"),
   )
 }
+
+///|
+test "publish letter spacing in px, also inside typography" {
+  let output = css(
+    (
+      #|{
+      #|  "base": {
+      #|    "letter-spacing": { "label": { "$type": "letterSpacing", "$value": "2.6" } },
+      #|    "typography": {
+      #|      "label": { "$type": "typography", "$value": { "fontFamilies": "{font.family.sans}", "fontSizes": "11", "fontWeight": "500", "lineHeight": "1.6", "letterSpacing": "{letter-spacing.label}" } }
+      #|    }
+      #|  },
+      #|  "light": {},
+      #|  "dark": {}
+      #|}
+    ),
+  )
+  assert_true(output.contains("  --letter-spacing-label: 2.6px;\n"))
+  assert_true(
+    output.contains(
+      "  --typography-label-letter-spacing: var(--letter-spacing-label);\n",
+    ),
+  )
+  assert_false(
+    css(
+      (
+        #|{ "base": { "typography": { "body": { "$type": "typography", "$value": { "fontFamilies": "a", "fontSizes": "16", "fontWeight": "400", "lineHeight": "1.7" } } } }, "light": {}, "dark": {} }
+      ),
+    ).contains("letter-spacing"),
+  )
+}
