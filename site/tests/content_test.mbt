@@ -23,6 +23,9 @@ fn sample() -> @ssg.PublishedContent {
             "c", "date: 2025-12-23 14:03\ntags: 日記\npinned: true", "Body",
           ),
           post("d", "date: 2025-03-04 03:28\ntags: diary", "Body"),
+          post(
+            "e", "date: 2020-01-01 00:00\ndescription: e\ntags: diary", "A description equal to the title is replaced by this paragraph.",
+          ),
         ],
       },
     ],
@@ -47,6 +50,10 @@ test "excerpt prefers the description and falls back to the first paragraph" {
     content="First real paragraph with markup &amp; more text here.",
   )
   inspect(@site.excerpt(by_slug("a"), 10), content="First real…")
+  inspect(
+    @site.excerpt(by_slug("e"), 80),
+    content="A description equal to the title is replaced by this paragraph.",
+  )
 }
 
 ///|
@@ -64,7 +71,14 @@ test "group items by year, newest year first" {
   let groups = @site.items_by_year(sample().all_items())
   debug_inspect(
     groups.map(fn(group) { (group.0, slugs(group.1)) }),
-    content="[(\"2026\", [\"b\"]), (\"2025\", [\"c\", \"d\"]), (\"2024\", [\"a\"])]",
+    content=(
+      #|[
+      #|  ("2026", ["b"]),
+      #|  ("2025", ["c", "d"]),
+      #|  ("2024", ["a"]),
+      #|  ("2020", ["e"]),
+      #|]
+    ),
   )
 }
 
@@ -72,7 +86,7 @@ test "group items by year, newest year first" {
 test "count tags, most used first and then by code point" {
   debug_inspect(
     @site.tag_counts(sample()),
-    content="[(\"diary\", 3), (\"技術\", 1), (\"日記\", 1)]",
+    content="[(\"diary\", 4), (\"技術\", 1), (\"日記\", 1)]",
   )
 }
 
