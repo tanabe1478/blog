@@ -140,3 +140,22 @@ Penpotのデザインファイルには`design/tokens.json`と同じtokenを取�
 - light / darkはPenpotのtheme（group `mode`）で切り替える。themeはfile全体で1つだけ有効なので、light用とdark用の画面を別に作らず、themeを切り替えて確認する。
 - Penpotは`-apple-system`のように`-`で始まるfont名をtokenとして受け付けない。fallbackは`sans-serif`などの総称名にする。
 - plugin（MCP）からtokenの値を変えた場合、適用済みのshapeには自動で反映されなかった。`shape.applyToken(token, ["typography"])`のようにshapeごとに当て直す。
+
+#### Penpotファイルの構成（2026-10）
+
+| page / board | 内容 |
+| --- | --- |
+| `Redesign / OmmWriter` | 今のデザイン。Desktop（Home・Post・Articles・About）とMobile / Homeのlight画面に色とtypographyのtokenを当てている |
+| `Dark / Desktop / *` | light画面を複製し、色だけdarkの値を直接書いたもの。themeは1つしか有効にできないので、並べて見る用 |
+| `Hover / *` | Desktop / Homeのhover状態。prototypeのoverlayとして使う |
+| `Hover states` | 要素ごとのDefault / Hoverをcomponentのvariant（`State`）にし、時間とeasingを書いたもの |
+| `Archive / Old design` | 旧デザイン。tokenを`legacy.*`（set `legacy/base`・`legacy/light`・`legacy/dark`）へ当て直して残している |
+
+Hoverは、PenpotにSmart Animateのような補間がないため、Desktop / Homeの各要素にmouse-enterでhover状態のboardをoverlay表示（dissolve、ease-out、150〜300ms）し、overlay側のmouse-leaveで閉じる形で表現した。View modeのFlow「Home / Hover」で確かめられる。CSSにはまだ反映していない。
+
+pluginから作業するときの注意:
+
+- Penpotのtabが裏に回ると、browserがtabを止めてMCPが応答しなくなる。agent-browserの`--headed`で開いたtabを前面にしたまま使うと安定した。MCPの接続は、`/mcp`でReconnectした時点でつながっていたtabに結び付く。
+- textの幅をlayout経由で変えても、表示上の折り返しは古い幅のまま残ることがある。boardを`viewport.zoomIntoView`で画面に出してから、line-heightを少し変えて戻すと計算し直される。
+- overlayの`manualPositionLocation`は、trigger元がboardならそのboard、textやgroupなら一番近い親boardからの位置になる。
+- tokenの名前を変えても、shape側の参照は古い名前のまま残る。shapeからtokenを外すAPIはなく、別の値を代入すると外れる（同じ値の代入では外れない）。
