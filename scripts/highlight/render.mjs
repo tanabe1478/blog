@@ -11,6 +11,13 @@ const theme = createCssVariablesTheme({
   fontStyle: true,
 });
 
+// The shell grammar marks every unquoted argument as a string, which turns
+// whole command lines green. Arguments read as text; options as constants.
+theme.tokenColors.push(
+  { scope: "string.unquoted.argument.shell", settings: { foreground: "var(--shiki-foreground)" } },
+  { scope: "constant.other.option", settings: { foreground: "var(--shiki-token-constant)" } },
+);
+
 const PRE = /<pre(?: data-language="([^"]*)" class="hljs")?><code>([\s\S]*?)<\/code><\/pre>/g;
 const ENTITIES = { lt: "<", gt: ">", quot: '"', "#39": "'", amp: "&" };
 
