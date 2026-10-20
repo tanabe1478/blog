@@ -135,6 +135,20 @@ fn collect_tokens(
           let text = scalar_text(value)
           output.push((token_name(path), reference(text).unwrap_or(text)))
         }
+        // Penpot has no duration type, so durations are numbers under `duration`.
+        "number" if path is ["duration", ..] => {
+          let text = dimension(value, token_type)
+          output.push(
+            (
+              token_name(path),
+              if text.has_prefix("var(") {
+                text
+              } else {
+                "\{text}ms"
+              },
+            ),
+          )
+        }
         _ => output.push((token_name(path), dimension(value, token_type)))
       }
       return
