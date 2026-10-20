@@ -156,6 +156,27 @@ export interface BlogDeployment {
   updatedAt?: string;
 }
 
+// Site pages the CMS may edit, besides posts. Only these paths can be written.
+const PAGES = {
+  home: { path: "Content/index.md", publicPath: "/" },
+  about: { path: "Content/about.md", publicPath: "/about/" },
+} as const;
+
+export type PageName = keyof typeof PAGES;
+
+export interface PageDocument {
+  name: PageName;
+  path: string;
+  content: string;
+  sha: string;
+  githubUrl: string;
+  publicUrl: string;
+}
+
+export function isPageName(name: string): name is PageName {
+  return Object.hasOwn(PAGES, name);
+}
+
 export class PostNotFoundError extends Error {}
 export class PostConflictError extends Error {}
 
@@ -732,4 +753,43 @@ export async function putRepositoryImage(
   if (!response.ok) {
     throw new Error(`GitHub image API returned ${response.status}`);
   }
+}
+
+export async function getPage(
+  name: PageName,
+  token?: string,
+  request: typeof fetch = fetch,
+): Promise<PageDocument> {
+  const { path, publicPath } = PAGES[name];
+  const file = await getContentFile(`${CONTENTS_API_URL}/${path}`, name, token, request);
+
+  return {
+    name,
+    path,
+    content: file.content,
+    sha: file.sha,
+    githubUrl: githubFileUrl(path),
+    publicUrl: `${PUBLIC_BLOG_URL}${publicPath}`,
+  };
+}
+
+export async function updatePage(
+  name: PageName,
+  content: string,
+  sha: string,
+  token: string,
+  request: typeof fetch = fetch,
+): Promise<PostUpdate> {
+  const { path } = PAGES[name];
+  const update = await putContentFile(
+    `${CONTENTS_API_URL}/${path}`,
+    content,
+    sha,
+    `page: update ${name} via CMS`,
+    name,
+    token,
+    request,
+  );
+
+  return { ...update, githubUrl: githubFileUrl(path) };
 }

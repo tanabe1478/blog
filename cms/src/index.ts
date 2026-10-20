@@ -3,7 +3,9 @@ import {
   createPost,
   deletePost,
   getBlogDeployment,
+  getPage,
   getPost,
+  isPageName,
   isValidNewPostContent,
   isValidNewPostName,
   isValidPostContent,
@@ -12,6 +14,7 @@ import {
   PostConflictError,
   renamePost,
   PostNotFoundError,
+  updatePage,
   updatePost,
 } from "./github";
 import {
@@ -162,6 +165,74 @@ export default {
       } catch (error) {
         console.error("Failed to load deployment status", error);
         return json({ error: "公開状況を取得できませんでした" }, 502);
+      }
+    }
+
+    if (url.pathname.startsWith("/api/pages/")) {
+      const name = url.pathname.slice("/api/pages/".length);
+      if (!isPageName(name)) {
+        return json({ error: "ページが見つかりません" }, 404);
+      }
+
+      if (request.method === "GET") {
+        try {
+          return json({ page: await getPage(name, env.GITHUB_TOKEN) });
+        } catch (error) {
+          if (error instanceof PostNotFoundError) {
+            return json({ error: "ページが見つかりません" }, 404);
+          }
+          console.error("Failed to load page", error);
+          return json({ error: "ページを取得できませんでした" }, 502);
+        }
+      }
+
+      if (request.method === "PUT") {
+        if (!isAllowedWriteRequest(request, url, env)) {
+          return json({ error: "Forbidden" }, 403);
+        }
+        if (!request.headers.get("content-type")?.startsWith("application/json")) {
+          return json({ error: "JSONを送信してください" }, 415);
+        }
+        if (!env.GITHUB_TOKEN) {
+          return json({ error: "保存機能が設定されていません" }, 503);
+        }
+
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return json({ error: "JSONが不正です" }, 400);
+        }
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("content" in payload) ||
+          typeof payload.content !== "string" ||
+          !("sha" in payload) ||
+          typeof payload.sha !== "string" ||
+          !/^[0-9a-f]{40}$/.test(payload.sha) ||
+          !isValidPostContent(payload.content)
+        ) {
+          return json({ error: "保存内容が不正です" }, 400);
+        }
+
+        try {
+          return json({
+            update: await updatePage(name, payload.content, payload.sha, env.GITHUB_TOKEN),
+          });
+        } catch (error) {
+          if (error instanceof PostConflictError) {
+            return json(
+              { error: "ページが他の場所で更新されています。再読み込みしてください" },
+              409,
+            );
+          }
+          if (error instanceof PostNotFoundError) {
+            return json({ error: "ページが見つかりません" }, 404);
+          }
+          console.error("Failed to update page", error);
+          return json({ error: "ページを保存できませんでした" }, 502);
+        }
       }
     }
 
