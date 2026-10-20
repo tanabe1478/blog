@@ -6,7 +6,7 @@
 
 ```text
 moon.work               MoonBit workspace。site と vendor/moonbit-ssg を member にする
-mise.toml               MoonBit toolchainの固定（vendor/moonbit-ssg/mise.toml と同じ値）
+mise.toml               MoonBit toolchainとNodeの固定（MoonBitはvendor/moonbit-ssg/mise.toml と同じ値）
 site/
   moon.mod              module tanabe1478/blog。tanabe1478/moonbit-ssg@0.1.0 を import
   src/config.mbt        site名・説明・URL・SNS・Analytics
@@ -20,6 +20,8 @@ site/
 vendor/moonbit-ssg      git submodule。使うcommitはsubmoduleが固定する
 design/tokens.json      色・文字・余白などのdesign token（Penpotと共有する正本）
 Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
+Resources/scripts/      code-blocks.js（コピーボタンとMermaidの描画）
+scripts/highlight/      Node。build後のOutput/のコードをShikiで色分けし、Mermaidの箱を作る
 ```
 
 `moon.mod`はlocal path依存を書けないため、`moon.work`のworkspaceで`tanabe1478/moonbit-ssg`をsubmoduleへ解決します。mooncakesへの公開は不要です。
@@ -33,6 +35,22 @@ Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
 3. `@ssg.render_publish_rss_feed`と`@ssg.render_publish_sitemap`で`feed.rss`と`sitemap.xml`を書き出す。
 4. `Resources/`をそのままcopyする。
 5. `design/tokens.json`を`tokens_css`でCSS変数に変換し、`MyHtmlTheme/styles.css`の前につなげて`/styles.css`に書き出す。`base`と`light`のsetが既定、`dark`は`prefers-color-scheme: dark`で効く。
+6. `node scripts/highlight/build.mjs Output`でコードブロックを書き換える（下の「コードとMermaid」）。
+
+## コードとMermaid
+
+moonbit-ssgはコードを`<pre data-language="…">`のまま出力し、そのあと`scripts/highlight`が書き換えます。
+
+- 言語付きのブロックはShiki（ビルド時）で色分けし、言語名とコピーボタンのバーを付ける。ShikiはCSS変数のthemeを使い、色は`color.syntax.*`のtoken。lightとdarkはCSS変数で切り替わるので、色分けは1回だけ。
+- shellの引用符のない引数は文字列扱いにせず通常の文字色、`-d`のようなoptionはconstantの色にしている（`render.mjs`のtheme規則）。
+- ` ```mermaid `のブロックは「図 / コード」の箱になる。図は`/scripts/code-blocks.js`がブラウザで描き、色はtoken（`color.diagram.node`など）から渡す。darkへの切り替えでは描き直す。JavaScriptが動かないときや描けないときはソースを表示する。
+- mermaidはCDNを使わず、npmで入れたESM版を`Output/vendor/mermaid/`にコピーして配信する。図のあるページだけが読み込む。
+- このsiteの見出しのclassは`section-label`。`label`のような一般的なclass名はMermaidなどのライブラリとぶつかるので使わない。
+
+```bash
+npm ci --prefix scripts/highlight
+npm test --prefix scripts/highlight   # node --test
+```
 
 ## 変更する場所
 
