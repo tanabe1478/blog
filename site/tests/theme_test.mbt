@@ -230,3 +230,10 @@ test "tag details list only tagged posts" {
   assert_true(html.contains("Newer title"))
   assert_false(html.contains("Older title"))
 }
+
+///|
+test "section labels use a class that does not collide with libraries" {
+  let html = index_html()
+  assert_true(html.contains("<h2 class=\"section-label\">Pinned</h2>"))
+  assert_false(html.contains("class=\"label\""))
+}
