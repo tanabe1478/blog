@@ -1,0 +1,2 @@
+# Markdown is stored with LF so diffs stay small and tools agree on line endings.
+*.md text eol=lf
