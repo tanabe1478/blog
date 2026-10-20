@@ -8,18 +8,18 @@ fn fail(message : String) -> Unit {
 
 ///|
 fn usage() -> String {
-  "usage: build CONTENT RESOURCES OUTPUT [BUILD_DATE]\n  BUILD_DATE: yyyy-MM-ddTHH:mm:ss with optional +HHMM (default: now in JST)"
+  "usage: build CONTENT RESOURCES TOKENS OUTPUT [BUILD_DATE]\n  BUILD_DATE: yyyy-MM-ddTHH:mm:ss with optional +HHMM (default: now in JST)"
 }
 
 ///|
 fn main {
   let args = @env.args()
-  if args.length() != 4 && args.length() != 5 {
+  if args.length() != 5 && args.length() != 6 {
     fail(usage())
     return
   }
-  let build_date = if args.length() == 5 {
-    match @ssg.BuildDate::parse(args[4]) {
+  let build_date = if args.length() == 6 {
+    match @ssg.BuildDate::parse(args[5]) {
       Some(date) => date
       None => {
         fail(usage())
@@ -29,11 +29,18 @@ fn main {
   } else {
     @site.current_build_date()
   }
-  @site.build_site(@site.blog_config(), args[1], args[2], args[3], build_date~) catch {
+  @site.build_site(
+    @site.blog_config(),
+    args[1],
+    args[2],
+    args[3],
+    args[4],
+    build_date~,
+  ) catch {
     @fs.IOError(message) => {
       fail("unable to build site: \{message}")
       return
     }
   }
-  println("Generated site at \{args[3]}")
+  println("Generated site at \{args[4]}")
 }

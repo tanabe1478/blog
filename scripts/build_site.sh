@@ -21,6 +21,7 @@ command=(
   mise exec -- moon run site/cmd/build --
   "$repo_root/Content"
   "$repo_root/Resources"
+  "$repo_root/design/tokens.json"
   "$output_dir"
 )
 if [[ $# -eq 1 ]]; then

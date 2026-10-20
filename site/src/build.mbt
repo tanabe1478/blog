@@ -3,7 +3,8 @@
 let section_ids : Array[String] = ["posts"]
 
 ///|
-/// Theme stylesheet, published at `/styles.css` as well as its own path.
+/// Theme stylesheet. `/styles.css` is the generated token variables followed
+/// by this file, so pages load a single stylesheet.
 let theme_stylesheet : String = "MyHtmlTheme/styles.css"
 
 ///|
@@ -57,9 +58,14 @@ pub fn build_site(
   config : BlogConfig,
   content_directory : String,
   resources_directory : String,
+  tokens_path : String,
   output_directory : String,
   build_date~ : @ssg.BuildDate,
 ) -> Unit raise @fs.IOError {
+  let tokens = match tokens_css(@fs.read_file_to_string(tokens_path)) {
+    Ok(css) => css
+    Err(message) => raise @fs.IOError("invalid design tokens: \{message}")
+  }
   let content = @ssg.load_published_content(content_directory, section_ids)
   remove_tree(output_directory)
   @ssg.generate_publish_html(
@@ -77,8 +83,10 @@ pub fn build_site(
     @ssg.render_publish_sitemap(config.site, content, build_date),
   )
   @ssg.copy_publish_files(resources_directory, output_directory)
-  @ssg.copy_publish_file(
-    join_path(resources_directory, theme_stylesheet),
-    output_directory,
+  @fs.write_string_to_file(
+    join_path(output_directory, "styles.css"),
+    tokens +
+    "\n" +
+    @fs.read_file_to_string(join_path(resources_directory, theme_stylesheet)),
   )
 }
