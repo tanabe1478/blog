@@ -27,6 +27,24 @@ Dockerをいつまでも雰囲気で使っているのでもう少し掘り下�
 - Docker
     - この辺の機能を組み合わせてコンテナとして設定、管理できる
 
+```mermaid
+flowchart TB
+    Docker["Docker<br/>コンテナとしてまとめて設定・管理する"]
+    subgraph kernel["Linux カーネルの機能"]
+        PID["PID namespace<br/>PID の番号体系を分ける"]
+        MNT["mount namespace<br/>マウント構成を分ける"]
+        CG["cgroup v2<br/>リソース使用量を計測・制御する"]
+        PROC["/proc<br/>プロセスの情報をファイルで公開する"]
+    end
+    Docker --> PID
+    Docker --> MNT
+    Docker --> CG
+    unshare["unshare"] -. namespace を直接作る .-> PID
+    unshare -. namespace を直接作る .-> MNT
+    mount["mount"] -. ファイルシステムを接続する .-> MNT
+    PID -. どの PID が見えるか .-> PROC
+```
+
 ## 2. Docker で同じプロセスのPIDを比較
 
 sleepだけを動かすコンテナを作る
@@ -60,6 +78,21 @@ grep -E '^(Name|Pid|PPid|NSpid):' "/proc/$host_pid/status"
 結果として同じsleepに対して異なるPIDがホスト側とコンテナ内で割り当てられているのがわかる
 
 プロセスが二個あるのではなく1個のプロセスにPID namespaceごとに番号がついてる。
+
+```mermaid
+flowchart LR
+    subgraph host["ホストの PID namespace"]
+        HP["sleep 1800<br/>PID 4242（例）"]
+    end
+    subgraph container["コンテナの PID namespace"]
+        CP["sleep 1800<br/>PID 1"]
+    end
+    proc(("プロセスは 1 つ"))
+    proc --- HP
+    proc --- CP
+    hostps["ホストの ps"] --> HP
+    exec["docker exec の ps"] --> CP
+```
 
 外側のPIDを知らないから操作できないのではなく、通常のPID指定では内側の番号体系から外側のプロセスをさせない。
 
@@ -136,6 +169,21 @@ mount -t tmpfs -o size=1m,nosuid,nodenv,noexec tmpfs /tmp/mount-lab.qSm0X3
 
 
 表示の比較をすると元のfrom-child.txtは内側からは見えずにホスト側からは見える。そして新しいonly-inside.txtは内側からは見えてホスト側からは見えない
+
+```mermaid
+flowchart LR
+    disk[("元のファイルシステム<br/>from-child.txt")]
+    tmpfs[("tmpfs（1MiB）<br/>only-inside.txt")]
+    subgraph hostns["ホストの mount namespace"]
+        HD["/tmp/mount-lab.qSm0X3"]
+    end
+    subgraph childns["内側の mount namespace"]
+        CD["/tmp/mount-lab.qSm0X3"]
+    end
+    HD --> disk
+    CD --> tmpfs
+    CD -. tmpfs に隠されて見えない .-> disk
+```
 
 内側では別のファイルシステムを接続したので元の内容が隠れた。
 
