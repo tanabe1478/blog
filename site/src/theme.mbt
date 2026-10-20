@@ -193,7 +193,8 @@ fn render_home(config : BlogConfig, content : @ssg.PublishedContent) -> String {
   let recent = "<section class=\"section recent\">\{render_section_head("Recent", Some(("/posts/", "すべての記事 →")))}\{render_post_list(recent_items(content, 5))}</section>"
   let rss = "<section class=\"section rss\"><p class=\"rss-text\">\{metadata_text(index, "rss")}</p><a class=\"button\" href=\"\{config.feed_path}\">RSS で購読する</a></section>"
   let tags = "<section class=\"section tags\">\{render_section_head("Tags", None)}\{render_tag_cloud(content)}</section>"
-  profile + pinned + recent + rss + tags
+  // The order also serves narrow screens; CSS places profile and rss beside the main column.
+  "<div class=\"home-layout\">\{profile}<div class=\"home-main\">\{pinned}\{recent}</div>\{rss}\{tags}</div>"
 }
 
 ///|
