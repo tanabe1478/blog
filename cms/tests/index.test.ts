@@ -119,7 +119,7 @@ describe("CMS Worker", () => {
                   name: "first.md",
                   type: "blob",
                   object: {
-                    text: "---\ndate: 2025-01-02 09:00\n---\n\n# First post\n",
+                    text: "---\ndate: 2025-01-02 09:00\npinned: true\n---\n\n# First post\n",
                   },
                 },
               ],
@@ -140,6 +140,7 @@ describe("CMS Worker", () => {
           name: "second post.md",
           title: "Second post",
           date: "2026-02-03 10:00",
+          pinned: false,
           path: "Content/posts/second post.md",
           githubUrl:
             "https://github.com/tanabe1478/blog/blob/main/Content/posts/second%20post.md",
@@ -150,6 +151,7 @@ describe("CMS Worker", () => {
           name: "first.md",
           title: "First post",
           date: "2025-01-02 09:00",
+          pinned: true,
           path: "Content/posts/first.md",
           githubUrl:
             "https://github.com/tanabe1478/blog/blob/main/Content/posts/first.md",
