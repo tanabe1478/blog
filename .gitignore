@@ -18,3 +18,4 @@ __pycache__/
 /_build/
 /.mooncakes/
 /scripts/highlight/node_modules/
+/.cache/
