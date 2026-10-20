@@ -1,5 +1,5 @@
 ---
-profile: "@t__nabe1478"
+profile: "@tanabe1478"
 rss: 更新は RSS で受け取れます。
 ---
 
