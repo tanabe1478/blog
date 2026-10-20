@@ -56,6 +56,25 @@ React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense
 
 file pickerとdrag-and-dropの両方で画像をrepositoryへ保存し、現在のcursor/selection位置へ画像Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
 
+## Pinned
+
+既存記事・新規記事の編集中は**トップに固定表示（Pinned）**のcheckboxを表示します。checkすると本文のfrontmatterへ`pinned: true`を加え、外すと削除します。状態はtextareaの本文から読むため、手で書いた`pinned: true`とも食い違いません。保存は通常の**GitHubへ保存**です。
+
+## Site pages
+
+記事一覧の上の**サイトのページ**から、Home（`Content/index.md`、`?page=home`）とAbout（`Content/about.md`、`?page=about`）を編集できます。
+
+| page | 入力欄 | 本文 |
+| --- | --- | --- |
+| Home | プロフィール（`profile`）、RSSの案内（`rss`） | Profile欄の紹介文 |
+| About | タイトル（`# 見出し`）、サブタイトル（`subtitle`） | Aboutの本文 |
+
+本文はMarkdownとpreviewの2ペインです。保存時は`ui/src/frontmatter.ts`で変わった部分だけを書き換え、他のfrontmatter行はそのまま残します。`:`や`@`で始まるなど誤読されうる値は`"`で、`"`を含む値は`'`で囲みます。
+
+Workerは`GET /api/pages/{home|about}`と`PUT /api/pages/{home|about}`を提供します。pathはWorker内の固定表で決め、clientから受け取らないため、他のfileは書けません。保存は記事と同じくProduction Origin、JSON、現在のBlob SHAを検証し、競合は`409`です。保存後はDeploy Blogの状況を表示します。
+
+端末へのdraft保存は、短い文言を扱う画面のため行いません。
+
 ## Local draft
 
 編集中のMarkdownは400msのdebounce後にbrowserの`localStorage`へ自動保存します。既存記事・新規記事ともreload後に**下書きを復元**または**下書きを破棄**を選べます。GitHub保存成功時と、確認後のcancel時に対応draftを削除します。

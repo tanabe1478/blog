@@ -35,6 +35,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - GraphQL atomic commitとHEAD/SHA競合検知付きのslug変更に対応済み。
 - CMS `/`をReact 19へ切替済み。記事遷移はSuspense + transition、editor/Markdown rendererはlazy chunkへ分離済み。
 - Cloudflare resourceとtokenは`yurubo`から分離済み。
+- 2026-10: Home（`Content/index.md`）とAbout（`Content/about.md`）を入力欄とMarkdown本文で編集できる画面、記事のPinned切り替えを追加済み（`cms/README.md`）。
 
 ### docs
 
@@ -59,6 +60,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - agent-browserでトップ・最新記事・tag一覧・既存記事をdesktop/mobile表示し、pixel差分0を確認済み。
 - 2026-10に設定とthemeをこのrepositoryの`site/`へ移し、moonbit-ssgを汎用libraryとしてsubmodule `vendor/moonbit-ssg`で使う構成にした。moonbit-ssg側のblog専用adapterは削除済み（`docs/site-generator.md`）。
 - Check、production deploy、local deployをMoonBit単独buildへ切り替え済み。
+- 2026-10にOmmWriter風のデザインへ変更済み。topはProfile・Pinned・Recent・RSS・Tags、`/posts/`は年ごとの一覧、`/about/`を追加。値は`design/tokens.json`、frontmatterの使い方は`docs/site-generator.md`。
 - Swift Package、Swift source、reference build、継続parity checkを撤去済み。
 
 ## 現在の公開 URL

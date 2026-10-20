@@ -11,6 +11,7 @@ site/
   moon.mod              module tanabe1478/blog。tanabe1478/moonbit-ssg@0.1.0 を import
   src/config.mbt        site名・説明・URL・SNS・Analytics
   src/theme.mbt         各pageのHTML（PublishHTMLFactory）
+  src/content.mbt       抜粋・日付表記・Pinned・Recent・年ごとの一覧・tag件数
   src/url.mbt           HTML escapeとURL組み立て
   src/tokens.mbt        design/tokens.json → CSS変数
   src/build.mbt         読み込み → HTML → RSS/sitemap → Resources copy → /styles.css
@@ -28,7 +29,7 @@ Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
 `scripts/build_site.sh`は`moon run site/cmd/build`を実行します。
 
 1. `@ssg.load_published_content`で`Content/`を読む。`posts/`だけをsectionとして扱い、他のMarkdownはpageになる。
-2. `@ssg.generate_publish_html`に`site/src/theme.mbt`のfactoryを渡し、`/`、`/posts/`、`/posts/<slug>/`、`/tags/`、`/tags/<tag>/`を書き出す。
+2. `@ssg.generate_publish_html`に`site/src/theme.mbt`のfactoryを渡し、`/`、`/posts/`、`/posts/<slug>/`、`/tags/`、`/tags/<tag>/`を書き出す。`Content/about.md`は`/about/`になる。
 3. `@ssg.render_publish_rss_feed`と`@ssg.render_publish_sitemap`で`feed.rss`と`sitemap.xml`を書き出す。
 4. `Resources/`をそのままcopyする。
 5. `design/tokens.json`を`tokens_css`でCSS変数に変換し、`MyHtmlTheme/styles.css`の前につなげて`/styles.css`に書き出す。`base`と`light`のsetが既定、`dark`は`prefers-color-scheme: dark`で効く。
@@ -39,12 +40,31 @@ Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
 | --- | --- |
 | 色・文字の大きさ・行の高さ・余白・幅・角丸の値 | `design/tokens.json` |
 | どの要素にどのtokenを使うか、tokenにない細かな指定 | `Resources/MyHtmlTheme/styles.css` |
-| topに出す自己紹介などの文章 | `Content/index.md`の本文（先頭の`# `見出しは`<title>`用で表示しない） |
+| topのProfile・RSS欄の文章 | `Content/index.md`（下のfrontmatter表を参照）。CMSの**Homeを編集**からも変えられる |
+| Aboutの文章 | `Content/about.md`。CMSの**Aboutを編集**からも変えられる |
+| topのPinnedに出す記事 | 記事のfrontmatterに`pinned: true`。CMSの編集画面のcheckboxでも切り替えられる |
 | pageのHTML構造、並び順、表示項目 | `site/src/theme.mbt` |
 | site名・説明・SNS link・Analytics ID | `site/src/config.mbt` |
 | sectionやfeed、出力file | `site/src/build.mbt` |
 
 どれもこのrepositoryだけで完結します。pushすればDeploy Blogが走ります。
+
+## Contentのfrontmatter
+
+moonbit-ssgのfrontmatterは1行1つの`key: value`だけを読みます。値の前後の`"`または`'`は1組だけ外し、escapeは解きません。themeが使うkeyは次のとおりです。
+
+| file | key / 部分 | 表示する場所 |
+| --- | --- | --- |
+| `Content/index.md` | `profile` | Profile欄の1行目（handleなど） |
+| | `rss` | RSS欄の案内文 |
+| | 本文 | Profile欄の紹介文。先頭の`# `見出しは`<title>`用で表示しない |
+| `Content/about.md` | `# 見出し` | Aboutのtitle |
+| | `subtitle` | titleの下の1行 |
+| | 本文 | 紹介文。`## `で区切った節も書ける |
+| `Content/posts/*.md` | `date`、`description`、`tags` | 日付、抜粋、tag。`description`がtitleと同じか空なら本文の先頭を抜粋に使う |
+| | `pinned: true` | topのPinnedにcardで出す（日付の新しい順） |
+
+topのRecentは日付の新しい5件、`/posts/`は全記事を年ごとに並べます。
 
 ## 確認
 
