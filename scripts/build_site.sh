@@ -32,4 +32,9 @@ fi
   cd "$repo_root"
   mise exec -- moon update
   "${command[@]}"
+  # Highlight code and prepare mermaid blocks (scripts/highlight).
+  if [[ ! -d scripts/highlight/node_modules ]]; then
+    mise exec -- npm ci --prefix scripts/highlight --no-audit --no-fund
+  fi
+  mise exec -- node scripts/highlight/build.mjs "$output_dir"
 )
