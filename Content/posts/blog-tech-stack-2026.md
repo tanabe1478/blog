@@ -39,13 +39,6 @@ flowchart TB
 
 moonbit-ssg は汎用のライブラリとして使い、このブログ専用の設定やテーマはブログの repository 側に置いた。最初は moonbit-ssg の中にブログ用のコードがあったが、依存の向きが逆で触りにくかったので分けた。moonbit-ssg は git submodule で取り込んでいる。
 
-ローカルで確認するときはこれだけで済む。
-
-```bash
-scripts/build_site.sh
-python3 -m http.server 4173 --directory Output
-```
-
 MoonBit の toolchain と Node の版は mise で固定している。
 
 ## デザインは Penpot と design token
