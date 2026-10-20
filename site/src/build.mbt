@@ -3,9 +3,11 @@
 let section_ids : Array[String] = ["posts"]
 
 ///|
-/// Theme stylesheet. `/styles.css` is the generated token variables followed
-/// by this file, so pages load a single stylesheet.
-let theme_stylesheet : String = "MyHtmlTheme/styles.css"
+/// Theme stylesheets in Resources/. `/styles.css` is the generated token
+/// variables followed by these files, so pages load a single stylesheet.
+let theme_stylesheets : Array[String] = [
+  "MyHtmlTheme/fonts.css", "MyHtmlTheme/styles.css",
+]
 
 ///|
 fn join_path(parent : String, child : String) -> String {
@@ -83,10 +85,16 @@ pub fn build_site(
     @ssg.render_publish_sitemap(config.site, content, build_date),
   )
   @ssg.copy_publish_files(resources_directory, output_directory)
+  let stylesheet = StringBuilder()
+  stylesheet.write_string(tokens)
+  for path in theme_stylesheets {
+    stylesheet.write_string("\n")
+    stylesheet.write_string(
+      @fs.read_file_to_string(join_path(resources_directory, path)),
+    )
+  }
   @fs.write_string_to_file(
     join_path(output_directory, "styles.css"),
-    tokens +
-    "\n" +
-    @fs.read_file_to_string(join_path(resources_directory, theme_stylesheet)),
+    stylesheet.to_string(),
   )
 }
