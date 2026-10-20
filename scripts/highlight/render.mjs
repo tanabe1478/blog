@@ -1,6 +1,6 @@
 // Rewrites the <pre> blocks that moonbit-ssg writes into Output/ HTML:
 // highlighted code gets a header with its language and a copy button, and
-// mermaid blocks become a diagram box that /scripts/code-blocks.js draws.
+// mermaid blocks get the SVG drawn at build time (see mermaid.mjs).
 import { bundledLanguages, createCssVariablesTheme, createHighlighter } from "shiki";
 
 // Colors come from CSS variables, so design/tokens.json decides them and
@@ -31,17 +31,20 @@ const escape = (text) =>
 const label = (language) =>
   language ? `<span class="code-language">${escape(language)}</span>` : "";
 
-const mermaidBlock = (source) =>
+// Without an SVG the box shows the source. The toggle stays hidden until
+// /scripts/code-blocks.js wires it up.
+const mermaidBlock = (source, svg) =>
   '<figure class="mermaid-block"><div class="code-header">' +
   label("mermaid") +
   '<div class="mermaid-toggle" role="group" aria-label="表示形式" hidden>' +
   '<button type="button" data-view="diagram" aria-pressed="true">図</button>' +
   '<button type="button" data-view="code" aria-pressed="false">コード</button>' +
   "</div></div>" +
-  '<div class="mermaid-diagram" hidden></div>' +
-  `<pre class="mermaid-source"><code>${escape(source)}</code></pre></figure>`;
+  (svg ? `<div class="mermaid-diagram">${svg}</div>` : '<div class="mermaid-diagram" hidden></div>') +
+  `<pre class="mermaid-source"${svg ? " hidden" : ""}><code>${escape(source)}</code></pre></figure>`;
 
-export async function createRenderer() {
+// renderDiagram(source) returns an SVG string, or null when it cannot draw.
+export async function createRenderer({ renderDiagram = async () => null } = {}) {
   const highlighter = await createHighlighter({ themes: [theme], langs: [] });
 
   const highlight = async (code, language) => {
@@ -66,7 +69,7 @@ export async function createRenderer() {
       const code = decode(match[2]).replace(/\n$/, "");
       if (language === "mermaid") {
         hasMermaid = true;
-        blocks.push(mermaidBlock(code));
+        blocks.push(mermaidBlock(code, await renderDiagram(code)));
         continue;
       }
       hasCode = true;
