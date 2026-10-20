@@ -164,6 +164,7 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
               name: EXISTING_NAME,
               title: "Existing title",
               date: "2026-07-20 10:00",
+              pinned: false,
               path: `Content/posts/${EXISTING_NAME}`,
               githubUrl:
                 "https://github.com/tanabe1478/blog/blob/main/Content/posts/existing-post.md",
@@ -867,4 +868,37 @@ test("pins an article to the top page through its frontmatter", async ({ page })
     content: EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"),
     sha: "a".repeat(40),
   });
+});
+
+test("pins an article from the list with its current SHA", async ({ page }) => {
+  let updatePayload: unknown;
+  await mockCmsApi(page, {
+    onUpdate: (payload) => {
+      updatePayload = payload;
+    },
+  });
+  await page.goto("/");
+  await expect(page.getByText("1件の記事 · Pinned 0件")).toBeVisible();
+  const row = page.locator(".post-list > li", { hasText: "Existing title" });
+  await row.getByRole("button", { name: "ピン留め", exact: true }).click();
+
+  await expect(row.getByRole("button", { name: "ピンを外す", exact: true })).toBeVisible();
+  await expect(row.locator(".pinned-badge")).toHaveText("Pinned");
+  await expect(page.getByText("1件の記事 · Pinned 1件")).toBeVisible();
+  await expect(page.getByText(/Pinnedを更新しました/)).toBeVisible();
+  expect(updatePayload).toEqual({
+    content: EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"),
+    sha: "a".repeat(40),
+  });
+});
+
+test("keeps the pinned state when pinning from the list conflicts", async ({ page }) => {
+  await mockCmsApi(page, { updateConflict: true });
+  await page.goto("/");
+  const row = page.locator(".post-list > li", { hasText: "Existing title" });
+  await row.getByRole("button", { name: "ピン留め", exact: true }).click();
+
+  await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
+  await expect(row.getByRole("button", { name: "ピン留め", exact: true })).toBeVisible();
+  await expect(row.locator(".pinned-badge")).toHaveCount(0);
 });
