@@ -38,6 +38,13 @@ describe("code block rendering", () => {
     assert.equal(plain(preOf(html)), "echo 'a & b' > out");
   });
 
+  it("colors shell arguments as plain text and options as constants", async () => {
+    const { html } = await render('<pre data-language="bash" class="hljs"><code>docker run -d pid-lab\n</code></pre>');
+
+    assert.match(html, /<span style="color:var\(--shiki-foreground\)">\s*pid-lab<\/span>/);
+    assert.match(html, /<span style="color:var\(--shiki-token-constant\)">\s*-d<\/span>/);
+  });
+
   it("keeps a block without a language as plain text and omits the label", async () => {
     const { html, hasCode } = await render("<pre><code>a &lt;b&gt;\n</code></pre>");
 
