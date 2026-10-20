@@ -151,7 +151,9 @@ Penpotのデザインファイルには`design/tokens.json`と同じtokenを取�
 | `Hover states` | 要素ごとのDefault / Hoverをcomponentのvariant（`State`）にし、時間とeasingを書いたもの |
 | `Archive / Old design` | 旧デザイン。tokenを`legacy.*`（set `legacy/base`・`legacy/light`・`legacy/dark`）へ当て直して残している |
 
-Hoverは、PenpotにSmart Animateのような補間がないため、Desktop / Homeの各要素にmouse-enterでhover状態のboardをoverlay表示（dissolve、ease-out、150〜300ms）し、overlay側のmouse-leaveで閉じる形で表現した。View modeのFlow「Home / Hover」で確かめられる。CSSにはまだ反映していない。
+Hoverは、PenpotにSmart Animateのような補間がないため、Desktop / Homeの各要素にmouse-enterでhover状態のboardをoverlay表示（dissolve、ease-out、150〜300ms）し、overlay側のmouse-leaveで閉じる形で表現した。View modeのFlow「Home / Hover」で確かめられる。CSSでは同じ状態を`transition`で実装している。
+
+時間は`design/tokens.json`の`duration`（fast 150・base 200・slow 300・enter 600・stagger 80）で決める。Penpotには時間のtoken型がないため`number`型で置き、`tokens_css`は最上位が`duration`のtokenだけを`ms`付きで出力する。表示時のアニメーション（sectionが順にfade inする）も同じtokenを使い、`prefers-reduced-motion: reduce`のときはhoverのtransitionと合わせて止める。
 
 pluginから作業するときの注意:
 
