@@ -812,6 +812,36 @@ time {
     }
 }
 
+/* Entrance: page sections fade in and rise slightly, one after another.
+   Only for people who have not asked the OS to reduce motion. */
+
+@keyframes enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .home-layout > *,
+    main.column > :not(.article, .home-layout),
+    .article > * {
+        animation: enter var(--duration-enter) ease-out both;
+    }
+
+    :is(.home-layout, main.column, .article) > :nth-child(2) {
+        animation-delay: var(--duration-stagger);
+    }
+
+    :is(.home-layout, main.column, .article) > :nth-child(3) {
+        animation-delay: calc(var(--duration-stagger) * 2);
+    }
+
+    :is(.home-layout, main.column, .article) > :nth-child(n + 4) {
+        animation-delay: calc(var(--duration-stagger) * 3);
+    }
+}
+
 /* Respect the OS setting for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
     *,
