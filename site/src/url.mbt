@@ -7,6 +7,11 @@ fn escape_html(value : String) -> String {
 }
 
 ///|
+fn escape_attribute(value : String) -> String {
+  escape_html(value).replace_all(old="\"", new="&quot;")
+}
+
+///|
 fn is_url_path_byte(byte : Int) -> Bool {
   (byte >= 0x41 && byte <= 0x5a) ||
   (byte >= 0x61 && byte <= 0x7a) ||
