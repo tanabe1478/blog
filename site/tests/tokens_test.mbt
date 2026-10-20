@@ -165,3 +165,21 @@ test "publish letter spacing in px, also inside typography" {
     ).contains("letter-spacing"),
   )
 }
+
+///|
+test "publish duration tokens in ms while other numbers stay unitless" {
+  let output = css(
+    (
+      #|{
+      #|  "base": {
+      #|    "duration": { "fast": { "$type": "number", "$value": "150" } },
+      #|    "line-height": { "body": { "$type": "number", "$value": "1.7" } }
+      #|  },
+      #|  "light": {},
+      #|  "dark": {}
+      #|}
+    ),
+  )
+  assert_true(output.contains("  --duration-fast: 150ms;\n"))
+  assert_true(output.contains("  --line-height-body: 1.7;\n"))
+}
