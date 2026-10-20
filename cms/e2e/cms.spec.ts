@@ -842,3 +842,29 @@ test("keeps page edits when saving conflicts", async ({ page }) => {
   await expect(page.getByText(/ページが他の場所で更新されています/)).toBeVisible();
   await expect(page.getByLabel("サブタイトル")).toHaveValue("Engineer");
 });
+
+test("pins an article to the top page through its frontmatter", async ({ page }) => {
+  let updatePayload: unknown;
+  await mockCmsApi(page, {
+    onUpdate: (payload) => {
+      updatePayload = payload;
+    },
+  });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const pinned = page.getByLabel("トップに固定表示（Pinned）");
+  const textarea = page.getByLabel("Markdown本文");
+  await expect(pinned).not.toBeChecked();
+
+  await pinned.check();
+  await expect(textarea).toHaveValue(EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"));
+  await pinned.uncheck();
+  await expect(textarea).toHaveValue(EXISTING_CONTENT);
+  await pinned.check();
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  expect(updatePayload).toEqual({
+    content: EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"),
+    sha: "a".repeat(40),
+  });
+});
