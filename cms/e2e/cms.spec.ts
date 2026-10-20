@@ -12,6 +12,24 @@ tags: 技術
 Existing paragraph.
 `;
 
+const HOME_CONTENT = `---
+profile: "@t__nabe1478"
+rss: 更新は RSS で受け取れます。
+---
+
+# 
+
+紹介文です。
+`;
+const ABOUT_CONTENT = `---
+subtitle: "@t__nabe1478"
+---
+
+# tanabe1478
+
+About me.
+`;
+
 interface MockOptions {
   createConflict?: boolean;
   createError?: boolean;
@@ -28,6 +46,8 @@ interface MockOptions {
   onUpdate?: (payload: unknown) => void;
   onDelete?: (payload: unknown) => void;
   onRename?: (payload: unknown) => void;
+  pageUpdateConflict?: boolean;
+  onPageUpdate?: (name: string, payload: unknown) => void;
 }
 
 async function mockCmsApi(page: Page, options: MockOptions = {}) {
@@ -94,6 +114,46 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
         },
       });
       return;
+    }
+
+    if (url.pathname === "/api/pages/home" || url.pathname === "/api/pages/about") {
+      const name = url.pathname.slice("/api/pages/".length);
+      const path = name === "home" ? "Content/index.md" : "Content/about.md";
+      if (request.method() === "GET") {
+        await route.fulfill({
+          json: {
+            page: {
+              name,
+              path,
+              content: name === "home" ? HOME_CONTENT : ABOUT_CONTENT,
+              sha: "a".repeat(40),
+              githubUrl: `https://github.com/tanabe1478/blog/blob/main/${path}`,
+              publicUrl: name === "home" ? "https://tanabe1478.github.io/" : "https://tanabe1478.github.io/about/",
+            },
+          },
+        });
+        return;
+      }
+      if (request.method() === "PUT") {
+        options.onPageUpdate?.(name, request.postDataJSON());
+        if (options.pageUpdateConflict) {
+          await route.fulfill({
+            status: 409,
+            json: { error: "ページが他の場所で更新されています。再読み込みしてください" },
+          });
+          return;
+        }
+        await route.fulfill({
+          json: {
+            update: {
+              sha: "b".repeat(40),
+              commitSha: "c".repeat(40),
+              githubUrl: `https://github.com/tanabe1478/blog/blob/main/${path}`,
+            },
+          },
+        });
+        return;
+      }
     }
 
     if (request.method() === "GET" && url.pathname === "/api/posts") {
@@ -712,4 +772,73 @@ test("keeps React saved state when deployment lookup fails", async ({ page }) =>
 
   await expect(page.locator(".deployment-status")).toContainText("記事は保存済みですが、公開状況を取得できません");
   await expect(page.getByRole("heading", { name: "Saved with status error" })).toBeVisible();
+});
+
+test("edits the Home profile, RSS text and introduction", async ({ page }) => {
+  let saved: { name: string; payload: unknown } | undefined;
+  await mockCmsApi(page, {
+    onPageUpdate: (name, payload) => {
+      saved = { name, payload };
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Homeを編集" }).click();
+
+  await expect(page.getByLabel("プロフィール")).toHaveValue("@t__nabe1478");
+  await expect(page.getByLabel("RSSの案内")).toHaveValue("更新は RSS で受け取れます。");
+  await expect(page.getByLabel("本文（Markdown）")).toHaveValue("紹介文です。\n");
+  const save = page.getByRole("button", { name: "ページをGitHubへ保存" });
+  await expect(save).toBeDisabled();
+
+  await page.getByLabel("RSSの案内").fill("RSS でどうぞ");
+  await page.getByLabel("本文（Markdown）").fill("新しい**紹介文**です。");
+  await expect(page.locator(".markdown-article strong")).toHaveText("紹介文");
+  await save.click();
+
+  await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
+  expect(saved).toEqual({
+    name: "home",
+    payload: {
+      content: HOME_CONTENT.replace("更新は RSS で受け取れます。", "RSS でどうぞ").replace(
+        "紹介文です。\n",
+        "新しい**紹介文**です。\n",
+      ),
+      sha: "a".repeat(40),
+    },
+  });
+  await expect(save).toBeDisabled();
+});
+
+test("edits the About title and subtitle", async ({ page }) => {
+  let saved: { name: string; payload: unknown } | undefined;
+  await mockCmsApi(page, {
+    onPageUpdate: (name, payload) => {
+      saved = { name, payload };
+    },
+  });
+  await page.goto("/?page=about");
+
+  await expect(page.getByLabel("タイトル")).toHaveValue("tanabe1478");
+  await page.getByLabel("タイトル").fill("New name");
+  await page.getByLabel("サブタイトル").fill("Engineer");
+  await page.getByRole("button", { name: "ページをGitHubへ保存" }).click();
+
+  await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
+  expect(saved).toEqual({
+    name: "about",
+    payload: {
+      content: ABOUT_CONTENT.replace('"@t__nabe1478"', "Engineer").replace("# tanabe1478", "# New name"),
+      sha: "a".repeat(40),
+    },
+  });
+});
+
+test("keeps page edits when saving conflicts", async ({ page }) => {
+  await mockCmsApi(page, { pageUpdateConflict: true });
+  await page.goto("/?page=about");
+  await page.getByLabel("サブタイトル").fill("Engineer");
+  await page.getByRole("button", { name: "ページをGitHubへ保存" }).click();
+
+  await expect(page.getByText(/ページが他の場所で更新されています/)).toBeVisible();
+  await expect(page.getByLabel("サブタイトル")).toHaveValue("Engineer");
 });
