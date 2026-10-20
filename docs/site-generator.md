@@ -119,3 +119,4 @@ Penpotのデザインファイルには`design/tokens.json`と同じtokenを取�
 - repository側で変えたら、PenpotのTokensのimportで取り込む。
 - light / darkはPenpotのtheme（group `mode`）で切り替える。themeはfile全体で1つだけ有効なので、light用とdark用の画面を別に作らず、themeを切り替えて確認する。
 - Penpotは`-apple-system`のように`-`で始まるfont名をtokenとして受け付けない。fallbackは`sans-serif`などの総称名にする。
+- plugin（MCP）からtokenの値を変えた場合、適用済みのshapeには自動で反映されなかった。`shape.applyToken(token, ["typography"])`のようにshapeごとに当て直す。
