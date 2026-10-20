@@ -62,12 +62,19 @@ describe("code block rendering", () => {
     assert.equal(plain(preOf(html)), "x = 1");
   });
 
-  it("turns a mermaid block into a diagram box that shows the source without JavaScript", async () => {
-    const source = "flowchart LR\n  A[&quot;Host&quot;] --&gt; B\n";
-    const { html, hasCode, hasMermaid } = await render(
-      `<pre data-language="mermaid" class="hljs"><code>${source}</code></pre>`,
+  it("embeds the diagram drawn at build time and keeps the source for the code view", async () => {
+    const sources = [];
+    const withDiagrams = await createRenderer({
+      renderDiagram: async (source) => {
+        sources.push(source);
+        return '<svg id="mermaid-1"><text>Host</text></svg>';
+      },
+    });
+    const { html, hasCode, hasMermaid } = await withDiagrams(
+      '<pre data-language="mermaid" class="hljs"><code>flowchart LR\n  A[&quot;Host&quot;] --&gt; B\n</code></pre>',
     );
 
+    assert.deepEqual(sources, ['flowchart LR\n  A["Host"] --> B']);
     assert.equal(hasMermaid, true);
     assert.equal(hasCode, false);
     assert.match(html, /^<figure class="mermaid-block">/);
@@ -75,8 +82,16 @@ describe("code block rendering", () => {
     assert.match(html, /<div class="mermaid-toggle" role="group" aria-label="表示形式" hidden>/);
     assert.match(html, /<button type="button" data-view="diagram" aria-pressed="true">図<\/button>/);
     assert.match(html, /<button type="button" data-view="code" aria-pressed="false">コード<\/button>/);
+    assert.match(html, /<div class="mermaid-diagram"><svg id="mermaid-1"><text>Host<\/text><\/svg><\/div>/);
+    assert.match(html, /<pre class="mermaid-source" hidden><code>flowchart LR\n {2}A\[&quot;Host&quot;\] --&gt; B<\/code><\/pre>/);
+  });
+
+  it("shows the mermaid source when a diagram cannot be drawn", async () => {
+    const failing = await createRenderer({ renderDiagram: async () => null });
+    const { html } = await failing('<pre data-language="mermaid" class="hljs"><code>not mermaid\n</code></pre>');
+
     assert.match(html, /<div class="mermaid-diagram" hidden><\/div>/);
-    assert.match(html, /<pre class="mermaid-source"><code>flowchart LR\n {2}A\[&quot;Host&quot;\] --&gt; B<\/code><\/pre>/);
+    assert.match(html, /<pre class="mermaid-source"><code>not mermaid<\/code><\/pre>/);
   });
 
   it("leaves pages without code blocks and inline code untouched", async () => {
