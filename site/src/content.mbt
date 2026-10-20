@@ -41,7 +41,9 @@ fn truncate(text : String, max : Int) -> String {
 /// HTML-escaped summary for lists: the description, or the first paragraph.
 pub fn excerpt(item : @ssg.PublishItem, max : Int) -> String {
   let description = item.content.description.trim().to_owned()
-  if !description.is_empty() {
+  // A description that only repeats the title says nothing new; use the body.
+  if !description.is_empty() &&
+    description != item.content.title.trim().to_owned() {
     return escape_html(truncate(description, max))
   }
   let html = item.content.body_html
