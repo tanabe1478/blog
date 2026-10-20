@@ -17,3 +17,4 @@ __pycache__/
 *.pyc
 /_build/
 /.mooncakes/
+/scripts/highlight/node_modules/

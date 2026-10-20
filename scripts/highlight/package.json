@@ -1,0 +1,13 @@
+{
+  "name": "tanabe-blog-highlight",
+  "private": true,
+  "type": "module",
+  "description": "Post-processes Output/ HTML: Shiki code highlighting and Mermaid blocks.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mermaid": "12.2.0",
+    "shiki": "4.5.0"
+  }
+}

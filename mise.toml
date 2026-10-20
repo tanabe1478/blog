@@ -1,6 +1,10 @@
 # MoonBit toolchain used to build this site with site/ and vendor/moonbit-ssg.
 # Keep it in sync with vendor/moonbit-ssg/mise.toml when bumping the submodule.
 
+[tools]
+# Node runs scripts/highlight (Shiki, Mermaid) after the MoonBit build.
+node = "24"
+
 [tools."http:moonbit"]
 version = "0.10.11+6ff76a5f9"
 bin_path = "bin"
