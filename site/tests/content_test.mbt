@@ -72,7 +72,7 @@ test "group items by year, newest year first" {
 test "count tags, most used first and then by code point" {
   debug_inspect(
     @site.tag_counts(sample()),
-    content="[(\"diary\", 3), (\"日記\", 1), (\"技術\", 1)]",
+    content="[(\"diary\", 3), (\"技術\", 1), (\"日記\", 1)]",
   )
 }
 

@@ -87,18 +87,6 @@ fn render_profile_links(config : BlogConfig) -> String {
 }
 
 ///|
-/// Newest first. Items with the same date keep their filename order.
-fn items_by_descending_date(
-  items : Array[@ssg.PublishItem],
-) -> Array[@ssg.PublishItem] {
-  let sorted = items.copy()
-  sorted.sort_by(fn(left, right) {
-    right.content.date.compare(left.content.date)
-  })
-  sorted
-}
-
-///|
 fn items_tagged_with(
   content : @ssg.PublishedContent,
   tag : String,
