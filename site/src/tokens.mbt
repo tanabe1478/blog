@@ -4,7 +4,7 @@
 let rem_types : Array[String] = ["fontSizes", "spacing", "sizing", "dimension"]
 
 ///|
-let px_types : Array[String] = ["borderRadius", "borderWidth"]
+let px_types : Array[String] = ["borderRadius", "borderWidth", "letterSpacing"]
 
 ///|
 fn format_number(value : Double) -> String {
@@ -109,6 +109,11 @@ fn typography(
   output.push((name("font-weight"), weight))
   output.push((name("font-style"), style))
   output.push((name("line-height"), dimension(field("lineHeight"), "number")))
+  match fields.get("letterSpacing") {
+    Some(value) =>
+      output.push((name("letter-spacing"), dimension(value, "letterSpacing")))
+    None => ()
+  }
 }
 
 ///|
