@@ -12,11 +12,13 @@ site/
   src/config.mbt        site名・説明・URL・SNS・Analytics
   src/theme.mbt         各pageのHTML（PublishHTMLFactory）
   src/url.mbt           HTML escapeとURL組み立て
-  src/build.mbt         読み込み → HTML → RSS/sitemap → Resources copy
-  cmd/build/            CLI: build CONTENT RESOURCES OUTPUT [BUILD_DATE]
+  src/tokens.mbt        design/tokens.json → CSS変数
+  src/build.mbt         読み込み → HTML → RSS/sitemap → Resources copy → /styles.css
+  cmd/build/            CLI: build CONTENT RESOURCES TOKENS OUTPUT [BUILD_DATE]
   tests/                themeのblack-box test
 vendor/moonbit-ssg      git submodule。使うcommitはsubmoduleが固定する
-Resources/MyHtmlTheme/  CSS。styles.css は /styles.css にもcopyされる
+design/tokens.json      色・文字・余白などのdesign token（Penpotと共有する正本）
+Resources/MyHtmlTheme/  CSS。値はvar(--...)で参照し、直接書かない
 ```
 
 `moon.mod`はlocal path依存を書けないため、`moon.work`のworkspaceで`tanabe1478/moonbit-ssg`をsubmoduleへ解決します。mooncakesへの公開は不要です。
@@ -28,13 +30,15 @@ Resources/MyHtmlTheme/  CSS。styles.css は /styles.css にもcopyされる
 1. `@ssg.load_published_content`で`Content/`を読む。`posts/`だけをsectionとして扱い、他のMarkdownはpageになる。
 2. `@ssg.generate_publish_html`に`site/src/theme.mbt`のfactoryを渡し、`/`、`/posts/`、`/posts/<slug>/`、`/tags/`、`/tags/<tag>/`を書き出す。
 3. `@ssg.render_publish_rss_feed`と`@ssg.render_publish_sitemap`で`feed.rss`と`sitemap.xml`を書き出す。
-4. `Resources/`をそのままcopyし、`MyHtmlTheme/styles.css`を`/styles.css`へcopyする。
+4. `Resources/`をそのままcopyする。
+5. `design/tokens.json`を`tokens_css`でCSS変数に変換し、`MyHtmlTheme/styles.css`の前につなげて`/styles.css`に書き出す。`base`と`light`のsetが既定、`dark`は`prefers-color-scheme: dark`で効く。
 
 ## 変更する場所
 
 | 変えたいもの | 場所 |
 | --- | --- |
-| 色・余白・font | `Resources/MyHtmlTheme/styles.css` |
+| 色・文字の大きさ・行の高さ・余白・幅・角丸の値 | `design/tokens.json` |
+| どの要素にどのtokenを使うか、tokenにない細かな指定 | `Resources/MyHtmlTheme/styles.css` |
 | topに出す自己紹介などの文章 | `Content/index.md`の本文（先頭の`# `見出しは`<title>`用で表示しない） |
 | pageのHTML構造、並び順、表示項目 | `site/src/theme.mbt` |
 | site名・説明・SNS link・Analytics ID | `site/src/config.mbt` |
@@ -94,3 +98,15 @@ SSG自体を同時に直す場合は、`vendor/moonbit-ssg`の中でbranchを作
 
 - `tags/ゲーム`のdirectory名がNFDからNFCになり、HTML内のlinkと一致した。
 - sitemapの`lastmod`が全件build日から各記事の日付になった。
+
+## Design token
+
+`design/tokens.json`はPenpotがimport/exportする形式（最上位keyがset、tokenは`$type`と`$value`）です。
+
+- 文字の大きさ・余白・幅はPenpotの都合でpxで書き、CSSではremに変換する（ブラウザの文字サイズ設定が効くように）。角丸はpxのまま。
+- line-heightは単位なしの比率で書く。
+- typographyは`--typography-<name>-font-family`などfamily・size・weight・style・line-heightの5変数になる。
+- 変数名はtokenの階層を`-`でつないだもの（`color.text` → `--color-text`）。
+
+tokenを追加したら`styles.css`から`var(--...)`で参照します。CSSに値を直接書くとPenpotとずれるので避けます。
+
