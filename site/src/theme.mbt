@@ -113,7 +113,7 @@ fn render_tags(tags : Array[String]) -> String {
 
 ///|
 fn render_label(label : String) -> String {
-  "<h2 class=\"label\">\{label}</h2>"
+  "<h2 class=\"section-label\">\{label}</h2>"
 }
 
 ///|

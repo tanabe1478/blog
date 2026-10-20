@@ -177,7 +177,7 @@ body:not(.page-home) main.column {
     justify-content: space-between;
 }
 
-.label {
+.section-label {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -189,7 +189,7 @@ body:not(.page-home) main.column {
     text-transform: uppercase;
 }
 
-.label::before {
+.section-label::before {
     content: "";
     width: 5px;
     height: 5px;
