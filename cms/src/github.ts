@@ -106,6 +106,7 @@ export interface PostSummary {
   name: string;
   title: string;
   date: string;
+  pinned: boolean;
   path: string;
   githubUrl: string;
   publicUrl: string;
@@ -228,11 +229,14 @@ function postMetadata(name: string, content: string): PostSummary | undefined {
   const date = frontmatter?.[1].match(/^date:\s*(.+)\s*$/m)?.[1]?.trim();
   const title = content.match(/^#{1,6}\s+(.+)\s*$/m)?.[1]?.trim();
   if (!date || !title) return undefined;
+  // Same rule as the blog theme: only an exact `pinned: true` line pins a post.
+  const pinned = /^pinned:\s*["']?true["']?\s*$/m.test(frontmatter?.[1] ?? "");
   const path = `Content/posts/${name}`;
   return {
     name,
     title,
     date,
+    pinned,
     path,
     githubUrl: githubFileUrl(path),
     publicUrl: publicPostUrl(name),
@@ -433,6 +437,8 @@ export async function listPosts(
       name: entry.name,
       title: entry.name.slice(0, -3),
       date: "",
+      // Without a token only filenames are listed, so the frontmatter is unknown.
+      pinned: false,
       path: entry.path,
       githubUrl: githubFileUrl(entry.path),
       publicUrl: publicPostUrl(entry.name),
