@@ -1,7 +1,7 @@
 ---
 date: 2026-05-12 19:10
 description: ブログ公開用のスクリプトを一つにまとめた
-tags: 技術, 日記
+tags: 技術, ブログ
 pinned: true
 ---
 

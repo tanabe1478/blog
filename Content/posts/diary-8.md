@@ -1,7 +1,7 @@
 ---
 date: 2022-08-29 16:38
 description: ""
-tags: diary
+tags: 仕事
 ---
 
 # 副業を始めた

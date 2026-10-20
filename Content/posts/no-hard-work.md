@@ -1,7 +1,7 @@
 ---
 date: 2020-12-19 01:38
 description: BaseCamp社を創業したジェイソン・フリードとDHHの共著「No HARD WORK!」を読みました
-tags: 読書メモ,
+tags: 読書
 image: images/no-hard-work/no-hard-work.jpg
 ---
 

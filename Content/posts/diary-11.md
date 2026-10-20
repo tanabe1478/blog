@@ -1,7 +1,7 @@
 ---
 date: 2022-11-27 04:46
 description: ""
-tags: diary
+tags: ガジェット, 技術
 ---
 
 # Synology DS220j と WD80EFZZ-EC を使ったNAS環境の初期設定

@@ -1,7 +1,7 @@
 ---
 date: 2020-12-09 18:08
 description: Publish向けに一つ目のプラグインを作った
-tags: アニメ,
+tags: 技術, ブログ
 ---
 
 # このサイトを生成しているPublish向けのYoutube埋め込みを表示するプラグインを作った

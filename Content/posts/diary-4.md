@@ -1,7 +1,7 @@
 ---
 date: 2022-07-26 00:21
 description: ""
-tags: diary
+tags: ゲーム
 ---
 
 # Raftをやり始めた

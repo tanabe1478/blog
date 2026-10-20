@@ -2,7 +2,7 @@
 ---
 date: 2021-01-05 05:40
 description: ヘッドホンの配線に困ってカールコードを購入したのでメモ
-tags: 買ったもの,
+tags: ガジェット
 image: images/curl-code/curl-code-1.jpg
 ---
 

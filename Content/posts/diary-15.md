@@ -1,7 +1,7 @@
 ---
 date: 2024-01-12 22:14
 description: ""
-tags: diary
+tags: ゲーム
 ---
 
 # モンスターハンターワールドをはじめた

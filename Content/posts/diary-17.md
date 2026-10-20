@@ -1,7 +1,7 @@
 ---
 date: 2025-03-04 03:28
 description: ""
-tags: diary
+tags: 技術
 ---
 
 # GmailをGeminiにつなげる方法

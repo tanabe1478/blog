@@ -1,7 +1,7 @@
 ---
 date: 2023-04-16 21:29
 description: ""
-tags: diary
+tags: ゲーム
 ---
 
 # Sons of the Forestをやり終えた

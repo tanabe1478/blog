@@ -1,7 +1,7 @@
 ---
 date: 2022-07-29 23:04
 description: ""
-tags: diary
+tags: 読書
 ---
 
 # 最近やっている本の読み方

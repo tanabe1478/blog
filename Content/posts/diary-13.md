@@ -1,7 +1,7 @@
 ---
 date: 2023-11-30 16:54
 description: ""
-tags: diary
+tags: 日記
 ---
 
 # 2023 近況

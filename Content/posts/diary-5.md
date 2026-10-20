@@ -1,7 +1,7 @@
 ---
 date: 2022-07-27 21:10
 description: ""
-tags: diary
+tags: ガジェット
 ---
 
 # Pixel6aを買った

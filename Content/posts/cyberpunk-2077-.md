@@ -1,7 +1,7 @@
 ---
 date: 2020-12-12 19:08
 description: 今年一番プレイするゲームになりそう
-tags: ゲーム,
+tags: ゲーム
 image: images/cyberpunk/cyberpunk-logo.jpeg
 ---
 

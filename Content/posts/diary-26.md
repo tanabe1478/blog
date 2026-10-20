@@ -1,7 +1,7 @@
 ---
 date: 2025-12-23 14:03
 description: ""
-tags: diary
+tags: 技術, ブログ
 ---
 
 # diary の改修

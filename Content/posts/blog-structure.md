@@ -3,7 +3,7 @@
 ---
 date: 2020-11-29 21:40
 description: このブログの構成について
-tags: 技術,
+tags: 技術, ブログ
 image: images/publish.png
 ---
 

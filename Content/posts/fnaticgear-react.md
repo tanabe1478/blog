@@ -1,7 +1,7 @@
 ---
 date: 2020-11-30 19:08
 description: 最近FPSで使っているゲーミングヘッドセット
-tags: 買ったもの,
+tags: ガジェット
 image: images/fnatic-gear-react.jpg
 ---
 

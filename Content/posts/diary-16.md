@@ -1,7 +1,7 @@
 ---
 date: 2025-02-02 16:50
 description: ""
-tags: diary
+tags: 技術, ブログ
 ---
 
 # Next.js 製ブログのアップデート作業記録

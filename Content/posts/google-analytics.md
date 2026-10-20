@@ -1,7 +1,7 @@
 ---
 date: 2021-01-11 18:00
 description: このサイトにGoogle Analyticsを導入したので経緯と手順
-tags: 雑記,
+tags: 技術, ブログ
 ---
 
 # Google Analyticsを導入した

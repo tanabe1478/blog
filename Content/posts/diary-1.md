@@ -1,7 +1,7 @@
 ---
 date: 2022-07-18 19:51
 description: ""
-tags: diary
+tags: 技術
 ---
 
 # Next.jsの勉強

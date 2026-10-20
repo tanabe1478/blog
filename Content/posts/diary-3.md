@@ -1,7 +1,7 @@
 ---
 date: 2022-07-20 15:03
 description: ""
-tags: diary
+tags: ガジェット
 ---
 
 # Polarisを組み立てた

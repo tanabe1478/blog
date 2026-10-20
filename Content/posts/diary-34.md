@@ -1,7 +1,7 @@
 ---
 date: 2026-04-24 04:09
 description: ""
-tags: diary
+tags: 技術, ブログ
 pinned: true
 ---
 

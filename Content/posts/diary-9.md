@@ -1,7 +1,7 @@
 ---
 date: 2022-09-28 12:12
 description: ""
-tags: diary
+tags: ゲーム
 ---
 
 # 原神をはじめた時からの記録

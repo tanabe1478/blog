@@ -1,7 +1,7 @@
 ---
 date: 2022-07-19 00:56
 description: ""
-tags: diary
+tags: ガジェット
 ---
 
 # iOSからAndroidへ移行した
