@@ -2,6 +2,7 @@ export interface PostSummary {
   name: string;
   title: string;
   date: string;
+  pinned: boolean;
   path: string;
   githubUrl: string;
   publicUrl: string;

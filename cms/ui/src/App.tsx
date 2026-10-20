@@ -12,9 +12,11 @@ import type {
   ArticleWorkspaceProps,
   InitialDeployment,
 } from "./ArticleWorkspace";
-import { fetchPosts, type PageName, type PostSummary } from "./api";
+import { fetchPost, fetchPosts, updatePost, type PageName, type PostSummary } from "./api";
+import { DeploymentStatus } from "./DeploymentStatus";
 import { readDraft, writeDraft, type LocalDraft } from "./drafts";
-import { invalidatePost, preloadPost, readPost } from "./postResource";
+import { setFrontmatterValue } from "./frontmatter";
+import { invalidatePost, preloadPost, readPost, setCachedPost } from "./postResource";
 import { RouteErrorBoundary } from "./RouteErrorBoundary";
 
 let articleWorkspacePromise:
@@ -214,6 +216,40 @@ function PostList({
 }) {
   const [posts, setPosts] = useState<Loadable<PostSummary[]>>({ state: "loading" });
   const [showNewPost, setShowNewPost] = useState(false);
+  const [pinning, setPinning] = useState<string>();
+  const [pinStatus, setPinStatus] = useState<{ message: string; error: boolean }>();
+  const [pinCommit, setPinCommit] = useState<string>();
+
+  // Reads the latest source so the save carries its current SHA and keeps other edits.
+  const togglePinned = async (post: PostSummary) => {
+    setPinning(post.name);
+    setPinStatus(undefined);
+    try {
+      const document = await fetchPost(post.name);
+      const content = setFrontmatterValue(document.content, "pinned", post.pinned ? null : "true");
+      const update = await updatePost(post.name, content, document.sha);
+      setCachedPost({ ...document, content, sha: update.sha, githubUrl: update.githubUrl });
+      setPosts((current) =>
+        current.state === "ready"
+          ? {
+              state: "ready",
+              value: current.value.map((item) =>
+                item.name === post.name ? { ...item, pinned: !post.pinned } : item,
+              ),
+            }
+          : current,
+      );
+      setPinCommit(update.commitSha);
+      setPinStatus({
+        message: `Pinnedを更新しました（${post.title}）。公開処理はGitHub Actionsで進みます。`,
+        error: false,
+      });
+    } catch (error) {
+      setPinStatus({ message: message(error, "Pinnedを更新できませんでした"), error: true });
+    } finally {
+      setPinning(undefined);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -248,7 +284,15 @@ function PostList({
       {posts.state === "error" && <p role="alert" className="error-message">{posts.message}</p>}
       {posts.state === "ready" && (
         <>
-          <p role="status">{posts.value.length}件の記事</p>
+          <p role="status">
+            {posts.value.length}件の記事 · Pinned {posts.value.filter((post) => post.pinned).length}件
+          </p>
+          {pinStatus && (
+            <p className={pinStatus.error ? "error-message" : "workspace-status"} role={pinStatus.error ? "alert" : "status"}>
+              {pinStatus.message}
+            </p>
+          )}
+          {pinCommit && <DeploymentStatus key={pinCommit} commitSha={pinCommit} purpose="publish" />}
           <ul className="post-list">
             {posts.value.map((post) => (
               <li key={post.name}>
@@ -259,10 +303,21 @@ function PostList({
                   onMouseEnter={() => onPreload(post.name)}
                   onFocus={() => onPreload(post.name)}
                 >
-                  <span className="post-title">{post.title}</span>
+                  <span className="post-title">
+                    {post.title}
+                    {post.pinned && <span className="pinned-badge">Pinned</span>}
+                  </span>
                   <code className="post-meta">
                     {post.date ? `${post.date} · ${post.name}` : post.name}
                   </code>
+                </button>
+                <button
+                  className="pin-button"
+                  type="button"
+                  disabled={Boolean(pinning)}
+                  onClick={() => void togglePinned(post)}
+                >
+                  {pinning === post.name ? "保存中…" : post.pinned ? "ピンを外す" : "ピン留め"}
                 </button>
               </li>
             ))}

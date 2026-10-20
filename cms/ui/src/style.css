@@ -133,6 +133,32 @@ button:disabled {
   list-style: none;
 }
 
+.post-list > li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.post-list > li > .post-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.pin-button {
+  flex: none;
+}
+
+.pinned-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e8eefb;
+  color: #2f5fc4;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 .post-link {
   display: block;
   width: 100%;
