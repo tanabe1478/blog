@@ -17,6 +17,7 @@ import {
 } from "./api";
 import { DeploymentStatus, type DeploymentPurpose } from "./DeploymentStatus";
 import { removeDraft, writeDraft, type LocalDraft } from "./drafts";
+import { readFrontmatterValue, setFrontmatterValue } from "./frontmatter";
 import { MarkdownArticle } from "./MarkdownArticle";
 import { invalidatePost, setCachedPost } from "./postResource";
 
@@ -88,6 +89,8 @@ export function ArticleWorkspace({
   const lastDraftContent = useRef(content);
 
   const changed = creating || content !== post.content;
+  // The top page lists posts whose frontmatter says `pinned: true`.
+  const pinned = readFrontmatterValue(content, "pinned") === "true";
 
   useEffect(() => {
     if (!editing || content === lastDraftContent.current) return;
@@ -450,6 +453,20 @@ export function ArticleWorkspace({
         </p>
       )}
       {draftStatus && <p className="draft-state" role="status">{draftStatus}</p>}
+
+      {editing && (
+        <label className="pinned-toggle">
+          <input
+            type="checkbox"
+            checked={pinned}
+            disabled={saving}
+            onChange={(event) =>
+              setContent(setFrontmatterValue(content, "pinned", event.target.checked ? "true" : null))
+            }
+          />
+          トップに固定表示（Pinned）
+        </label>
+      )}
 
       {editing ? (
         <div className="editor-grid">
