@@ -1,3 +1,5 @@
+import type { Text } from "@codemirror/state";
+
 export interface SelectionRange {
   from: number;
   to: number;
@@ -5,17 +7,19 @@ export interface SelectionRange {
 
 // Keep the repository's existing image-insertion policy: put a blank line
 // around the image only when the neighbouring text is not already at a line
-// boundary.
+// boundary. Use Text rather than a string so CRLF documents keep CodeMirror's
+// position numbering.
 export function insertBlockMarkdown(
-  source: string,
+  doc: Text,
   range: SelectionRange,
   markdown: string,
 ): { text: string; cursor: number } {
-  const before = source.slice(0, range.from);
-  const after = source.slice(range.to);
-  const leading = before && !before.endsWith("\n") ? "\n" : "";
-  const trailing = after && !after.startsWith("\n") ? "\n" : "";
-  const text = `${leading}${markdown}${trailing}`;
+  const fromLine = doc.lineAt(range.from);
+  const toLine = doc.lineAt(range.to);
+  const leading = fromLine.from < range.from ? "\n" : "";
+  const trailing = toLine.to > range.to ? "\n" : "";
+  const block = markdown.replace(/\r\n?/g, "\n");
+  const text = `${leading}${block}${trailing}`;
   return { text, cursor: range.from + text.length };
 }
 

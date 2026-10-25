@@ -2,6 +2,7 @@ import {
   StateEffect,
   StateField,
   type EditorState,
+  type Transaction,
 } from "@codemirror/state";
 
 import { insertBlockMarkdown, type SelectionRange } from "./insert";
@@ -44,16 +45,54 @@ export const anchorField = StateField.define<AnchorState>({
   },
 });
 
+export function captureAnchorEffect(
+  state: EditorState,
+  position = state.selection.main.head,
+): { id: AnchorId; effect: StateEffect<Anchor | null> } {
+  const id = state.field(anchorField).next;
+  const selection = state.selection.main;
+  const insideSelection =
+    position >= selection.from && position <= selection.to;
+  return {
+    id,
+    effect: setAnchor.of({
+      id,
+      from: insideSelection ? selection.from : position,
+      to: insideSelection ? selection.to : position,
+    }),
+  };
+}
+
 export function captureAnchorInState(
   state: EditorState,
 ): { id: AnchorId; state: EditorState } {
-  const id = state.field(anchorField).next;
-  const selection = state.selection.main;
+  const captured = captureAnchorEffect(state);
   return {
-    id,
-    state: state.update({
-      effects: setAnchor.of({ id, from: selection.from, to: selection.to }),
-    }).state,
+    id: captured.id,
+    state: state.update({ effects: captured.effect }).state,
+  };
+}
+
+export function insertAtAnchorTransaction(
+  state: EditorState,
+  id: AnchorId,
+  markdown: string,
+): { transaction: Transaction; text: string; usedAnchor: boolean } {
+  const captured = state.field(anchorField).current;
+  const usedAnchor = captured?.id === id;
+  const range: SelectionRange = usedAnchor ? captured : state.selection.main;
+  const { text, cursor } = insertBlockMarkdown(state.doc, range, markdown);
+  const insert =
+    state.lineBreak === "\n" ? text : text.replace(/\n/g, state.lineBreak);
+  return {
+    text,
+    usedAnchor,
+    transaction: state.update({
+      changes: { from: range.from, to: range.to, insert },
+      selection: { anchor: cursor },
+      effects: setAnchor.of(null),
+      scrollIntoView: true,
+    }),
   };
 }
 
@@ -62,18 +101,10 @@ export function insertAtAnchorInState(
   id: AnchorId,
   markdown: string,
 ): { state: EditorState; text: string; usedAnchor: boolean } {
-  const captured = state.field(anchorField).current;
-  const usedAnchor = captured?.id === id;
-  const range: SelectionRange = usedAnchor ? captured : state.selection.main;
-  const { text, cursor } = insertBlockMarkdown(state.sliceDoc(), range, markdown);
+  const result = insertAtAnchorTransaction(state, id, markdown);
   return {
-    text,
-    usedAnchor,
-    state: state.update({
-      changes: { from: range.from, to: range.to, insert: text },
-      selection: { anchor: cursor },
-      effects: setAnchor.of(null),
-      scrollIntoView: true,
-    }).state,
+    text: result.text,
+    usedAnchor: result.usedAnchor,
+    state: result.transaction.state,
   };
 }

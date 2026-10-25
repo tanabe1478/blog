@@ -52,6 +52,25 @@ describe("editor upload anchors", () => {
     expect(inserted.state.sliceDoc()).toBe("one two\nimage");
   });
 
+  it("keeps CRLF line endings when inserting at the end of a document", () => {
+    const initial = EditorState.create({
+      doc: "before\r\nafter",
+      selection: { anchor: 12 },
+      extensions: [anchorField, EditorState.lineSeparator.of("\r\n")],
+    });
+    const captured = captureAnchorInState(initial);
+    const inserted = insertAtAnchorInState(
+      captured.state,
+      captured.id,
+      "![x](/images/x.png)",
+    );
+
+    expect(inserted.state.sliceDoc()).toBe(
+      "before\r\nafter\r\n![x](/images/x.png)",
+    );
+    expect(inserted.state.selection.main.head).toBe(inserted.state.doc.length);
+  });
+
   it("maps the anchor through deletions and consumes it after insertion", () => {
     const initial = stateWith("abcdef", 4);
     const captured = captureAnchorInState(initial);
