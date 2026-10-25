@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  frontmatterRange,
   readFrontmatterValue,
   setFrontmatterValue,
   splitHeading,
@@ -46,6 +47,16 @@ describe("frontmatter helpers", () => {
 
   it("keeps values on one line", () => {
     expect(setFrontmatterValue(home, "rss", "line one\nline two")).toContain("rss: line one line two");
+  });
+
+  it("reports the exact frontmatter range used by the editor", () => {
+    expect(frontmatterRange(home)).toEqual({ from: 0, to: home.indexOf("\n\n# ") + 1 });
+    expect(frontmatterRange("# Title\n")).toBeNull();
+    expect(frontmatterRange("---\nunclosed\n")).toBeNull();
+    expect(frontmatterRange("---\ntitle: A\n---\n\n---\n\nbody\n")).toEqual({
+      from: 0,
+      to: "---\ntitle: A\n---\n".length,
+    });
   });
 
   it("splits the leading heading from the body and joins it back", () => {

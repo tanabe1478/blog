@@ -46,6 +46,14 @@ function quote(value: string): string {
   return value.includes('"') ? `'${value}'` : `"${value}"`;
 }
 
+// Half-open offset of the leading `--- ... ---` block, including its final
+// newline. The editor uses this to keep frontmatter out of Markdown parsing.
+export function frontmatterRange(source: string): { from: number; to: number } | null {
+  const { lines, rest } = splitFrontmatter(source);
+  if (lines === null) return null;
+  return { from: 0, to: source.length - rest.length };
+}
+
 export function readFrontmatterValue(source: string, key: string): string {
   const { lines } = splitFrontmatter(source);
   const line = lines?.find((candidate) => keyOf(candidate) === key);
