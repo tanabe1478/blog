@@ -49,15 +49,83 @@ describe("CMS Worker", () => {
     expect(response.status).toBe(200);
   });
 
-  it("serves the React CMS root through the authenticated Worker", async () => {
+  it("serves the React CMS root with a matching CSP nonce", async () => {
+    const html = [
+      "<!doctype html><html><head><title>Blog CMS</title></head>",
+      '<body><div id="root"></div></body></html>',
+    ].join("");
+    const assets = {
+      fetch: vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            new Response(html, {
+              headers: { "content-type": "text/html; charset=utf-8" },
+            }),
+          ),
+        ),
+    };
+    const request = new Request("https://cms.example.test/");
+
+    const first = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        WRITE_HOST: "cms.example.test",
+        ASSETS: assets as unknown as Fetcher,
+      },
+    );
+    const firstBody = await first.text();
+    const firstNonce = firstBody.match(
+      /<meta name="csp-nonce" content="([0-9a-f]{32})">/,
+    )?.[1];
+    const firstCsp = first.headers.get("content-security-policy") ?? "";
+
+    expect(first.status).toBe(200);
+    expect(firstBody).toContain('id="root"');
+    expect(firstNonce).toMatch(/^[0-9a-f]{32}$/);
+    expect(first.headers.get("cache-control")).toBe("no-store");
+    expect(first.headers.get("content-length")).toBeNull();
+    expect(firstCsp).toContain("script-src 'self'");
+    expect(firstCsp).toContain(`style-src 'self' 'nonce-${firstNonce}'`);
+    expect(firstCsp).not.toContain("'unsafe-inline'");
+    expect(firstCsp).not.toContain("'unsafe-eval'");
+
+    const second = await worker.fetch(
+      request as Parameters<typeof worker.fetch>[0],
+      {
+        POLICY_AUD: "test-audience",
+        TEAM_DOMAIN: "https://test.cloudflareaccess.com",
+        ACCESS_BYPASS: true,
+        WRITE_HOST: "cms.example.test",
+        ASSETS: assets as unknown as Fetcher,
+      },
+    );
+    const secondBody = await second.text();
+    const secondNonce = secondBody.match(
+      /<meta name="csp-nonce" content="([0-9a-f]{32})">/,
+    )?.[1];
+
+    expect(secondNonce).not.toBe(firstNonce);
+    expect(second.headers.get("content-security-policy")).toContain(
+      `'nonce-${secondNonce}'`,
+    );
+    expect(assets.fetch).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://cms.example.test/" }),
+    );
+  });
+
+  it("passes built assets through without an HTML nonce", async () => {
     const assets = {
       fetch: vi.fn().mockResolvedValue(
-        new Response('<div id="root"></div>', {
-          headers: { "content-type": "text/html; charset=utf-8" },
+        new Response("console.log(1);", {
+          headers: { "content-type": "text/javascript" },
         }),
       ),
     };
-    const request = new Request("https://cms.example.test/");
+    const request = new Request("https://cms.example.test/assets/app.js");
 
     const response = await worker.fetch(
       request as Parameters<typeof worker.fetch>[0],
@@ -71,17 +139,9 @@ describe("CMS Worker", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('id="root"');
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-security-policy")).toContain(
-      "script-src 'self'",
-    );
-    expect(response.headers.get("content-security-policy")).not.toContain(
-      "'unsafe-inline'",
-    );
-    expect(assets.fetch).toHaveBeenCalledWith(
-      expect.objectContaining({ url: "https://cms.example.test/" }),
-    );
+    expect(await response.text()).toBe("console.log(1);");
+    expect(response.headers.get("content-security-policy")).toBeNull();
+    expect(response.headers.get("cache-control")).toBeNull();
   });
 
   it("does not keep the React migration preview route", async () => {

@@ -49,6 +49,20 @@ function postNameFromPath(pathname: string): string | undefined {
   }
 }
 
+function randomNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+// CodeMirror injects its generated stylesheet at runtime. A per-response nonce
+// lets that one stylesheet through without allowing arbitrary inline styles.
+function injectNonce(html: string, nonce: string): string {
+  const meta = `<meta name="csp-nonce" content="${nonce}">`;
+  return html.includes("</head>")
+    ? html.replace("</head>", `${meta}</head>`)
+    : `${meta}${html}`;
+}
+
 async function reactAsset(request: Request, env: Env): Promise<Response> {
   if (!env.ASSETS) {
     return json({ error: "React UI assets are not built" }, 503);
@@ -58,14 +72,25 @@ async function reactAsset(request: Request, env: Env): Promise<Response> {
   const headers = new Headers(asset.headers);
   headers.set("referrer-policy", "no-referrer");
   headers.set("x-content-type-options", "nosniff");
-  if (url.pathname === "/") {
-    headers.set("cache-control", "no-store");
-    headers.set(
-      "content-security-policy",
-      "default-src 'none'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src https: data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
-    );
+
+  if (url.pathname !== "/") {
+    return new Response(asset.body, {
+      status: asset.status,
+      statusText: asset.statusText,
+      headers,
+    });
   }
-  return new Response(asset.body, {
+
+  const nonce = randomNonce();
+  const html = injectNonce(await asset.text(), nonce);
+  headers.set("cache-control", "no-store");
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  headers.set(
+    "content-security-policy",
+    `default-src 'none'; connect-src 'self'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; img-src https: data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
+  );
+  return new Response(html, {
     status: asset.status,
     statusText: asset.statusText,
     headers,
