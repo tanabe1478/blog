@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bodyStart,
   frontmatterRange,
   readFrontmatterValue,
   setFrontmatterValue,
@@ -57,6 +58,33 @@ describe("frontmatter helpers", () => {
       from: 0,
       to: "---\ntitle: A\n---\n".length,
     });
+  });
+
+  it("finds the editable body after frontmatter, blank lines, and the heading", () => {
+    const about = "---\nsubtitle: Sub\n---\n\n# tanabe1478\n\nAbout me.\n\n## This blog\n\nText.\n";
+    expect(bodyStart(about)).toBe(about.indexOf("About me."));
+    expect(bodyStart(home)).toBe(home.indexOf("紹介文です。"));
+    expect(bodyStart("本文だけ\n")).toBe(0);
+    expect(bodyStart("---\ntitle: A\n---\n\n# Title\n\n")).toBe(
+      "---\ntitle: A\n---\n\n# Title\n\n".length,
+    );
+  });
+
+  it("keeps CRLF frontmatter, headings and body positions consistent", () => {
+    const crlfHome = home.replace(/\n/g, "\r\n");
+    expect(readFrontmatterValue(crlfHome, "profile")).toBe("@t__nabe1478");
+    expect(frontmatterRange(crlfHome)).toEqual(frontmatterRange(home));
+    expect(bodyStart(crlfHome)).toBe(bodyStart(home));
+    expect(setFrontmatterValue(crlfHome, "pinned", "true")).toBe(
+      setFrontmatterValue(home, "pinned", "true").replace(/\n/g, "\r\n"),
+    );
+    expect(splitHeading(crlfHome)).toEqual({
+      heading: "",
+      body: "紹介文です。\r\n",
+    });
+    expect(joinHeading(crlfHome, "", "新しい紹介文。\r\n")).toBe(
+      crlfHome.replace("紹介文です。\r\n", "新しい紹介文。\r\n"),
+    );
   });
 
   it("splits the leading heading from the body and joins it back", () => {

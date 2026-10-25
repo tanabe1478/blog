@@ -2,26 +2,38 @@
 // They work on lines instead of a YAML parser because moonbit-ssg only reads
 // flat `key: value` lines, and keeping every untouched line avoids noisy diffs.
 
+import { stringOffsetToDoc } from "./textPosition";
+
 const fence = "---";
 
-type Parts = { lines: string[] | null; rest: string };
+type Parts = { lines: string[] | null; rest: string; eol: string };
+
+export function lineEndingOf(source: string): "\r\n" | "\n" {
+  const crlf = source.includes("\r\n");
+  const loneLf = /(^|[^\r])\n/.test(source);
+  return crlf && !loneLf ? "\r\n" : "\n";
+}
 
 function splitFrontmatter(source: string): Parts {
-  if (!source.startsWith(`${fence}\n`)) return { lines: null, rest: source };
-  const end = source.indexOf(`\n${fence}`, fence.length);
-  if (end === -1) return { lines: null, rest: source };
-  const afterFence = end + fence.length + 1;
-  if (afterFence < source.length && source[afterFence] !== "\n") return { lines: null, rest: source };
-  const body = source.slice(fence.length + 1, end);
+  const eol = lineEndingOf(source);
+  if (!source.startsWith(`${fence}${eol}`)) return { lines: null, rest: source, eol };
+  const end = source.indexOf(`${eol}${fence}`, fence.length);
+  if (end === -1) return { lines: null, rest: source, eol };
+  const afterFence = end + fence.length + eol.length;
+  if (afterFence < source.length && !source.startsWith(eol, afterFence)) {
+    return { lines: null, rest: source, eol };
+  }
+  const body = source.slice(fence.length + eol.length, end);
   return {
-    lines: body === "" ? [] : body.split("\n"),
-    rest: source.slice(Math.min(afterFence + 1, source.length)),
+    lines: body === "" ? [] : body.split(eol),
+    rest: source.slice(Math.min(afterFence + eol.length, source.length)),
+    eol,
   };
 }
 
-function joinFrontmatter(lines: string[], rest: string): string {
+function joinFrontmatter(lines: string[], rest: string, eol: string): string {
   if (lines.length === 0) return rest;
-  return `${fence}\n${lines.join("\n")}\n${fence}\n${rest}`;
+  return `${fence}${eol}${lines.join(eol)}${eol}${fence}${eol}${rest}`;
 }
 
 function keyOf(line: string): string | null {
@@ -46,12 +58,16 @@ function quote(value: string): string {
   return value.includes('"') ? `'${value}'` : `"${value}"`;
 }
 
-// Half-open offset of the leading `--- ... ---` block, including its final
-// newline. The editor uses this to keep frontmatter out of Markdown parsing.
+// Half-open CodeMirror position of the leading `--- ... ---` block, including
+// its final newline. The editor uses this to keep frontmatter out of Markdown
+// parsing even when the file uses CRLF.
 export function frontmatterRange(source: string): { from: number; to: number } | null {
-  const { lines, rest } = splitFrontmatter(source);
+  const { lines, rest, eol } = splitFrontmatter(source);
   if (lines === null) return null;
-  return { from: 0, to: source.length - rest.length };
+  return {
+    from: 0,
+    to: stringOffsetToDoc(source, source.length - rest.length, eol),
+  };
 }
 
 export function readFrontmatterValue(source: string, key: string): string {
@@ -63,7 +79,7 @@ export function readFrontmatterValue(source: string, key: string): string {
 
 // Replaces, appends or (with null) removes one key, leaving every other line as is.
 export function setFrontmatterValue(source: string, key: string, value: string | null): string {
-  const { lines, rest } = splitFrontmatter(source);
+  const { lines, rest, eol } = splitFrontmatter(source);
   const current = lines ?? [];
   const index = current.findIndex((line) => keyOf(line) === key);
   const next = [...current];
@@ -75,22 +91,23 @@ export function setFrontmatterValue(source: string, key: string, value: string |
     if (index === -1) next.push(line);
     else next[index] = line;
   }
-  return joinFrontmatter(next, rest);
+  return joinFrontmatter(next, rest, eol);
 }
 
-type HeadingParts = { prefix: string; heading: string | null; body: string };
+type HeadingParts = { prefix: string; heading: string | null; body: string; eol: string };
 
 function splitHeadingParts(source: string): HeadingParts {
-  const { lines, rest } = splitFrontmatter(source);
+  const { lines, rest, eol } = splitFrontmatter(source);
   const frontmatter = lines === null ? "" : source.slice(0, source.length - rest.length);
-  const blank = /^\n*/.exec(rest)?.[0] ?? "";
+  const blank = /^(?:\r?\n)*/.exec(rest)?.[0] ?? "";
   const afterBlank = rest.slice(blank.length);
-  const match = /^#(?: (.*))?(?:\n|$)/.exec(afterBlank);
-  if (!match) return { prefix: frontmatter + blank, heading: null, body: afterBlank };
+  const match = /^#(?: (.*))?(?:\r?\n|$)/.exec(afterBlank);
+  if (!match) return { prefix: frontmatter + blank, heading: null, body: afterBlank, eol };
   return {
     prefix: frontmatter + blank,
     heading: (match[1] ?? "").trim(),
-    body: afterBlank.slice(match[0].length).replace(/^\n+/, ""),
+    body: afterBlank.slice(match[0].length).replace(/^(?:\r?\n)+/, ""),
+    eol,
   };
 }
 
@@ -101,6 +118,21 @@ export function splitHeading(source: string): { heading: string; body: string } 
 }
 
 export function joinHeading(source: string, heading: string, body: string): string {
-  const { prefix } = splitHeadingParts(source);
-  return `${prefix}# ${heading.trim()}\n\n${body}`;
+  const { prefix, eol } = splitHeadingParts(source);
+  return `${prefix}# ${heading.trim()}${eol}${eol}${body}`;
+}
+
+// Start of the editable body: after frontmatter, blank lines, and a leading
+// `# heading`. Used to place the caret when entering edit mode.
+export function bodyStart(source: string): number {
+  const { rest, eol } = splitFrontmatter(source);
+  const prefix = source.length - rest.length;
+  const blank = /^(?:\r?\n)*/.exec(rest)?.[0].length ?? 0;
+  const afterBlank = rest.slice(blank);
+  const heading = /^#(?: (.*))?(?:\r?\n|$)/.exec(afterBlank);
+  let position = prefix + blank + (heading ? heading[0].length : 0);
+  while (position < source.length && (source[position] === "\n" || source[position] === "\r")) {
+    position++;
+  }
+  return stringOffsetToDoc(source, position, eol);
 }
