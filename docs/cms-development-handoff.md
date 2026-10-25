@@ -357,8 +357,9 @@ CMSは保存responseのsource commit SHAで`deploy-blog.yml`のworkflow runを�
 - 上限は10MB。
 - 記事filenameからslugを決め、1 segmentの安全な文字だけ許可する。
 - 内容のsha256先頭16桁をfilenameにし、`Resources/images/<slug>/`へGitHub Contents APIでcommitする（shaを渡さないので上書きしない。既存pathの`422`は同一内容として成功扱い）。
-- `![alt](/images/<slug>/<file>)`を作り、file pickerまたはtextareaへのdrop位置へ挿入する。
-- previewは`/images/...`を`raw.githubusercontent.com`の`main`から表示する。
+- `![alt](/images/<slug>/<file>)`を作り、file picker、drop、pasteの位置へ挿入する。
+- upload中に入力があっても、挿入位置は`ui/src/editor/anchors.ts`のanchorで追従する。
+- editorとread-only表示は`/images/...`を`raw.githubusercontent.com`の`main`から表示する。
 
 uploadは選択/drop直後に`main`へcommitし、Deploy Blogも起動します。記事編集をキャンセルしても画像commitは残ります。E2E確認では不要な実uploadを避けます。
 
@@ -378,13 +379,15 @@ GitHub保存成功または確認付きcancelでdraftを削除します。`local
 
 Suspenseの対象はread遷移とcode splittingだけです。保存、画像upload、rename、delete、draft autosave、deploy pollingはprogress/errorを明示するmutationなのでSuspense化しません。
 
-## Live preview
+## Markdown editor
 
-記事detailの閲覧時はMarkdown textareaを隠し、描画済み記事を表示します。編集時は左Markdown・右Previewの2ペインになり、800px以下は縦1列です。閲覧表示と編集Previewは同じrendererを使います。
+記事とHome / Aboutの編集画面は、CodeMirror 6を使った1画面のinline editorです。Markdown sourceを書きながら、heading、強調、link、画像などをその場で表示します。textareaとpreviewの2ペインは使いません。
 
-rendererは`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を使います。raw HTML pluginは追加せず、危険なURL protocolを拒否します。
+編集画面の実装は`cms/ui/src/editor/`にあります。sourceを正本とし、保存時は`state.sliceDoc()`で取り出した文字列をそのままAPIへ送ります。inactive lineでは記法を隠し、カーソルがある行ではraw記法を再表示します。Mermaid / YouTube / raw HTMLはsourceのまま扱い、実行・埋め込みはしません。
 
-対応範囲:
+記事detailのread-only表示は`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を使います。raw HTML pluginは追加せず、危険なURL protocolを拒否します。
+
+read-only表示の対応範囲:
 
 - heading
 - paragraph
@@ -395,9 +398,11 @@ rendererは`cms/ui/src/MarkdownArticle.tsx`で`react-markdown`と`remark-gfm`を
 - link
 - 通常画像、リンク付き画像
 
-完全なCommonMark/moonbit-ssg rendererではないため、公開結果とのpixel-level一致を保証するPreviewではありません。複雑なnested list、table、Markdown extension等を追加する場合は、先にtestを追加し、sanitizeされていないHTMLを導入しないでください。
+完全なCommonMark/moonbit-ssg rendererではないため、公開結果とのpixel-level一致を保証するものではありません。複雑なnested list、table、Markdown extension等を追加する場合は、先にtestを追加し、sanitizeされていないHTMLを導入しないでください。
 
-CSPは`cms/src/index.ts`で設定します。画像sourceを増やすために`script-src`や`default-src`を緩めないでください。
+CSPは`cms/src/index.ts`で設定します。CodeMirrorのruntime style用にresponseごとのnonceを`<meta name="csp-nonce">`とheaderへ設定し、`EditorView.cspNonce`へ渡します。画像sourceを増やすために`script-src`や`default-src`を緩めないでください。`'unsafe-inline'`は追加しません。
+
+editorの記法、画像、CRLF、CSP、testの詳細は`docs/inline-editor.md`を参照してください。
 
 ## Testと確認手順
 
@@ -455,15 +460,15 @@ cms/e2e/*.spec.ts
 1. local Workerを起動する。
 2. detail URLを直接開く。
 3. 編集ボタンを押す。
-4. textarea入力、2ペイン、画像、キャンセルを確認する。
+4. inline editorで入力し、heading・強調・画像・active lineのraw表示、キャンセルを確認する。
 5. GitHub保存と画像uploadは、実副作用を意図した場合だけ行う。
 
 確認観点:
 
-- Desktopで2列、mobile幅で1列
+- Desktop / mobileともeditorが横に潰れず、画像がcontainer幅を超えない
+- inactive lineの記法が隠れ、カーソルを合わせた行だけraw記法へ戻る
 - raw HTMLが実行されず文字として見える
 - linkが`http`/`https`以外を許可しない
-- 画像がcontainer幅を超えない
 - cancelでoriginal contentへ戻る
 - 保存buttonの連打を防ぐ
 
@@ -599,9 +604,9 @@ Secretの問題はcode rollbackでは戻りません。Secret storage側で正�
 - 既存記事のMarkdown編集
 - SHAによる競合検知付きGitHub保存
 - 各記事detailからGitHub sourceと公開ページへのlink
-- file picker / drag-and-dropによる画像upload（`Resources/images/`へcommit）
-- cursor位置への画像Markdown挿入
-- 編集時の2ペインlive preview
+- file picker / drag-and-drop / pasteによる画像upload（`Resources/images/`へcommit）
+- editorのcursor位置への画像Markdown挿入（upload中の入力にも追従）
+- Typora風inline Markdown editor（heading、強調、link、画像、code fence等）
 - 保存commitを起点にしたBlog自動build/deploy
 
 ## 次の実装task

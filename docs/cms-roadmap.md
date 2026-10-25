@@ -123,6 +123,8 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 - 10MB client check、upload失敗時の本文維持
 - React専用Playwright E2Eで編集・保存・競合・画像選択/drop/失敗を確認
 
+この時点の編集画面はtextarea + 2ペインpreviewでした。現在はCMS-020のinline editorへ置き換えています。
+
 ### CMS-R002 記事一覧・detail閲覧のReact化
 
 状態: `done`
@@ -170,6 +172,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-017 | token期限・rotation状態の確認 | G | `planned` |
 | CMS-018 | Production新規作成E2E確認手順 | G | `planned` |
 | CMS-019 | Suspense記事遷移とeditor code splitting | D | `done` |
+| CMS-020 | Typora風inline Markdown editor | E | `done` |
 
 ---
 
@@ -219,6 +222,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - fallbackに依存しない`useTransition().isPending`表示
 - hover/focus時の記事dataとeditor chunk preload
 - `ArticleWorkspace`、`react-markdown`、`remark-gfm`のlazy chunk分離
+- inline editor導入後は`MarkdownEditor`（CodeMirror）も編集開始時だけ読み込む
 - save/create/rename後のcache更新とdelete時の無効化
 - mutation、Gyazo、deploy pollingはSuspense化せず明示的stateを維持
 
@@ -252,7 +256,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - `@playwright/test`とChromiumを導入する。
 - Playwrightがlocal Wranglerを自動起動・終了する。
 - API responseをtest内でmockするfixture/helperを用意する。
-- 記事一覧、描画済みdetail、編集2ペイン、cancelをE2E化する。
+- 記事一覧、描画済みdetail、編集画面、cancelをE2E化する。
 - 新規記事form、frontmatter生成、初回保存成功をE2E化する。
 - 公開ページ/GitHub linkを確認する。
 - save conflict/error時に入力内容が失われないことを確認する。
@@ -287,7 +291,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 完了条件:
 
-- textarea変更をdebounceして`localStorage`へ保存する。
+- editorの変更をdebounceして`localStorage`へ保存する。
 - draft keyはProduction/Preview/記事slugを混同しない。
 - 既存記事はGitHubから取得したSHAまたはbase contentとの関係を記録する。
 - draftがある場合、勝手に上書きせず「復元」「破棄」を選べる。
@@ -476,6 +480,45 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ## Milestone E: Markdownと画像編集を改善する
 
+### CMS-020 Typora風inline Markdown editor
+
+状態: `done`
+
+目的:
+
+- Markdown textareaとpreviewの2ペインをやめ、sourceを書きながら同じ場所で装飾を確認できるようにする。
+- Markdown sourceを正本のまま維持し、保存時に本文を整形・変換しない。
+- 画像upload中に本文を入力しても、画像を元のcaret位置へ挿入する。
+
+実装:
+
+- CodeMirror 6とLezer Markdown parserによるinline editor
+- heading、strong、emphasis、strike、inline code、link、image、list、quote、code fence、table、HTMLの表示
+- inactive lineでは記法を隠し、active lineではraw記法を再表示
+- Mermaid / YouTubeはsourceを残し、badgeだけ表示（iframe・図の描画なし）
+- frontmatterのraw表示と、Pinnedの対象行だけを書き換える既存処理の維持
+- file picker / drop / pasteによる画像挿入と、upload中のanchor追従
+- 一貫したCRLFの保持、混在改行のLF fallback、Pinned更新時の位置変換
+- CSP nonceをCodeMirrorのruntime styleへ渡し、`'unsafe-inline'`を追加しない
+- `MarkdownEditor`を`React.lazy`で編集開始時だけ読み込む
+- 記事編集とHome / About編集を同じeditorへ移行
+- read-onlyの記事detailは従来の`MarkdownArticle`を維持
+
+確認:
+
+- Vitestでdecoration範囲、画像anchor、CRLF offset、frontmatter helperを確認
+- Playwright E2Eでinline記法、active lineのraw表示、preview paneがないこと、CSP nonce、lazy chunk、upload中の入力、CRLF round-trip、日本語IMEを確認
+- 既存のdraft、保存、競合、Pinned、画像、rename、deleteのE2Eも継続して成功
+- `npm run check`でUI build、TypeScript、Vitest、Playwrightを確認
+
+注意:
+
+- CodeMirror + Markdown parserのchunkは約504 kB（gzip約176 kB）でViteの500 kB warningを超える。編集開始時だけ読み込むlazy chunkとして許容し、必要ならlanguage support単位で追加分割する。
+- 公開siteのrendererとの完全一致はCMS-011で扱う。
+- Mermaid、YouTube、raw HTMLの実行・埋め込みはeditorでは行わない。
+
+詳細は`docs/inline-editor.md`を参照。
+
 ### CMS-009 Markdown toolbar
 
 状態: `planned`
@@ -483,7 +526,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 完了条件:
 
 - heading、bold、link、list、code、image等の最低限の挿入操作を提供する。
-- textarea selection/cursor位置を維持する。
+- editorのselection/cursor位置を維持する。
 - keyboard操作とaria-labelを提供する。
 - toolbarなしでもMarkdownを直接編集できる。
 
@@ -665,8 +708,8 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - 描画済み記事detail
 - 既存記事編集とSHA競合検知
 - validated slug/frontmatterによる新規記事作成
-- Gyazo画像uploadとdrag-and-drop
-- 2ペインlive preview
+- 画像uploadとfile picker / drag-and-drop / paste
+- Typora風inline Markdown editor（heading、強調、link、画像、code fence等）
 - 記事detailからGitHub source / 公開ページへのlink
 - GitHub保存後のMoonBit build / asset検査とGitHub Pages deploy
 

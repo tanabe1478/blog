@@ -46,19 +46,21 @@ Productionの`workers.dev` URLはCloudflare Accessで保護します。Access Po
 
 記事一覧はGitHub GraphQL APIから`Content/posts/*.md`のfrontmatterと最初のheadingを取得します。Section用の`index.md`は除外し、公開blogのtop pageと同じdate降順でtitle・date・filenameを表示します。
 
-記事選択は`startTransition`で行い、取得中も一覧を残して`isPending`を即時表示します。detailはSuspense境界とerror boundaryを持ち、hover/focus時に記事dataとeditor chunkをpreloadします。`ArticleWorkspace`とMarkdown rendererはlazy chunkへ分離しています。
+記事選択は`startTransition`で行い、取得中も一覧を残して`isPending`を即時表示します。detailはSuspense境界とerror boundaryを持ち、hover/focus時に記事dataとeditor chunkをpreloadします。`ArticleWorkspace`、Markdown renderer、`MarkdownEditor`はlazy chunkへ分離しています。
 
 React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense fallbackだけに依存させません。保存・画像upload・rename・delete・deploy pollingはSuspense化せず、明示的な進捗/error stateを維持します。
 
 ## React editing
 
-既存記事の編集時はcontrolled textareaと`react-markdown` previewを2ペイン表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
+既存記事の編集時はCodeMirror 6を使ったTypora風inline Markdown editorを表示します。Markdown sourceを正本とし、heading・強調・link・画像などをその場で表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
 
-file pickerとdrag-and-dropの両方で画像をrepositoryへ保存し、現在のcursor/selection位置へ画像Markdownを挿入します。10MB超過とupload errorでは本文を変更しません。
+file picker、drag-and-drop、pasteで画像をrepositoryへ保存し、現在のcursor/selection位置へ画像Markdownを挿入します。upload中に入力してもanchorが追従するため、挿入位置がずれません。10MB超過とupload errorでは本文を変更しません。
+
+editorの記法、CRLF、CSP、testの詳細は`docs/inline-editor.md`を参照してください。
 
 ## Pinned
 
-既存記事・新規記事の編集中は**トップに固定表示（Pinned）**のcheckboxを表示します。checkすると本文のfrontmatterへ`pinned: true`を加え、外すと削除します。状態はtextareaの本文から読むため、手で書いた`pinned: true`とも食い違いません。保存は通常の**GitHubへ保存**です。
+既存記事・新規記事の編集中は**トップに固定表示（Pinned）**のcheckboxを表示します。checkすると本文のfrontmatterへ`pinned: true`を加え、外すと削除します。状態はeditorの本文から読むため、手で書いた`pinned: true`とも食い違いません。保存は通常の**GitHubへ保存**です。
 
 記事一覧でも、件数の横にPinnedの件数を、ピン留め中の記事に**Pinned**の目印を表示します。各記事の**ピン留め** / **ピンを外す**を押すと、その記事の最新Markdownと現在のBlob SHAを取得し、`pinned: true`だけを足し引きしてすぐGitHubへ保存します（1回ごとに1 commitとDeploy Blogが走ります）。競合時は表示を変えずにerrorを出します。一覧の`pinned`は`GITHUB_TOKEN`がある場合だけfrontmatterから読みます。
 
@@ -71,7 +73,7 @@ file pickerとdrag-and-dropの両方で画像をrepositoryへ保存し、現在�
 | Home | プロフィール（`profile`）、RSSの案内（`rss`） | Profile欄の紹介文 |
 | About | タイトル（`# 見出し`）、サブタイトル（`subtitle`） | Aboutの本文 |
 
-本文はMarkdownとpreviewの2ペインです。保存時は`ui/src/frontmatter.ts`で変わった部分だけを書き換え、他のfrontmatter行はそのまま残します。`:`や`@`で始まるなど誤読されうる値は`"`で、`"`を含む値は`'`で囲みます。
+本文は記事と同じinline Markdown editorで編集します。保存時は`ui/src/frontmatter.ts`で変わった部分だけを書き換え、他のfrontmatter行はそのまま残します。`:`や`@`で始まるなど誤読されうる値は`"`で、`"`を含む値は`'`で囲みます。
 
 Workerは`GET /api/pages/{home|about}`と`PUT /api/pages/{home|about}`を提供します。pathはWorker内の固定表で決め、clientから受け取らないため、他のfileは書けません。保存は記事と同じくProduction Origin、JSON、現在のBlob SHAを検証し、競合は`409`です。保存後はDeploy Blogの状況を表示します。
 
@@ -91,11 +93,11 @@ Workerは`GET /api/pages/{home|about}`と`PUT /api/pages/{home|about}`を提供�
 
 slugは英小文字・数字・単一hyphenだけを許可し、Section予約名`index`は拒否します。同名fileがGitHubにある場合は上書きせず`409`を返します。作成も既存記事の更新と同じくProduction Originだけで許可します。
 
-## Article detail and live preview
+## Article detail and inline editing
 
-記事detailの閲覧時はMarkdown sourceではなく描画済みpreviewを表示します。各記事detailにはGitHub sourceと公開ページへのlinkを表示します。編集状態にすると、左にMarkdown textarea、右にリアルタイムpreviewを表示します。800px以下では縦1列へ切り替わります。
+記事detailの閲覧時はMarkdown sourceではなく描画済み記事を表示します。各記事detailにはGitHub sourceと公開ページへのlinkを表示します。編集状態にすると、記事と同じinline Markdown editorを表示します。
 
-previewはheading、paragraph、list、blockquote、code block、link、Markdown画像に対応します。`/images/...`は`raw.githubusercontent.com`の`main`から表示するため、deploy前の画像も確認できます。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
+read-only表示はheading、paragraph、list、blockquote、code block、link、Markdown画像に対応します。`/images/...`は`raw.githubusercontent.com`の`main`から表示するため、deploy前の画像も確認できます。Markdown内のraw HTMLは実行せず文字として表示し、URL schemeとCSPの両方で外部contentを制限します。
 
 ## Slug rename
 
@@ -145,9 +147,9 @@ CMSの保存は`Content/posts/*.md`をGitHubの`main`へcommitします。この
 
 Production CMSからの同一Origin requestだけを受け付け、Previewからのuploadは`403`で拒否します。PNG・JPEG・GIF・WebPのfile signatureを検証し、sizeは10MB以下に制限します。
 
-記事を編集状態にすると、file pickerに加えてMarkdown textareaへのdrag-and-dropで画像を1枚ずつuploadできます。挿入先は現在のcursor位置です。
+記事を編集状態にすると、file picker、editorへのdrag-and-drop、pasteで画像を1枚ずつuploadできます。挿入先はupload開始時のcursor位置で、upload中に本文を入力してもanchorが追従します。
 
-画像uploadは即時に`main`へcommitし、Deploy Blogも起動する副作用があります。同じ内容の画像は同じpathになり、既存fileは上書きしません。textareaへ挿入した後にキャンセルしても画像commitは残ります。記事へ反映するには、続けて**GitHubへ保存**を実行します。
+画像uploadは即時に`main`へcommitし、Deploy Blogも起動する副作用があります。同じ内容の画像は同じpathになり、既存fileは上書きしません。editorへ挿入した後にキャンセルしても画像commitは残ります。記事へ反映するには、続けて**GitHubへ保存**を実行します。
 
 ## local development
 

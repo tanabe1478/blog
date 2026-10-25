@@ -34,11 +34,11 @@ copy元の`attachments/...`は削除しません。
 
 ### CMS
 
-file pickerまたはdrag-and-dropで画像を選ぶと、Worker（`cms/src/images.ts`）がGitHub Contents APIで`Resources/images/<slug>/`へ即時commitし、Markdownを本文へ挿入します。
+file picker、drag-and-drop、pasteで画像を選ぶと、Worker（`cms/src/images.ts`）がGitHub Contents APIで`Resources/images/<slug>/`へ即時commitし、Markdownを本文へ挿入します。
 
 - 同じ内容の画像が既にある場合（GitHubの`422`）は上書きせず成功扱いにする。
 - 画像commitは`Resources/**`の変更なのでDeploy Blogが走る。
-- CMS previewは`/images/...`を`raw.githubusercontent.com`の`main`から表示する。upload直後でdeploy前でも確認できる。
+- CMSのread-only表示とinline editorは`/images/...`を`raw.githubusercontent.com`の`main`から表示する。upload直後でdeploy前でも確認できる。
 - 記事を保存しなかった場合も画像commitは残る。不要なら手で削除する。
 
 ## Gyazoからの移行（2026-10）

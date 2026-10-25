@@ -6,7 +6,7 @@ repository scriptまたはBlog CMSを使った記事作成手順です。
 
 1. Blog CMSの記事一覧で**新規記事**を選ぶ。
 2. slug、title、公開日時、description、tagsを入力する。
-3. **本文を編集**で未保存Markdownとpreviewを開く。
+3. **本文を編集**で未保存Markdownをinline editorで開く。
 4. 本文と画像を編集する。
 5. **GitHubへ保存**で`Content/posts/<slug>.md`を初めて作成する。
 6. GitHub Actionsによるbuild/deploy後、記事detailの**公開ページを開く**から確認する。

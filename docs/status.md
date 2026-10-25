@@ -26,7 +26,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 記事detailからGitHub sourceと公開ページを開ける。
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
 - 画像のfile picker / drag-and-drop uploadに対応済み（`Resources/images/`へcommit）。
-- 編集時の2ペインlive Markdown previewに対応済み。
+- 編集画面はTypora風inline Markdown editorに対応済み。Markdown sourceを正本とし、heading・強調・link・画像等をその場で表示する（`docs/inline-editor.md`）。
 - CMS保存後はGitHub Actionsが固定revisionのMoonBit SSGで生成・asset checkし、GitHub Pagesへ自動deployする。
 - Playwright E2EをlocalとCIへ導入し、今後のuser-facing機能の完了条件に設定済み。
 - localStorage自動下書き、reload復元、保存後削除、SHA変更時の競合維持に対応済み。

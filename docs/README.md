@@ -24,6 +24,7 @@
 
 - `cms-development-handoff.md` — 別session向けの開発引き継ぎ資料
 - `cms-roadmap.md` — Task ID付きの実装backlogとE2E方針
+- `inline-editor.md` — Typora風inline Markdown editorの記法、画像、CSP、確認方法
 - `../cms/README.md` — CMS機能別の短い運用説明
 
 ## publish workflow
