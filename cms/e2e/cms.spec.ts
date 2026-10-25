@@ -30,6 +30,44 @@ subtitle: "@t__nabe1478"
 About me.
 `;
 
+const ARTICLE_EDITOR = "Markdown本文";
+const PAGE_EDITOR = "本文（Markdown）";
+
+function editorHost(page: Page, label = ARTICLE_EDITOR) {
+  return page.locator(`[data-markdown-editor="${label}"]`);
+}
+
+async function editorValue(page: Page, label = ARTICLE_EDITOR): Promise<string> {
+  return editorHost(page, label).evaluate((element) => {
+    const hook = (
+      element as HTMLElement & { __cmsGetMarkdown?: () => string }
+    ).__cmsGetMarkdown;
+    return hook ? hook() : "";
+  });
+}
+
+async function replaceEditorValue(
+  page: Page,
+  value: string,
+  label = ARTICLE_EDITOR,
+): Promise<void> {
+  const host = editorHost(page, label);
+  const content = host.locator(".cm-content");
+  await expect(content).toBeVisible();
+  await content.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.insertText(value);
+  await expect.poll(() => editorValue(page, label)).toBe(value);
+}
+
+async function appendEditorValue(
+  page: Page,
+  suffix: string,
+  label = ARTICLE_EDITOR,
+): Promise<void> {
+  await replaceEditorValue(page, `${await editorValue(page, label)}${suffix}`, label);
+}
+
 interface MockOptions {
   createConflict?: boolean;
   createError?: boolean;
@@ -42,6 +80,7 @@ interface MockOptions {
   postDelayMs?: number;
   postError?: boolean;
   imageError?: boolean;
+  imageDelayMs?: number;
   onCreate?: (payload: unknown) => void;
   onUpdate?: (payload: unknown) => void;
   onDelete?: (payload: unknown) => void;
@@ -90,6 +129,9 @@ async function mockCmsApi(page: Page, options: MockOptions = {}) {
     }
 
     if (request.method() === "POST" && url.pathname === "/api/images") {
+      if (options.imageDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, options.imageDelayMs));
+      }
       if (options.imageError) {
         await route.fulfill({
           status: 502,
@@ -439,20 +481,18 @@ test("does not execute raw HTML or unsafe URLs in React article detail", async (
   await expect(article.locator('a[href^="javascript:"]')).toHaveCount(0);
 });
 
-test("edits and previews an article in React, then cancels", async ({ page }) => {
+test("edits an article inline, then cancels", async ({ page }) => {
   await mockCmsApi(page);
   await page.goto(`/?post=${EXISTING_NAME}`);
 
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill("# React changed\n\nPreview body.");
-  await expect(
-    page.getByRole("heading", { name: "React changed", exact: true }),
-  ).toBeVisible();
+  const host = editorHost(page);
+  await replaceEditorValue(page, "# React changed\n\nInline body.");
+  await expect(host.locator(".cm-md-h1")).toHaveText("React changed");
 
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(textarea).toBeHidden();
+  await expect(host).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "Existing title", exact: true }),
   ).toBeVisible();
@@ -467,14 +507,14 @@ test("saves a React article with its current SHA", async ({ page }) => {
   });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Markdown本文").fill("# Saved in React\n");
+  await replaceEditorValue(page, "# Saved in React\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   expect(updatePayload).toEqual({
     content: "# Saved in React\n",
     sha: "a".repeat(40),
   });
-  await expect(page.getByLabel("Markdown本文")).toBeHidden();
+  await expect(editorHost(page)).toBeHidden();
   await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Saved in React", exact: true }),
@@ -485,7 +525,7 @@ test("reopens the cached article version after saving", async ({ page }) => {
   await mockCmsApi(page);
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Markdown本文").fill("# Cached saved title\n");
+  await replaceEditorValue(page, "# Cached saved title\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
   await page.getByRole("button", { name: "← 記事一覧へ" }).click();
   await page.getByRole("button", { name: /Existing title/ }).click();
@@ -499,24 +539,23 @@ test("keeps React editor content when saving conflicts", async ({ page }) => {
   await mockCmsApi(page, { updateConflict: true });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill("# Conflict in React\n");
+  await replaceEditorValue(page, "# Conflict in React\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
-  await expect(textarea).toHaveValue("# Conflict in React\n");
-  await expect(textarea).toBeVisible();
+  await expect.poll(() => editorValue(page)).toBe("# Conflict in React\n");
+  await expect(editorHost(page)).toBeVisible();
 });
 
-test("uploads a dropped image and inserts repository image Markdown in React", async ({
+test("uploads a dropped image and inserts repository image Markdown inline", async ({
   page,
 }) => {
   await mockCmsApi(page);
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const textarea = page.getByLabel("Markdown本文");
+  const host = editorHost(page);
 
-  await textarea.evaluate((element) => {
+  await host.locator(".cm-content").evaluate((element) => {
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array([1, 2, 3])], "screen.png", { type: "image/png" }));
     element.dispatchEvent(
@@ -524,8 +563,11 @@ test("uploads a dropped image and inserts repository image Markdown in React", a
     );
   });
 
-  await expect(textarea).toHaveValue(/\/images\/hello\/0123456789abcdef\.png/);
-  await expect(page.locator(".markdown-article img")).toHaveAttribute(
+  await expect.poll(() => editorValue(page)).toContain(
+    "/images/hello/0123456789abcdef.png",
+  );
+  await page.keyboard.press("Control+End");
+  await expect(host.locator("img.cm-md-image")).toHaveAttribute(
     "src",
     "https://raw.githubusercontent.com/tanabe1478/blog/main/Resources/images/hello/0123456789abcdef.png",
   );
@@ -536,6 +578,7 @@ test("uploads a selected image from the React file picker", async ({ page }) => 
   await mockCmsApi(page);
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(editorHost(page).locator(".cm-content")).toBeVisible();
 
   await page.getByLabel("画像ファイル").setInputFiles({
     name: "picked.png",
@@ -543,15 +586,16 @@ test("uploads a selected image from the React file picker", async ({ page }) => 
     buffer: Buffer.from([1, 2, 3]),
   });
 
-  await expect(page.getByLabel("Markdown本文")).toHaveValue(/\/images\/hello\/0123456789abcdef\.png/);
+  await expect.poll(() => editorValue(page)).toContain(
+    "/images/hello/0123456789abcdef.png",
+  );
 });
 
 test("keeps React content when image upload fails", async ({ page }) => {
   await mockCmsApi(page, { imageError: true });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const textarea = page.getByLabel("Markdown本文");
-  const before = await textarea.inputValue();
+  const before = await editorValue(page);
 
   await page.getByLabel("画像ファイル").setInputFiles({
     name: "failed.png",
@@ -560,7 +604,209 @@ test("keeps React content when image upload fails", async ({ page }) => {
   });
 
   await expect(page.getByText(/画像をGitHubへ保存できませんでした/)).toBeVisible();
-  await expect(textarea).toHaveValue(before);
+  await expect.poll(() => editorValue(page)).toBe(before);
+});
+
+test("renders Markdown inline and reveals source on the active line", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const source = [
+    "# Inline title",
+    "",
+    "**strong** and *emphasis* and `code` and ~~strike~~.",
+    "",
+    "[link](https://example.test)",
+    "",
+    "![alt](/images/hello/0123456789abcdef.png)",
+    "",
+    "> quote",
+    "",
+    "- one",
+    "- two",
+    "",
+    "```mermaid",
+    "graph TD; A-->B",
+    "```",
+    "",
+  ].join("\n");
+  await replaceEditorValue(page, source);
+  const host = editorHost(page);
+
+  await expect(page.locator(".markdown-article")).toHaveCount(0);
+  await expect(host.locator(".cm-md-h1")).toHaveText("Inline title");
+  await expect(host.locator(".cm-md-strong")).toHaveText("strong");
+  await expect(host.locator(".cm-md-emphasis")).toHaveText("emphasis");
+  await expect(host.locator(".cm-md-code-inline")).toHaveText("code");
+  await expect(host.locator(".cm-md-strike")).toHaveText("strike");
+  await expect(host.locator(".cm-md-link")).toHaveText("link");
+  await expect(host.locator("img.cm-md-image")).toHaveAttribute(
+    "src",
+    "https://raw.githubusercontent.com/tanabe1478/blog/main/Resources/images/hello/0123456789abcdef.png",
+  );
+  await expect(host.locator(".cm-md-badge-mermaid")).toHaveText("mermaid");
+  await expect(host.locator(".cm-md-quote")).toContainText("quote");
+  await expect(host.locator(".cm-md-list")).toHaveCount(2);
+  await expect.poll(() => editorValue(page)).toBe(source);
+
+  await host.locator(".cm-md-h1").click();
+  await expect(host.locator(".cm-md-h1")).toHaveText("# Inline title");
+});
+
+test("applies CodeMirror styles under the per-response CSP nonce", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().includes("Content Security Policy")) {
+      violations.push(message.text());
+    }
+  });
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const host = editorHost(page);
+  const content = host.locator(".cm-content");
+  await expect(content).toBeVisible();
+
+  const nonce = await page
+    .locator('meta[name="csp-nonce"]')
+    .getAttribute("content");
+  expect(nonce).toMatch(/^[0-9a-f]{32}$/);
+  const styleNonces = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("style")).map(
+      (style) => style.nonce || style.getAttribute("nonce") || "",
+    ),
+  );
+  expect(styleNonces).toContain(nonce);
+  await expect(content).toHaveCSS("white-space", "break-spaces");
+  await expect(content).toHaveCSS("padding", "18px 20px");
+
+  const freshResponse = await page.evaluate(async () => {
+    const response = await fetch(location.href, { cache: "no-store" });
+    const html = await response.text();
+    return {
+      nonce:
+        html.match(/<meta name="csp-nonce" content="([0-9a-f]{32})">/)?.[1] ?? "",
+      csp: response.headers.get("content-security-policy") ?? "",
+    };
+  });
+  expect(freshResponse.nonce).toMatch(/^[0-9a-f]{32}$/);
+  expect(freshResponse.csp).toContain(`'nonce-${freshResponse.nonce}'`);
+  expect(freshResponse.csp).not.toContain("'unsafe-inline'");
+  expect(violations).toEqual([]);
+});
+
+test("loads the CodeMirror chunk only when editing starts", async ({ page }) => {
+  const chunks: string[] = [];
+  page.on("request", (request) => {
+    if (/\/assets\/MarkdownEditor-.*\.js/.test(request.url())) {
+      chunks.push(request.url());
+    }
+  });
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await expect(
+    page.getByRole("heading", { name: "Existing title", exact: true }),
+  ).toBeVisible();
+  expect(chunks).toEqual([]);
+
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(editorHost(page).locator(".cm-content")).toBeVisible();
+  await expect.poll(() => chunks.length).toBeGreaterThan(0);
+});
+
+test("inserts an uploaded image at the captured anchor after typing", async ({
+  page,
+}) => {
+  await mockCmsApi(page, { imageDelayMs: 600 });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await replaceEditorValue(page, "before after\n");
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  for (let index = 0; index < 7; index++) {
+    await page.keyboard.press("ArrowRight");
+  }
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "画像を選択 / ドロップ" }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: "during-typing.png",
+    mimeType: "image/png",
+    buffer: Buffer.from([1, 2, 3]),
+  });
+  await expect(page.getByText("画像をGitHubへ保存しています…")).toBeVisible();
+
+  await content.focus();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.insertText(" typed");
+  await expect(page.getByText(/画像を挿入しました/)).toBeVisible();
+
+  const value = await editorValue(page);
+  expect(value).toContain("/images/hello/0123456789abcdef.png");
+  expect(value).toContain("after typed");
+  expect(value.indexOf("/images/hello/0123456789abcdef.png")).toBeLessThan(
+    value.indexOf("after typed"),
+  );
+});
+
+test("preserves CRLF when editing and saving", async ({ page }) => {
+  const crlf = EXISTING_CONTENT.replace(/\n/g, "\r\n");
+  let updatePayload: unknown;
+  await mockCmsApi(page, {
+    existingContent: crlf,
+    onUpdate: (payload) => {
+      updatePayload = payload;
+    },
+  });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(editorHost(page).locator(".cm-content")).toBeVisible();
+  expect(await editorValue(page)).toBe(crlf);
+
+  const pinned = page.getByLabel("トップに固定表示（Pinned）");
+  await pinned.check();
+  await expect.poll(() => editorValue(page)).toBe(
+    crlf.replace("tags: 技術\r\n", "tags: 技術\r\npinned: true\r\n"),
+  );
+  await pinned.uncheck();
+  await expect.poll(() => editorValue(page)).toBe(crlf);
+
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.insertText("!");
+  await expect.poll(() => editorValue(page)).toBe(`${crlf}!`);
+  await page.getByRole("button", { name: "GitHubへ保存" }).click();
+
+  expect(updatePayload).toEqual({
+    content: `${crlf}!`,
+    sha: "a".repeat(40),
+  });
+});
+
+test("accepts Japanese IME composition without rewriting the editor", async ({
+  page,
+}) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await replaceEditorValue(page, "入力: ");
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+End");
+
+  const client = await page.context().newCDPSession(page);
+  await client.send("Input.imeSetComposition", {
+    text: "にほん",
+    selectionStart: 3,
+    selectionEnd: 3,
+  });
+  await client.send("Input.insertText", { text: "日本" });
+
+  await expect.poll(() => editorValue(page)).toBe("入力: 日本");
 });
 
 test("recovers and discards an existing React draft", async ({ page }) => {
@@ -568,13 +814,13 @@ test("recovers and discards an existing React draft", async ({ page }) => {
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const draftContent = "# React draft\n\nReload後も残る本文。";
-  await page.getByLabel("Markdown本文").fill(draftContent);
+  await replaceEditorValue(page, draftContent);
   await expect(page.getByText(/下書きをこの端末に保存しました/)).toBeVisible();
 
   await page.reload();
   await expect(page.getByText(/この端末に未保存の下書きがあります/)).toBeVisible();
   await page.getByRole("button", { name: "下書きを復元" }).click();
-  await expect(page.getByLabel("Markdown本文")).toHaveValue(draftContent);
+  await expect.poll(() => editorValue(page)).toBe(draftContent);
   await expect(page.getByText("端末の下書きを復元しました。")).toBeVisible();
 
   await page.reload();
@@ -619,7 +865,7 @@ test("uses the original SHA when saving a restored React draft", async ({ page }
 
   expect(updatePayload).toEqual({ content: "# Stale React draft\n", sha: draftSha });
   await expect(page.getByText(/記事が他の場所で更新されています/)).toBeVisible();
-  await expect(page.getByLabel("Markdown本文")).toHaveValue("# Stale React draft\n");
+  await expect.poll(() => editorValue(page)).toBe("# Stale React draft\n");
 });
 
 test("recovers and saves a new React article draft", async ({ page }) => {
@@ -631,14 +877,13 @@ test("recovers and saves a new React article draft", async ({ page }) => {
   });
   await openReactNewPostEditor(page);
   await expect(page).toHaveURL(/\?draft=new-post\.md$/);
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill(`${await textarea.inputValue()}React draft body.\n`);
+  await appendEditorValue(page, "React draft body.\n");
   await expect(page.getByText(/下書きをこの端末に保存しました/)).toBeVisible();
 
   await page.reload();
   await expect(page.getByText(/この端末に未保存の下書きがあります/)).toBeVisible();
   await page.getByRole("button", { name: "下書きを復元" }).click();
-  await expect(page.getByLabel("Markdown本文")).toHaveValue(/React draft body/);
+  await expect.poll(() => editorValue(page)).toContain("React draft body");
   await page.getByRole("button", { name: "新規記事を保存" }).click();
 
   expect(createPayload).toMatchObject({ name: "new-post.md" });
@@ -659,17 +904,16 @@ test("keeps the React new article editor usable without localStorage", async ({ 
   await mockCmsApi(page);
   await openReactNewPostEditor(page);
 
-  const textarea = page.getByLabel("Markdown本文");
-  await textarea.fill(`${await textarea.inputValue()}Still editable.\n`);
+  await appendEditorValue(page, "Still editable.\n");
   await expect(page.getByText(/端末下書きを保存できません/)).toBeVisible();
-  await expect(textarea).toHaveValue(/Still editable/);
+  await expect.poll(() => editorValue(page)).toContain("Still editable");
 });
 
 test("tracks React publication from pending to published", async ({ page }) => {
   await mockCmsApi(page, { deploymentStates: ["pending", "running", "published"] });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Markdown本文").fill("# Publish from React\n");
+  await replaceEditorValue(page, "# Publish from React\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   const deployment = page.locator(".deployment-status");
@@ -685,7 +929,7 @@ test("shows React deployment failure without losing the saved article", async ({
   await mockCmsApi(page, { deploymentStates: ["failed"] });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Markdown本文").fill("# Saved before failure\n");
+  await replaceEditorValue(page, "# Saved before failure\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   await expect(page.locator(".deployment-status")).toContainText("公開処理に失敗しました");
@@ -768,7 +1012,7 @@ test("keeps React saved state when deployment lookup fails", async ({ page }) =>
   await mockCmsApi(page, { deploymentError: true });
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Markdown本文").fill("# Saved with status error\n");
+  await replaceEditorValue(page, "# Saved with status error\n");
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 
   await expect(page.locator(".deployment-status")).toContainText("記事は保存済みですが、公開状況を取得できません");
@@ -787,13 +1031,16 @@ test("edits the Home profile, RSS text and introduction", async ({ page }) => {
 
   await expect(page.getByLabel("プロフィール")).toHaveValue("@t__nabe1478");
   await expect(page.getByLabel("RSSの案内")).toHaveValue("更新は RSS で受け取れます。");
-  await expect(page.getByLabel("本文（Markdown）")).toHaveValue("紹介文です。\n");
+  await expect.poll(() => editorValue(page, PAGE_EDITOR)).toBe("紹介文です。\n");
+  await expect(page.getByRole("textbox", { name: PAGE_EDITOR })).toBeVisible();
   const save = page.getByRole("button", { name: "ページをGitHubへ保存" });
   await expect(save).toBeDisabled();
 
   await page.getByLabel("RSSの案内").fill("RSS でどうぞ");
-  await page.getByLabel("本文（Markdown）").fill("新しい**紹介文**です。");
-  await expect(page.locator(".markdown-article strong")).toHaveText("紹介文");
+  await replaceEditorValue(page, "新しい**紹介文**です。", PAGE_EDITOR);
+  await expect(
+    editorHost(page, PAGE_EDITOR).locator(".cm-md-strong"),
+  ).toHaveText("紹介文");
   await save.click();
 
   await expect(page.getByText(/GitHubへ保存しました/)).toBeVisible();
@@ -854,13 +1101,14 @@ test("pins an article to the top page through its frontmatter", async ({ page })
   await page.goto(`/?post=${EXISTING_NAME}`);
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const pinned = page.getByLabel("トップに固定表示（Pinned）");
-  const textarea = page.getByLabel("Markdown本文");
   await expect(pinned).not.toBeChecked();
 
   await pinned.check();
-  await expect(textarea).toHaveValue(EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"));
+  await expect.poll(() => editorValue(page)).toBe(
+    EXISTING_CONTENT.replace("tags: 技術\n", "tags: 技術\npinned: true\n"),
+  );
   await pinned.uncheck();
-  await expect(textarea).toHaveValue(EXISTING_CONTENT);
+  await expect.poll(() => editorValue(page)).toBe(EXISTING_CONTENT);
   await pinned.check();
   await page.getByRole("button", { name: "GitHubへ保存" }).click();
 

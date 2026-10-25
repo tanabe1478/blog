@@ -1,9 +1,10 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
   type ChangeEvent,
-  type DragEvent,
   type FormEvent,
 } from "react";
 
@@ -17,11 +18,21 @@ import {
 } from "./api";
 import { DeploymentStatus, type DeploymentPurpose } from "./DeploymentStatus";
 import { removeDraft, writeDraft, type LocalDraft } from "./drafts";
+import type { MarkdownEditorHandle } from "./editor/MarkdownEditor";
+import type { AnchorId } from "./editor/anchors";
 import { readFrontmatterValue, setFrontmatterValue } from "./frontmatter";
 import { MarkdownArticle } from "./MarkdownArticle";
 import { invalidatePost, setCachedPost } from "./postResource";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+// CodeMirror is only needed while editing. Keep the read-only article route
+// from downloading it.
+const MarkdownEditor = lazy(() =>
+  import("./editor/MarkdownEditor").then((module) => ({
+    default: module.MarkdownEditor,
+  })),
+);
 
 export interface InitialDeployment {
   commitSha: string;
@@ -65,7 +76,6 @@ export function ArticleWorkspace({
   const [editing, setEditing] = useState(startEditing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [operation, setOperation] = useState<"rename" | "delete">();
   const [operationBusy, setOperationBusy] = useState(false);
   const [renameSlug, setRenameSlug] = useState(initialPost.name.slice(0, -3));
@@ -84,8 +94,9 @@ export function ArticleWorkspace({
       : "端末下書きを保存できません。本文を別の場所にも退避してください。",
   );
   const [error, setError] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<MarkdownEditorHandle>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageAnchor = useRef<AnchorId | undefined>(undefined);
   const lastDraftContent = useRef(content);
 
   const changed = creating || content !== post.content;
@@ -128,7 +139,6 @@ export function ArticleWorkspace({
     setBaseSha(post.sha);
     setStatus("編集中です。保存するとGitHubのmainブランチへ反映されます。");
     setEditing(true);
-    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const discardPendingDraft = () => {
@@ -155,7 +165,6 @@ export function ArticleWorkspace({
         ? "未保存の新規記事です。本文を確認してGitHubへ保存してください。"
         : "端末の下書きを編集中です。",
     );
-    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const cancelEditing = () => {
@@ -296,7 +305,7 @@ export function ArticleWorkspace({
     }
   };
 
-  const insertUploadedImage = async (file: File) => {
+  const insertUploadedImage = async (file: File, anchor?: AnchorId) => {
     if (uploading) return;
     if (file.size > MAX_IMAGE_BYTES) {
       setError(true);
@@ -304,27 +313,21 @@ export function ArticleWorkspace({
       return;
     }
 
-    const textarea = textareaRef.current;
-    const start = textarea?.selectionStart ?? content.length;
-    const end = textarea?.selectionEnd ?? start;
+    // The caret can move while the upload is in flight. The editor maps this
+    // anchor through those edits instead of reading the textarea afterwards.
+    const target = anchor ?? editorRef.current?.captureAnchor();
     setUploading(true);
     setError(false);
     setStatus("画像をGitHubへ保存しています…");
     try {
       const image = await uploadImage(file, post.name);
-      const before = content.slice(0, start);
-      const after = content.slice(end);
-      const leadingNewline = before && !before.endsWith("\n") ? "\n" : "";
-      const trailingNewline = after && !after.startsWith("\n") ? "\n" : "";
-      const inserted = `${leadingNewline}${image.markdown}${trailingNewline}`;
-      const nextContent = before + inserted + after;
-      const nextCursor = before.length + inserted.length;
-      setContent(nextContent);
+      // If the editor was still loading when the picker opened, fall back to
+      // the caret position that exists now.
+      const insertTarget = target ?? editorRef.current?.captureAnchor();
+      if (insertTarget === undefined || !editorRef.current?.insertAt(insertTarget, image.markdown)) {
+        throw new Error("画像は保存しましたが、挿入位置を特定できませんでした。");
+      }
       setStatus("画像を挿入しました。記事もGitHubへ保存してください。");
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
-      });
     } catch (cause) {
       setError(true);
       setStatus(cause instanceof Error ? cause.message : "画像をアップロードできませんでした。");
@@ -335,20 +338,25 @@ export function ArticleWorkspace({
 
   const selectImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) await insertUploadedImage(file);
+    const anchor = imageAnchor.current;
+    imageAnchor.current = undefined;
+    if (file) await insertUploadedImage(file, anchor);
     event.target.value = "";
   };
 
-  const dropImage = async (event: DragEvent<HTMLTextAreaElement>) => {
-    event.preventDefault();
-    setDragging(false);
-    const files = Array.from(event.dataTransfer.files);
+  const openImagePicker = () => {
+    imageAnchor.current = editorRef.current?.captureAnchor();
+    imageInputRef.current?.click();
+  };
+
+  const insertDroppedFiles = (files: File[], position: number) => {
     if (files.length !== 1) {
       setError(true);
       setStatus("画像は1枚ずつドロップしてください。");
       return;
     }
-    await insertUploadedImage(files[0]);
+    const anchor = editorRef.current?.captureAnchorAt(position);
+    void insertUploadedImage(files[0], anchor);
   };
 
   const draftConflict = Boolean(
@@ -469,28 +477,23 @@ export function ArticleWorkspace({
       )}
 
       {editing ? (
-        <div className="editor-grid">
-          <textarea
-            ref={textareaRef}
-            className={dragging ? "markdown-editor dragging" : "markdown-editor"}
-            aria-label="Markdown本文"
+        <Suspense
+          fallback={
+            <div className="markdown-editor-loading" role="status">
+              エディタを読み込んでいます…
+            </div>
+          }
+        >
+          <MarkdownEditor
+            ref={editorRef}
             value={content}
+            onChange={setContent}
+            ariaLabel="Markdown本文"
             readOnly={saving}
-            onChange={(event) => setContent(event.target.value)}
-            onDragEnter={(event) => {
-              if (event.dataTransfer.types.includes("Files")) {
-                event.preventDefault();
-                setDragging(true);
-              }
-            }}
-            onDragOver={(event) => {
-              if (event.dataTransfer.types.includes("Files")) event.preventDefault();
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={dropImage}
+            autoFocus="body"
+            onFiles={insertDroppedFiles}
           />
-          <MarkdownArticle content={content} />
-        </div>
+        </Suspense>
       ) : (
         <MarkdownArticle content={post.content} />
       )}
@@ -504,7 +507,7 @@ export function ArticleWorkspace({
             <button type="button" disabled={saving || uploading} onClick={cancelEditing}>
               キャンセル
             </button>
-            <button type="button" disabled={saving || uploading} onClick={() => imageInputRef.current?.click()}>
+            <button type="button" disabled={saving || uploading} onClick={openImagePicker}>
               {uploading ? "画像をアップロード中…" : "画像を選択 / ドロップ"}
             </button>
             <input

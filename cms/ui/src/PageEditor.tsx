@@ -1,14 +1,20 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import { fetchPage, updatePage, type PageDocument, type PageName } from "./api";
 import { DeploymentStatus } from "./DeploymentStatus";
 import {
   joinHeading,
+  lineEndingOf,
   readFrontmatterValue,
   setFrontmatterValue,
   splitHeading,
 } from "./frontmatter";
-import { MarkdownArticle } from "./MarkdownArticle";
+
+const MarkdownEditor = lazy(() =>
+  import("./editor/MarkdownEditor").then((module) => ({
+    default: module.MarkdownEditor,
+  })),
+);
 
 interface PageField {
   key: string;
@@ -56,7 +62,11 @@ function compose(name: PageName, source: string, values: PageValues): string {
       next = setFrontmatterValue(next, field.key, value || null);
     }
   }
-  const body = values.body === "" || values.body.endsWith("\n") ? values.body : `${values.body}\n`;
+  const eol = lineEndingOf(source);
+  const body =
+    values.body === "" || values.body.endsWith("\n")
+      ? values.body
+      : `${values.body}${eol}`;
   if (values.heading.trim() !== original.heading || body !== original.body) {
     next = joinHeading(next, values.heading, body);
   }
@@ -139,18 +149,20 @@ function PageForm({ initialPage }: { initialPage: PageDocument }) {
         </p>
       )}
 
-      <div className="editor-grid">
-        <textarea
-          className="markdown-editor"
-          aria-label="本文（Markdown）"
+      <Suspense
+        fallback={
+          <div className="markdown-editor-loading" role="status">
+            エディタを読み込んでいます…
+          </div>
+        }
+      >
+        <MarkdownEditor
           value={values.body}
+          onChange={(body) => setValues((current) => ({ ...current, body }))}
+          ariaLabel="本文（Markdown）"
           readOnly={saving}
-          onChange={(event) => setValues({ ...values, body: event.target.value })}
         />
-        <MarkdownArticle
-          content={config.heading ? `# ${values.heading}\n\n${values.body}` : values.body}
-        />
-      </div>
+      </Suspense>
 
       <div className="workspace-actions">
         <button className="primary" type="button" disabled={!changed || saving} onClick={save}>

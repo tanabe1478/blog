@@ -340,29 +340,16 @@ button:disabled {
   font-weight: 600;
 }
 
-.editor-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-}
-
-.markdown-editor {
-  width: 100%;
+.markdown-editor-loading {
+  display: flex;
   min-height: 60vh;
-  resize: vertical;
+  align-items: center;
+  justify-content: center;
   padding: 16px;
   border: 1px solid #d4d4ce;
   border-radius: 8px;
-  color: inherit;
+  color: #666;
   background: #fafaf8;
-  font-family: ui-monospace, monospace;
-  line-height: 1.6;
-}
-
-.markdown-editor.dragging {
-  border-color: #315ca8;
-  outline: 3px solid #dce7fa;
-  background: #f5f8ff;
 }
 
 .markdown-article {
@@ -448,10 +435,6 @@ button:disabled {
 }
 
 @media (max-width: 800px) {
-  .editor-grid {
-    grid-template-columns: 1fr;
-  }
-
   .workspace-actions {
     align-items: flex-start;
     flex-wrap: wrap;
