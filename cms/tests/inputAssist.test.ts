@@ -216,6 +216,31 @@ describe("inline formatting toggles", () => {
     expect(applied(transaction).selection.main.head).toBe(2);
   });
 
+  it("removes an empty pair when the shortcut is pressed again", () => {
+    for (const [command, pair] of [
+      ["bold", "****"],
+      ["italic", "**"],
+      ["strike", "~~~~"],
+      ["inlineCode", "``"],
+    ] as const) {
+      const first = run(createState("", { anchor: 0 }), command);
+      expect(applied(first).sliceDoc()).toBe(pair);
+
+      const second = run(applied(first), command);
+      expect(applied(second).sliceDoc()).toBe("");
+      expect(applied(second).selection.main.head).toBe(0);
+    }
+  });
+
+  it("nests italic inside bold instead of consuming one marker", () => {
+    expect(
+      applied(run(selectionRange("**word**", "word"), "italic")).sliceDoc(),
+    ).toBe("***word***");
+    expect(
+      applied(run(selectionRange("*word*", "word"), "bold")).sliceDoc(),
+    ).toBe("***word***");
+  });
+
   it("wraps inline code and chooses a longer fence for inner backticks", () => {
     expect(
       applied(run(selectionRange("word", "word"), "inlineCode")).sliceDoc(),
@@ -264,6 +289,24 @@ describe("inline formatting toggles", () => {
     expect(applied(codeTransaction).sliceDoc()).toBe(code);
   });
 
+  it("does not corrupt horizontal rules", () => {
+    const rule = "* * *";
+    expect(applied(run(selectionRange(rule, rule), "bold")).sliceDoc()).toBe(
+      rule,
+    );
+    expect(
+      applied(run(selectionRange(rule, rule), "inlineCode")).sliceDoc(),
+    ).toBe(rule);
+    expect(applied(run(selectionRange(rule, rule), "link")).sliceDoc()).toBe(
+      rule,
+    );
+    expect(
+      applied(run(createState(rule, { anchor: rule.length }), "bold")).sliceDoc(),
+    ).toBe(rule);
+    expect(run(createState(rule, { anchor: 2 }), "indentList")).toBeNull();
+    expect(run(createState(rule, { anchor: 2 }), "continueMarkup")).toBeNull();
+  });
+
   it("allows formatting inside a link label", () => {
     expect(
       applied(run(selectionRange("[word](https://x.test)", "word"), "bold"))
@@ -301,11 +344,16 @@ describe("links", () => {
     expect(applied(multilineTransaction).sliceDoc()).toBe(multiline);
   });
 
-  it("declines in fenced code", () => {
+  it("declines in fenced code and inline code", () => {
     const fenced = "```\nword\n```\n";
     const transaction = run(selectionRange(fenced, "word"), "link");
     expect(transaction).not.toBeNull();
     expect(applied(transaction).sliceDoc()).toBe(fenced);
+
+    const code = "`word`";
+    const codeTransaction = run(selectionRange(code, "word"), "link");
+    expect(codeTransaction).not.toBeNull();
+    expect(applied(codeTransaction).sliceDoc()).toBe(code);
   });
 });
 
@@ -326,6 +374,15 @@ describe("frontmatter protection", () => {
 
   it("protects a document with an unterminated frontmatter fence", () => {
     const source = "---\ntitle: word\n";
+    const state = createState(source, { anchor: source.indexOf("word") });
+    expect(frontmatterProtection(state, withFrontmatter)).toEqual({
+      from: 0,
+      to: source.length,
+    });
+  });
+
+  it("protects an unterminated fence with trailing spaces", () => {
+    const source = "--- \ntitle: word\n";
     const state = createState(source, { anchor: source.indexOf("word") });
     expect(frontmatterProtection(state, withFrontmatter)).toEqual({
       from: 0,

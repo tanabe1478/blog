@@ -38,11 +38,7 @@ export type InputCommand =
 type GuardAction = "allow" | "decline" | "consume";
 
 interface ListItem {
-  lineFrom: number;
   indent: number;
-  marker: string;
-  ordered: boolean;
-  task: boolean;
 }
 
 interface BlockContext {
@@ -50,9 +46,9 @@ interface BlockContext {
   fencedCode: boolean;
   htmlBlock: boolean;
   table: boolean;
+  horizontalRule: boolean;
   inlineCode: boolean;
   link: boolean;
-  listItem: ListItem | null;
 }
 
 interface TextPlan {
@@ -62,7 +58,7 @@ interface TextPlan {
   unwraps?: boolean;
 }
 
-const LIST_ITEM_RE = /^(\s*)([-+*]|\d{1,9}[.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
+const LIST_ITEM_RE = /^(\s*)(?:[-+*]|\d{1,9}[.)])(?:[ \t]+)(?:\[[ xX]\][ \t]+)?/;
 const EMPTY_BLOCKQUOTE_RE = /^[ \t]*(?:>[ \t]*)+$/;
 const URL_RE = /^(https?:\/\/|mailto:|xmpp:|www\.)/;
 const NON_PLAIN_TEXT_RE =
@@ -71,6 +67,7 @@ const NON_PLAIN_TEXT_RE =
 const FENCED_CODE_NODES = new Set(["FencedCode", "CodeBlock"]);
 const HTML_BLOCK_NODES = new Set(["HTMLBlock"]);
 const TABLE_NODES = new Set(["Table"]);
+const HORIZONTAL_RULE_NODES = new Set(["HorizontalRule"]);
 const INLINE_CODE_NODES = new Set(["InlineCode"]);
 const LINK_NODES = new Set(["Link"]);
 const BLOCKED_LINE_NODES = new Set([
@@ -78,6 +75,7 @@ const BLOCKED_LINE_NODES = new Set([
   "CodeBlock",
   "HTMLBlock",
   "Table",
+  "HorizontalRule",
 ]);
 
 const FORMAT_DELIMITERS = {
@@ -85,6 +83,14 @@ const FORMAT_DELIMITERS = {
   italic: "*",
   strike: "~~",
 } as const;
+
+type DelimitedFormat = keyof typeof FORMAT_DELIMITERS;
+
+const FORMAT_NODES: Record<DelimitedFormat, ReadonlySet<string>> = {
+  bold: new Set(["StrongEmphasis"]),
+  italic: new Set(["Emphasis"]),
+  strike: new Set(["Strikethrough"]),
+};
 
 const FORMAT_EVENTS = {
   bold: "input.format.bold",
@@ -128,7 +134,7 @@ export function frontmatterProtection(
   const source = state.sliceDoc();
   const range = frontmatterRange(source);
   if (range) return range;
-  return /^---(?:\r\n|\n|$)/.test(source)
+  return /^---[ \t]*(?:\r\n|\n|$)/.test(source)
     ? { from: 0, to: state.doc.length }
     : null;
 }
@@ -155,16 +161,21 @@ function hasNode(
   return found;
 }
 
+function nodeInRangeOrLine(
+  state: EditorState,
+  from: number,
+  to: number,
+  names: ReadonlySet<string>,
+): boolean {
+  if (hasNode(state, from, to, names)) return true;
+  const line = state.doc.lineAt(from);
+  return hasNode(state, line.from, line.to, names);
+}
+
 function listItemFromLine(line: Line): ListItem | null {
   const match = LIST_ITEM_RE.exec(line.text);
   if (!match) return null;
-  return {
-    lineFrom: line.from,
-    indent: match[1].length,
-    marker: match[2],
-    ordered: /^\d/.test(match[2]),
-    task: Boolean(match[4]),
-  };
+  return { indent: match[1].length };
 }
 
 function blockContext(
@@ -176,9 +187,15 @@ function blockContext(
   const to = selection.to;
   return {
     frontmatter: frontmatterProtection(state, config),
-    fencedCode: hasNode(state, from, to, FENCED_CODE_NODES),
-    htmlBlock: hasNode(state, from, to, HTML_BLOCK_NODES),
-    table: hasNode(state, from, to, TABLE_NODES),
+    fencedCode: nodeInRangeOrLine(state, from, to, FENCED_CODE_NODES),
+    htmlBlock: nodeInRangeOrLine(state, from, to, HTML_BLOCK_NODES),
+    table: nodeInRangeOrLine(state, from, to, TABLE_NODES),
+    horizontalRule: nodeInRangeOrLine(
+      state,
+      from,
+      to,
+      HORIZONTAL_RULE_NODES,
+    ),
     // Formatting may wrap a selection that contains a code span, but not a
     // selection that starts or ends inside one.
     inlineCode:
@@ -187,7 +204,6 @@ function blockContext(
         : hasNode(state, from, from, INLINE_CODE_NODES) ||
           hasNode(state, to, to, INLINE_CODE_NODES),
     link: hasNode(state, from, to, LINK_NODES),
-    listItem: listItemFromLine(state.doc.lineAt(from)),
   };
 }
 
@@ -229,14 +245,23 @@ function guardAction(
     case "bold":
     case "italic":
     case "strike":
-      return context.fencedCode ||
+      if (context.inlineCode) return "consume";
+      if (
+        context.fencedCode ||
         context.htmlBlock ||
         context.table ||
-        context.inlineCode
-        ? "consume"
-        : "allow";
+        context.horizontalRule
+      ) {
+        return unwraps && selection.empty ? "allow" : "consume";
+      }
+      return "allow";
     case "inlineCode":
-      if (context.fencedCode || context.htmlBlock || context.table) {
+      if (
+        context.fencedCode ||
+        context.htmlBlock ||
+        context.table ||
+        context.horizontalRule
+      ) {
         return "consume";
       }
       // Unwrapping an existing span is the way out; only nesting a new pair
@@ -247,6 +272,8 @@ function guardAction(
         context.fencedCode ||
         context.htmlBlock ||
         context.table ||
+        context.horizontalRule ||
+        context.inlineCode ||
         context.link
       ) {
         return "consume";
@@ -377,13 +404,34 @@ function selectedRange(main: { anchor: number; head: number }, from: number, to:
 
 function planDelimited(
   state: EditorState,
-  delimiter: string,
+  format: DelimitedFormat,
   userEvent: string,
 ): TextPlan {
+  const delimiter = FORMAT_DELIMITERS[format];
   const main = state.selection.main;
   const { from, to } = main;
 
   if (from === to) {
+    const beforePair = state.doc.sliceString(
+      Math.max(0, from - delimiter.length),
+      from,
+    );
+    const afterPair = state.doc.sliceString(
+      to,
+      Math.min(state.doc.length, to + delimiter.length),
+    );
+    if (
+      state.doc.length === delimiter.length * 2 &&
+      beforePair === delimiter &&
+      afterPair === delimiter
+    ) {
+      return {
+        changes: { from: 0, to: state.doc.length },
+        selection: { anchor: 0 },
+        userEvent,
+        unwraps: true,
+      };
+    }
     return {
       changes: { from, insert: delimiter + delimiter },
       selection: { anchor: from + delimiter.length },
@@ -392,7 +440,10 @@ function planDelimited(
   }
 
   const selected = state.doc.sliceString(from, to);
+  const hasFormat = hasNode(state, from, to, FORMAT_NODES[format]);
+  const selectedIsPair = selected === delimiter.repeat(2);
   if (
+    (hasFormat || selectedIsPair) &&
     selected.length >= delimiter.length * 2 &&
     selected.startsWith(delimiter) &&
     selected.endsWith(delimiter)
@@ -420,7 +471,7 @@ function planDelimited(
     to,
     Math.min(state.doc.length, to + delimiter.length),
   );
-  if (before === delimiter && after === delimiter) {
+  if (hasFormat && before === delimiter && after === delimiter) {
     return {
       changes: [
         { from: from - delimiter.length, to: from },
@@ -452,6 +503,26 @@ function planInlineCode(state: EditorState): TextPlan {
   const { from, to } = main;
 
   if (from === to) {
+    const beforePair = state.doc.sliceString(
+      Math.max(0, from - 1),
+      from,
+    );
+    const afterPair = state.doc.sliceString(
+      to,
+      Math.min(state.doc.length, to + 1),
+    );
+    if (
+      state.doc.length === 2 &&
+      beforePair === "`" &&
+      afterPair === "`"
+    ) {
+      return {
+        changes: { from: 0, to: state.doc.length },
+        selection: { anchor: 0 },
+        userEvent,
+        unwraps: true,
+      };
+    }
     return {
       changes: { from, insert: "``" },
       selection: { anchor: from + 1 },
@@ -536,11 +607,7 @@ function planFor(state: EditorState, command: InputCommand): TextPlan {
     case "bold":
     case "italic":
     case "strike":
-      return planDelimited(
-        state,
-        FORMAT_DELIMITERS[command],
-        FORMAT_EVENTS[command],
-      );
+      return planDelimited(state, command, FORMAT_EVENTS[command]);
     case "inlineCode":
       return planInlineCode(state);
     case "link":
