@@ -809,6 +809,180 @@ test("accepts Japanese IME composition without rewriting the editor", async ({
   await expect.poll(() => editorValue(page)).toBe("入力: 日本");
 });
 
+test("continues and exits Markdown lists", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await replaceEditorValue(page, "intro\n\n");
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("- hogehoge");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n- hogehoge\n- ");
+  await page.keyboard.type("child");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe(
+    "intro\n\n- hogehoge\n- child\n- ",
+  );
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe(
+    "intro\n\n- hogehoge\n- child\n",
+  );
+});
+
+test("continues ordered lists, task lists, and blockquotes", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const content = editorHost(page).locator(".cm-content");
+
+  await replaceEditorValue(page, "intro\n\n1. one");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("two");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n1. one\n2. two");
+
+  await replaceEditorValue(page, "intro\n\n- [ ] task");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("next");
+  await expect.poll(() => editorValue(page)).toBe(
+    "intro\n\n- [ ] task\n- [ ] next",
+  );
+
+  await replaceEditorValue(page, "intro\n\n- [x] done");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n- [x] done\n- [ ] ");
+
+  await replaceEditorValue(page, "intro\n\n> quote");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("more");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n> quote\n> more");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n> quote\n> more\n> ");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => editorValue(page)).toBe("intro\n\n> quote\n> more\n");
+});
+
+test("indents and outdents Markdown list items with Tab", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await replaceEditorValue(page, "- item");
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+End");
+
+  await page.keyboard.press("Tab");
+  await expect.poll(() => editorValue(page)).toBe("  - item");
+  await expect(content).toBeFocused();
+
+  await page.keyboard.press("Shift+Tab");
+  await expect.poll(() => editorValue(page)).toBe("- item");
+
+  await replaceEditorValue(page, "paragraph");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Tab");
+  await expect(content).not.toBeFocused();
+});
+
+test("wraps and unwraps bold, and italic beats selectParentSyntax", async ({
+  page,
+}) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await replaceEditorValue(page, "word");
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect.poll(() => editorValue(page)).toBe("**word**");
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect.poll(() => editorValue(page)).toBe("word");
+
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("ControlOrMeta+i");
+  await expect.poll(() => editorValue(page)).toBe("*word*");
+});
+
+test("applies strike, inline code, and link keyboard shortcuts", async ({ page }) => {
+  await mockCmsApi(page);
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const content = editorHost(page).locator(".cm-content");
+
+  await replaceEditorValue(page, "word");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("ControlOrMeta+Shift+x");
+  await expect.poll(() => editorValue(page)).toBe("~~word~~");
+
+  await replaceEditorValue(page, "word");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("Alt+Shift+5");
+  await expect.poll(() => editorValue(page)).toBe("~~word~~");
+
+  await replaceEditorValue(page, "word");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("ControlOrMeta+Shift+Backquote");
+  await expect.poll(() => editorValue(page)).toBe("`word`");
+
+  await replaceEditorValue(page, "word");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect.poll(() => editorValue(page)).toBe("[word]()");
+});
+
+test("does not continue YAML lists in frontmatter", async ({ page }) => {
+  const source = [
+    "---",
+    "date: 2026-07-20 10:00",
+    "tags:",
+    "  - 技術",
+    "---",
+    "",
+    "# Existing title",
+    "",
+  ].join("\n");
+  await mockCmsApi(page, { existingContent: source });
+  await page.goto(`/?post=${EXISTING_NAME}`);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const content = editorHost(page).locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+
+  await expect
+    .poll(async () => (await editorValue(page)).includes("  - 技術\n  - "))
+    .toBe(false);
+  await expect.poll(async () => (await editorValue(page)).length).toBeGreaterThan(
+    source.length,
+  );
+});
+
 test("recovers and discards an existing React draft", async ({ page }) => {
   await mockCmsApi(page);
   await page.goto(`/?post=${EXISTING_NAME}`);
