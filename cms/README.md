@@ -54,6 +54,8 @@ React Issue #31819のfallback throttlingを考慮し、操作feedbackをSuspense
 
 既存記事の編集時はCodeMirror 6を使ったTypora風inline Markdown editorを表示します。Markdown sourceを正本とし、heading・強調・link・画像などをその場で表示します。現在Blob SHA付きで保存し、競合/API error時は入力を維持します。
 
+editorは一般的なMarkdown入力支援も行います。`-`、`1.`、`- [ ]`、`>`の継続、空itemの1回Enterでの終了、Backspaceでの記法削除、Tab / Shift-Tabのlist indent、`Mod-b` / `Mod-i` / `Mod-Shift-x` / `` Mod-Shift-` `` / `Mod-k`のformat shortcut、選択textへのURL pasteによるlink作成に対応します。frontmatter、read-only、code fence、table、horizontal rule、inline codeではformattingやlink作成を安全側にno-opにします。詳細は`docs/inline-editor.md`を参照してください。
+
 file picker、drag-and-drop、pasteで画像をrepositoryへ保存し、現在のcursor/selection位置へ画像Markdownを挿入します。upload中に入力してもanchorが追従するため、挿入位置がずれません。10MB超過とupload errorでは本文を変更しません。
 
 editorの記法、CRLF、CSP、testの詳細は`docs/inline-editor.md`を参照してください。

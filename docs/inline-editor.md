@@ -12,6 +12,37 @@ read-onlyの記事detailは従来どおり`MarkdownArticle`（`react-markdown` +
 - 表示だけをCodeMirrorのdecorationで変えます。隠した記法は、カーソルがその行へ来ると再表示します。
 - 未変更のMarkdownを整形しません。frontmatterもrawのまま表示し、Pinnedなどの操作だけ`ui/src/frontmatter.ts`で対象行を書き換えます。
 
+## 入力支援
+
+一般的なMarkdown editorと同じように、list・quote・強調の入力をkeyboardから支援します。Markdown sourceを正本にするため、支援は選択範囲や行頭の記法だけを最小限に書き換えます。
+
+| 操作 | 動作 |
+| --- | --- |
+| `Enter` | unordered / ordered / task listとblockquoteを継続する。空のlist itemと空のblockquoteは1回で終了する |
+| `Backspace` | list / quoteの記法直後で、その記法を削除する |
+| `Tab` / `Shift-Tab` | list itemを2 spacesだけindent / outdentする。複数行選択では対象のlist行すべてに適用する |
+| `Mod-b` | bold（`**`）をtoggleする |
+| `Mod-i` | italic（`*`）をtoggleする |
+| `Mod-Shift-x` / `Alt-Shift-5` | strikethrough（`~~`）をtoggleする |
+| `` Mod-Shift-` `` | inline codeをtoggleする。選択内のbacktickより長いfenceを使う |
+| `Mod-k` | 選択textをlinkにする。空cursorでは`[]()`を挿入する |
+| URL paste | 選択textへURLを貼り付けると`[選択text](URL)`にする。`www.`には`https://`を補う |
+
+`Mod`はmacOSではCommand、Windows / LinuxではCtrlです。選択範囲をwrapした場合は元のtextを選択したままにし、すでに同じ記法で囲まれている場合はdelimiterを削除します。空cursorではpairを挿入してcursorを内側へ置きます。
+
+次の場所ではMarkdownを壊さないよう、入力支援を無効またはno-opにします。
+
+- frontmatterのYAML行
+- read-onlyのeditor
+- fenced code、HTML block、table、horizontal rule
+- inline code内のformattingとlink作成
+- 既存link内のlink作成
+- 複数行にまたがるlink作成
+
+frontmatterの判定は`MarkdownEditor`の必須prop `hasFrontmatter`で切り替えます。記事全体を編集する`ArticleWorkspace`は`true`、bodyだけを編集する`PageEditor`は`false`を渡します。bodyだけの文書が`---`で始まってもfrontmatterと誤認しないためです。未閉じのfrontmatter fenceは文書全体を保護します。
+
+一貫したCRLFの文書では、挿入する改行にもCRLFを使います。日本語IMEのcomposition中はkeyboard commandを実行しません。auto-pair、table rowの継続、code fenceの自動close、heading / block prefixのshortcutは対象外です。
+
 ## 記法ごとの表示
 
 | 記法 | 編集中の表示 |
@@ -75,6 +106,7 @@ CodeMirror + Markdown parserのchunkは約504 kB（gzip約176 kB）で、Viteの
 | --- | --- |
 | `cms/ui/src/editor/MarkdownEditor.tsx` | Reactとのlifecycle、value同期、read-only、imperative handle |
 | `cms/ui/src/editor/extensions.ts` | Markdown language、keymap、drop / paste、CSP nonce、更新通知 |
+| `cms/ui/src/editor/inputAssist.ts` | list / quote継続、format shortcut、frontmatter / read-only guard、URL paste |
 | `cms/ui/src/editor/livePreview.ts` | decoration仕様を生成する純粋関数 |
 | `cms/ui/src/editor/livePreviewPlugin.ts` | 仕様をCodeMirror decorationへ変換 |
 | `cms/ui/src/editor/widgets.ts` | 画像、badgeのwidget |
@@ -97,7 +129,7 @@ npm run check
 inline editor専用のE2E:
 
 ```bash
-npx playwright test --grep "Markdown inline|CSP nonce|CodeMirror chunk|captured anchor|CRLF|Japanese IME"
+npx playwright test --grep "Markdown inline|Markdown list|YAML list|keyboard shortcuts|selectParentSyntax|CSP nonce|CodeMirror chunk|captured anchor|CRLF|Japanese IME"
 ```
 
 確認している内容:
@@ -105,6 +137,9 @@ npx playwright test --grep "Markdown inline|CSP nonce|CodeMirror chunk|captured 
 - heading、strong、emphasis、inline code、strike、link、image、Mermaid badge、quote、listのinline表示
 - active lineでraw記法へ戻ること
 - 編集中にpreview paneが存在しないこと
+- list / task list / blockquoteの継続、空itemの終了、Tab / Shift-Tabのindent
+- bold / italic / strike / inline code / linkのshortcutとURL paste
+- frontmatterのYAML listを継続しないこと
 - CSP nonceがmeta、header、CodeMirrorの`<style>`で一致すること
 - read-only detailではCodeMirror chunkを取得しないこと
 - upload中に入力しても画像が元のanchorへ入ること
@@ -125,6 +160,8 @@ npm run dev
 2. カーソルを合わせた行だけ`#`や`**`が見える。
 3. 画像がeditor内に表示され、その行へカーソルを置くとMarkdownへ戻る。
 4. 画像を選んでも、upload中に入力した本文が消えない。
-5. cancelで元の記事へ戻る。
+5. `- item`の後でEnterを押すと次の`- `が入り、空のitemでEnterを押すと終了する。
+6. 選択したtextに`Mod-b`や`Mod-i`を押すと記法が付き、もう一度押すと外れる。
+7. cancelで元の記事へ戻る。
 
 実画像uploadは`Resources/images/`へcommitするため、確認目的で行う場合は不要な画像を残さないでください。

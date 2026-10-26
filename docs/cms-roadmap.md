@@ -173,6 +173,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-018 | Production新規作成E2E確認手順 | G | `planned` |
 | CMS-019 | Suspense記事遷移とeditor code splitting | D | `done` |
 | CMS-020 | Typora風inline Markdown editor | E | `done` |
+| CMS-021 | Markdown入力支援（list継続・format shortcut） | E | `in-progress` |
 
 ---
 
@@ -516,6 +517,43 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - CodeMirror + Markdown parserのchunkは約504 kB（gzip約176 kB）でViteの500 kB warningを超える。編集開始時だけ読み込むlazy chunkとして許容し、必要ならlanguage support単位で追加分割する。
 - 公開siteのrendererとの完全一致はCMS-011で扱う。
 - Mermaid、YouTube、raw HTMLの実行・埋め込みはeditorでは行わない。
+
+詳細は`docs/inline-editor.md`を参照。
+
+### CMS-021 Markdown入力支援（list継続・format shortcut）
+
+状態: `in-progress`（実装・ローカルcheck完了、deploy未確認）
+
+目的:
+
+- 一般的なMarkdown editorと同じ入力支援をinline editorへ追加し、listや強調の記法を毎回手で書かずに済むようにする。
+- Markdown sourceを正本とし、未変更のtextやfrontmatterを整形しない。
+- 日本語IME、CRLF、read-only、code fence、tableを壊さない。
+
+実装:
+
+- `Enter`によるunordered / ordered / task listとblockquoteの継続
+- 空のlist itemと空のblockquoteを1回の`Enter`で終了
+- `Backspace`によるlist / quote記法の削除
+- `Tab` / `Shift-Tab`によるlist itemの2 spaces indent / outdent
+- `Mod-b` bold、`Mod-i` italic、`Mod-Shift-x` / `Alt-Shift-5` strike、`` Mod-Shift-` `` inline code、`Mod-k` link
+- 選択textへのURL pasteを`[text](URL)`へ変換
+- 空cursorへのpair挿入と再押下による空pairの削除
+- frontmatter、read-only、fenced code、HTML block、table、horizontal rule、inline code、既存linkのguard
+- `hasFrontmatter` propで記事全体とbodyだけのeditorを区別
+
+確認:
+
+- Vitestでlist / quote継続、空item終了、indent、format toggle、link、URL paste、frontmatter / read-only / CRLFを確認
+- Playwright E2Eで実際のkeyboard入力によるlist継続、Tab、bold / italic / strike / inline code / link、YAML listのguardを確認
+- 既存のIME、CRLF、draft、保存、画像、rename、deleteのE2Eも継続して成功
+- `npm run check`でUI build、TypeScript、Vitest、Playwrightを確認
+
+注意:
+
+- frontmatterの判定は記事全体を編集する`ArticleWorkspace`だけ`hasFrontmatter: true`とし、bodyだけを編集する`PageEditor`は`false`にする。bodyが`---`で始まる場合の誤認を避けるため。
+- auto-pair、table rowの継続、code fenceの自動close、heading / block prefixのshortcutは今回の対象外。
+- Production deploy後の確認が終わるまで状態は`in-progress`とする。
 
 詳細は`docs/inline-editor.md`を参照。
 
