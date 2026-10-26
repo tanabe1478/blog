@@ -15,6 +15,7 @@ import { EditorView, keymap } from "@codemirror/view";
 
 import { anchorField } from "./anchors";
 import { detectLineSeparator } from "./insert";
+import { markdownInput } from "./inputAssist";
 import { livePreview, livePreviewAtomic } from "./livePreviewPlugin";
 
 export const externalSync = Annotation.define<boolean>();
@@ -32,6 +33,7 @@ export interface EditorExtensionConfig {
   ariaLabel: string;
   readOnly: Compartment;
   isReadOnly: boolean;
+  hasFrontmatter: boolean;
   onChange: (value: string) => void;
   onFiles?: (files: File[], position: number) => void;
 }
@@ -44,7 +46,7 @@ export function createExtensions(config: EditorExtensionConfig): Extension[] {
   return [
     history(),
     keymap.of([{ key: "Mod-a", run: selectAll }, ...defaultKeymap, ...historyKeymap]),
-    markdown({ base: markdownLanguage, addKeymap: false }),
+    markdown({ base: markdownLanguage, addKeymap: false, pasteURLAsLink: false }),
     EditorView.lineWrapping,
     EditorState.lineSeparator.of(detectLineSeparator(config.source)),
     EditorView.contentAttributes.of({
@@ -87,6 +89,7 @@ export function createExtensions(config: EditorExtensionConfig): Extension[] {
         return true;
       },
     }),
+    markdownInput({ hasFrontmatter: config.hasFrontmatter }),
     config.readOnly.of(readOnlyExtensions(config.isReadOnly)),
     config.nonce ? EditorView.cspNonce.of(config.nonce) : [],
     livePreview,

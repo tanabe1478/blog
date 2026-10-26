@@ -489,6 +489,7 @@ export function ArticleWorkspace({
             value={content}
             onChange={setContent}
             ariaLabel="Markdown本文"
+            hasFrontmatter
             readOnly={saving}
             autoFocus="body"
             onFiles={insertDroppedFiles}

@@ -43,6 +43,7 @@ export interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   ariaLabel: string;
+  hasFrontmatter: boolean;
   readOnly?: boolean;
   autoFocus?: "start" | "body" | false;
   onFiles?: (files: File[], position: number) => void;
@@ -75,6 +76,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             ariaLabel: props.ariaLabel,
             readOnly: readOnlyCompartment.current,
             isReadOnly: Boolean(props.readOnly),
+            hasFrontmatter: props.hasFrontmatter,
             onChange(next) {
               recentLocalValues.current.push(next);
               if (recentLocalValues.current.length > 20) recentLocalValues.current.shift();

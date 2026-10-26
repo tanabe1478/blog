@@ -160,6 +160,7 @@ function PageForm({ initialPage }: { initialPage: PageDocument }) {
           value={values.body}
           onChange={(body) => setValues((current) => ({ ...current, body }))}
           ariaLabel="本文（Markdown）"
+          hasFrontmatter={false}
           readOnly={saving}
         />
       </Suspense>
