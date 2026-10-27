@@ -27,7 +27,7 @@ blog / diary統合の基準日は2026-05-11です。Blog CMSの最新状況は`c
 - 記事一覧は公開blogと同じ43記事をdate降順で表示する。
 - 画像のfile picker / drag-and-drop uploadに対応済み（`Resources/images/`へcommit）。
 - 編集画面はTypora風inline Markdown editorに対応済み。Markdown sourceを正本とし、heading・強調・link・画像等をその場で表示する（`docs/inline-editor.md`）。
-- 2026-10: inline editorへMarkdown入力支援を追加済み。list / quoteの継続、空itemの終了、Tab indent、bold / italic / strike / inline code / link、URL pasteに対応し、frontmatter・read-only・code fence・table・horizontal ruleをguardする。ローカル`npm run check`は成功済みで、Production deployは未確認。
+- 2026-10: inline editorへMarkdown入力支援を追加済み。list / quoteの継続、空itemの終了、Tab indent、bold / italic / strike / inline code / link、URL pasteに対応し、frontmatter・read-only・code fence・table・horizontal ruleをguardする。ローカル`npm run check`とGitHub Actions `Deploy CMS`が成功し、Production deploy済み（2026-10-27、Worker version `d60a700b-3a27-4dd7-a900-3b5d21e89cc7`）。
 - CMS保存後はGitHub Actionsが固定revisionのMoonBit SSGで生成・asset checkし、GitHub Pagesへ自動deployする。
 - Playwright E2EをlocalとCIへ導入し、今後のuser-facing機能の完了条件に設定済み。
 - localStorage自動下書き、reload復元、保存後削除、SHA変更時の競合維持に対応済み。

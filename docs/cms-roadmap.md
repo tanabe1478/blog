@@ -173,7 +173,7 @@ CMS機能backlogを進める前に、現行のinline HTML/JavaScript UIをReact�
 | CMS-018 | Production新規作成E2E確認手順 | G | `planned` |
 | CMS-019 | Suspense記事遷移とeditor code splitting | D | `done` |
 | CMS-020 | Typora風inline Markdown editor | E | `done` |
-| CMS-021 | Markdown入力支援（list継続・format shortcut） | E | `in-progress` |
+| CMS-021 | Markdown入力支援（list継続・format shortcut） | E | `done` |
 
 ---
 
@@ -522,7 +522,7 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 
 ### CMS-021 Markdown入力支援（list継続・format shortcut）
 
-状態: `in-progress`（実装・ローカルcheck完了、deploy未確認）
+状態: `done`
 
 目的:
 
@@ -548,12 +548,13 @@ E2Eへtoken、cookie、Access JWT、browser認証stateを保存しません。Pr
 - Playwright E2Eで実際のkeyboard入力によるlist継続、Tab、bold / italic / strike / inline code / link、YAML listのguardを確認
 - 既存のIME、CRLF、draft、保存、画像、rename、deleteのE2Eも継続して成功
 - `npm run check`でUI build、TypeScript、Vitest、Playwrightを確認
+- 2026-10-27のGitHub Actions `Deploy CMS`（run 40426577120）が成功し、Cloudflare Worker version `d60a700b-3a27-4dd7-a900-3b5d21e89cc7` を確認
 
 注意:
 
 - frontmatterの判定は記事全体を編集する`ArticleWorkspace`だけ`hasFrontmatter: true`とし、bodyだけを編集する`PageEditor`は`false`にする。bodyが`---`で始まる場合の誤認を避けるため。
 - auto-pair、table rowの継続、code fenceの自動close、heading / block prefixのshortcutは今回の対象外。
-- Production deploy後の確認が終わるまで状態は`in-progress`とする。
+- Production deployとWorker versionの確認まで完了した。
 
 詳細は`docs/inline-editor.md`を参照。
 
